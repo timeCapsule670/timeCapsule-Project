@@ -26,6 +26,10 @@ export default function RootLayout() {
         <Stack.Screen name="create-account" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="family-setup" />
+        <Stack.Screen name="moments-selection" />
+        <Stack.Screen name="child-profile-setup" />
+        <Stack.Screen name="invite-child" />
+        <Stack.Screen name="welcome" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
