@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
-export default function OnboardingScreen() {
+export default function OnboardingTwoScreen() {
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -43,15 +43,15 @@ export default function OnboardingScreen() {
   }, []);
 
   const handleBack = () => {
-    router.push('/onboarding-2');
+    router.push('/onboarding-1');
   };
 
   const handleSkip = () => {
     router.push('/');
   };
 
-  const handleGetStarted = () => {
-    router.push('/family-setup');
+  const handleNext = () => {
+    router.push('/onboarding');
   };
 
   return (
@@ -100,17 +100,16 @@ export default function OnboardingScreen() {
           >
             <View style={styles.imageWrapper}>
               <Image
-                source={{ uri: 'https://images.pexels.com/photos/3990349/pexels-photo-3990349.jpeg' }}
+                source={{ uri: 'https://images.pexels.com/photos/4145353/pexels-photo-4145353.jpeg' }}
                 style={styles.illustrationImage}
                 resizeMode="cover"
               />
               
-              {/* Floating hearts overlay */}
-              <View style={styles.heartsOverlay}>
+              {/* Phone mockup overlay */}
+              <View style={styles.phoneOverlay}>
                 <Animated.View 
                   style={[
-                    styles.floatingHeart, 
-                    styles.heart1,
+                    styles.phoneContainer,
                     {
                       opacity: fadeAnim,
                       transform: [
@@ -123,45 +122,20 @@ export default function OnboardingScreen() {
                     }
                   ]}
                 >
-                  <Text style={styles.heartEmoji}>💝</Text>
-                </Animated.View>
-                
-                <Animated.View 
-                  style={[
-                    styles.floatingHeart, 
-                    styles.heart2,
-                    {
-                      opacity: fadeAnim,
-                      transform: [
-                        { scale: scaleAnim },
-                        { translateY: slideAnim.interpolate({
-                          inputRange: [0, 50],
-                          outputRange: [0, -5],
-                        })}
-                      ]
-                    }
-                  ]}
-                >
-                  <Text style={styles.heartEmoji}>💕</Text>
-                </Animated.View>
-                
-                <Animated.View 
-                  style={[
-                    styles.floatingHeart, 
-                    styles.heart3,
-                    {
-                      opacity: fadeAnim,
-                      transform: [
-                        { scale: scaleAnim },
-                        { translateY: slideAnim.interpolate({
-                          inputRange: [0, 50],
-                          outputRange: [0, 8],
-                        })}
-                      ]
-                    }
-                  ]}
-                >
-                  <Text style={styles.heartEmoji}>✨</Text>
+                  <View style={styles.phoneScreen}>
+                    <View style={styles.messageContainer}>
+                      <View style={styles.messageHeader}>
+                        <Text style={styles.messageTitle}>I'm proud of you! 👏</Text>
+                      </View>
+                      <View style={styles.messageBody}>
+                        <Text style={styles.messageText}>🎉 Happy 16th Birthday! 🎉</Text>
+                        <Text style={styles.messageText}>I love you more than words can say.</Text>
+                        <Text style={styles.messageText}>From the moment you were born, I knew you were something truly special.</Text>
+                        <Text style={styles.messageText}>Watching you grow into the incredible person you are today has been the greatest gift of my life.</Text>
+                        <Text style={styles.messageText}>No matter how old you get, you'll always be my heart.</Text>
+                      </View>
+                    </View>
+                  </View>
                 </Animated.View>
               </View>
             </View>
@@ -169,27 +143,33 @@ export default function OnboardingScreen() {
 
           {/* Text Content */}
           <View style={styles.textContent}>
-            <Text style={styles.title}>Stay Connected,{'\n'}Always</Text>
+            <Text style={styles.title}>Delivered When It{'\n'}Matters Most</Text>
             <Text style={styles.description}>
-              Whether it's a pep talk, advice, or just a reminder that they're loved—your voice will be right there.
+              Schedule or trigger messages for life's big moments—or quiet ones that call for comfort.
             </Text>
           </View>
 
           {/* Pagination Dots */}
           <View style={styles.pagination}>
             <View style={styles.dot} />
-            <View style={styles.dot} />
             <View style={[styles.dot, styles.activeDot]} />
+            <View style={styles.dot} />
           </View>
         </View>
 
-        {/* Get Started Button */}
+        {/* Next Button */}
         <TouchableOpacity
-          style={styles.getStartedButton}
-          onPress={handleGetStarted}
+          style={styles.nextButton}
+          onPress={handleNext}
           activeOpacity={0.9}
         >
-          <Text style={styles.getStartedText}>Get Started</Text>
+          <Text style={styles.nextText}>Next</Text>
+          <ArrowLeft 
+            size={20} 
+            color="#ffffff" 
+            strokeWidth={2}
+            style={styles.nextArrow}
+          />
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>
@@ -249,7 +229,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     elevation: 12,
-    shadowColor: '#F59E0B',
+    shadowColor: '#8B5CF6',
     shadowOffset: {
       width: 0,
       height: 12,
@@ -263,34 +243,55 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 24,
   },
-  heartsOverlay: {
+  phoneOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -120 }, { translateY: -150 }],
     pointerEvents: 'none',
   },
-  floatingHeart: {
-    position: 'absolute',
+  phoneContainer: {
+    width: 240,
+    height: 300,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  heart1: {
-    top: '15%',
-    right: '10%',
+  phoneScreen: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 12,
   },
-  heart2: {
-    top: '25%',
-    left: '8%',
+  messageContainer: {
+    backgroundColor: '#E0E7FF',
+    borderRadius: 12,
+    padding: 12,
+    flex: 1,
   },
-  heart3: {
-    bottom: '20%',
-    right: '15%',
+  messageHeader: {
+    marginBottom: 8,
   },
-  heartEmoji: {
-    fontSize: 24,
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+  messageTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3730A3',
+  },
+  messageBody: {
+    gap: 4,
+  },
+  messageText: {
+    fontSize: 11,
+    color: '#1E1B4B',
+    lineHeight: 14,
   },
   textContent: {
     alignItems: 'center',
@@ -326,17 +327,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   activeDot: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#8B5CF6',
     width: 24,
   },
-  getStartedButton: {
-    backgroundColor: '#F59E0B',
+  nextButton: {
+    backgroundColor: '#334155',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 32,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 32,
-    shadowColor: '#F59E0B',
+    shadowColor: '#334155',
     shadowOffset: {
       width: 0,
       height: 8,
@@ -344,11 +347,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 8,
+    gap: 8,
   },
-  getStartedText: {
+  nextText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+  nextArrow: {
+    transform: [{ rotate: '180deg' }],
   },
 });

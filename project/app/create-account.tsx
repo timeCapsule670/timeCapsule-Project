@@ -87,7 +87,7 @@ export default function CreateAccountScreen() {
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Navigate to onboarding screen instead of home
-            router.push('/onboarding');
+             router.push('/onboarding-1');
         } catch (error) {
             Alert.alert('Error', 'Failed to create account. Please try again.');
         } finally {

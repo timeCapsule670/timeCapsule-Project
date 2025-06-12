@@ -75,7 +75,7 @@ export default function WelcomeScreen() {
   };
 
   const handleGoHome = () => {
-    router.push('/');
+    router.push('/(tabs)');
   };
 
   const requestNotificationPermission = async () => {
@@ -106,6 +106,16 @@ export default function WelcomeScreen() {
     setShowMessageTypeModal(false);
     // Navigate to appropriate message creation flow
     Alert.alert('Message Creation', `${type.charAt(0).toUpperCase() + type.slice(1)} message creation flow coming soon!`);
+  };
+
+  const handleContinue = () => {
+    // Navigate to home tabs
+    router.push('/(tabs)');
+  };
+
+  const handleSkipForNow = () => {
+    // Navigate to home tabs
+    router.push('/(tabs)');
   };
 
   const ChecklistItem = ({ text, delay = 0 }: { text: string; delay?: number }) => (
@@ -372,8 +382,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
-   
+    marginBottom: 20,
+    shadowColor: '#3B4F75',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 3,
+    borderColor: '#EEF2FF',
   },
   familyIcon: {
     width: 80,
@@ -411,8 +430,7 @@ const styles = StyleSheet.create({
   checklist: {
     gap: 16,
     backgroundColor: '#F5F5F5',
-    padding: 10,
-    borderRadius: 15
+    padding: 15
   },
   checklistItem: {
     flexDirection: 'row',

@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
-export default function OnboardingScreen() {
+export default function OnboardingOneScreen() {
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
@@ -43,15 +43,15 @@ export default function OnboardingScreen() {
   }, []);
 
   const handleBack = () => {
-    router.push('/onboarding-2');
+    router.push('/create-account');
   };
 
   const handleSkip = () => {
     router.push('/');
   };
 
-  const handleGetStarted = () => {
-    router.push('/family-setup');
+  const handleNext = () => {
+    router.push('/onboarding-2');
   };
 
   return (
@@ -100,17 +100,17 @@ export default function OnboardingScreen() {
           >
             <View style={styles.imageWrapper}>
               <Image
-                source={{ uri: 'https://images.pexels.com/photos/3990349/pexels-photo-3990349.jpeg' }}
+                source={{ uri: 'https://images.pexels.com/photos/3865556/pexels-photo-3865556.jpeg' }}
                 style={styles.illustrationImage}
                 resizeMode="cover"
               />
               
-              {/* Floating hearts overlay */}
-              <View style={styles.heartsOverlay}>
+              {/* Floating elements overlay */}
+              <View style={styles.floatingOverlay}>
                 <Animated.View 
                   style={[
-                    styles.floatingHeart, 
-                    styles.heart1,
+                    styles.floatingElement, 
+                    styles.element1,
                     {
                       opacity: fadeAnim,
                       transform: [
@@ -123,13 +123,13 @@ export default function OnboardingScreen() {
                     }
                   ]}
                 >
-                  <Text style={styles.heartEmoji}>💝</Text>
+                  <Text style={styles.floatingEmoji}>🌱</Text>
                 </Animated.View>
                 
                 <Animated.View 
                   style={[
-                    styles.floatingHeart, 
-                    styles.heart2,
+                    styles.floatingElement, 
+                    styles.element2,
                     {
                       opacity: fadeAnim,
                       transform: [
@@ -142,13 +142,13 @@ export default function OnboardingScreen() {
                     }
                   ]}
                 >
-                  <Text style={styles.heartEmoji}>💕</Text>
+                  <Text style={styles.floatingEmoji}>💝</Text>
                 </Animated.View>
                 
                 <Animated.View 
                   style={[
-                    styles.floatingHeart, 
-                    styles.heart3,
+                    styles.floatingElement, 
+                    styles.element3,
                     {
                       opacity: fadeAnim,
                       transform: [
@@ -161,7 +161,7 @@ export default function OnboardingScreen() {
                     }
                   ]}
                 >
-                  <Text style={styles.heartEmoji}>✨</Text>
+                  <Text style={styles.floatingEmoji}>✨</Text>
                 </Animated.View>
               </View>
             </View>
@@ -169,27 +169,33 @@ export default function OnboardingScreen() {
 
           {/* Text Content */}
           <View style={styles.textContent}>
-            <Text style={styles.title}>Stay Connected,{'\n'}Always</Text>
+            <Text style={styles.title}>Messages That Grow{'\n'}With Them</Text>
             <Text style={styles.description}>
-              Whether it's a pep talk, advice, or just a reminder that they're loved—your voice will be right there.
+              Capture your love, wisdom, and support for your child—delivered when they need it most.
             </Text>
           </View>
 
           {/* Pagination Dots */}
           <View style={styles.pagination}>
-            <View style={styles.dot} />
-            <View style={styles.dot} />
             <View style={[styles.dot, styles.activeDot]} />
+            <View style={styles.dot} />
+            <View style={styles.dot} />
           </View>
         </View>
 
-        {/* Get Started Button */}
+        {/* Next Button */}
         <TouchableOpacity
-          style={styles.getStartedButton}
-          onPress={handleGetStarted}
+          style={styles.nextButton}
+          onPress={handleNext}
           activeOpacity={0.9}
         >
-          <Text style={styles.getStartedText}>Get Started</Text>
+          <Text style={styles.nextText}>Next</Text>
+          <ArrowLeft 
+            size={20} 
+            color="#ffffff" 
+            strokeWidth={2}
+            style={styles.nextArrow}
+          />
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>
@@ -263,7 +269,7 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 24,
   },
-  heartsOverlay: {
+  floatingOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -271,26 +277,34 @@ const styles = StyleSheet.create({
     bottom: 0,
     pointerEvents: 'none',
   },
-  floatingHeart: {
+  floatingElement: {
     position: 'absolute',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  heart1: {
+  element1: {
     top: '15%',
     right: '10%',
   },
-  heart2: {
+  element2: {
     top: '25%',
     left: '8%',
   },
-  heart3: {
+  element3: {
     bottom: '20%',
     right: '15%',
   },
-  heartEmoji: {
+  floatingEmoji: {
     fontSize: 24,
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   textContent: {
     alignItems: 'center',
@@ -329,14 +343,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#F59E0B',
     width: 24,
   },
-  getStartedButton: {
-    backgroundColor: '#F59E0B',
+  nextButton: {
+    backgroundColor: '#334155',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 32,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 32,
-    shadowColor: '#F59E0B',
+    shadowColor: '#334155',
     shadowOffset: {
       width: 0,
       height: 8,
@@ -344,11 +360,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 8,
+    gap: 8,
   },
-  getStartedText: {
+  nextText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+  nextArrow: {
+    transform: [{ rotate: '180deg' }],
   },
 });
