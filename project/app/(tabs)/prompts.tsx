@@ -49,8 +49,8 @@ export default function PromptsScreen() {
       id: 'emotional-support',
       label: 'Emotional Support',
       emoji: '😊',
-      color: '#8B5CF6',
-      backgroundColor: '#F3E8FF',
+      color: '#000000',
+      backgroundColor: '#D6C7ED',
     },
     {
       id: 'milestones',
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
   },
   aiCard: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#A3C4F3',
     borderRadius: 16,
     marginHorizontal: 24,
     padding: 20,
@@ -379,26 +379,25 @@ const styles = StyleSheet.create({
   },
   aiCardTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1E40AF',
+    color: '#2F3A56',
     marginBottom: 4,
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Inter-Regular',
   },
   aiCardDescription: {
     fontSize: 14,
-    color: '#3B82F6',
+    color: '#2F3A56',
     lineHeight: 20,
-    fontFamily: 'Poppins-Regular',
+    fontFamily: 'Inter-Regular',
   },
   generateButton: {
-    backgroundColor: '#3B4F75',
+    backgroundColor: '#2F3A56',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    shadowColor: '#3B4F75',
+    shadowColor: '#2F3A56',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -410,8 +409,7 @@ const styles = StyleSheet.create({
   generateButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Inter-Regular',
   },
   categoriesScrollView: {
     paddingLeft: 24,
@@ -428,16 +426,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   categoryEmoji: {
     fontSize: 18,
@@ -446,8 +434,8 @@ const styles = StyleSheet.create({
   categoryButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
-    fontFamily: 'Poppins-SemiBold',
+    color: '#000000',
+    fontFamily: 'Inter-SemiBold',
   },
   promptsList: {
     paddingHorizontal: 24,
@@ -478,11 +466,10 @@ const styles = StyleSheet.create({
   promptCardText: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '500',
     color: '#1F2937',
     lineHeight: 24,
     marginRight: 12,
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'Inter-Regular',
   },
   promptCardTags: {
     flexDirection: 'row',
@@ -491,16 +478,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tag: {
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#D6C7ED',
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 10,
   },
   tagText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#8B5CF6',
-    fontFamily: 'Poppins-Medium',
+    color: '#000000',
+    fontFamily: 'Inter-Regular',
   },
   promptCardActions: {
     flexDirection: 'row',
@@ -508,7 +494,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   usePromptButton: {
-    backgroundColor: '#3B4F75',
+    backgroundColor: '#2F3A56',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -527,8 +513,7 @@ const styles = StyleSheet.create({
   usePromptButtonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Inter-Regular',
   },
   editPromptButton: {
     width: 48,
