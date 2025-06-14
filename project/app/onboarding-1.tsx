@@ -57,8 +57,8 @@ export default function OnboardingOneScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      <Animated.View 
+
+      <Animated.View
         style={[
           styles.content,
           {
@@ -69,16 +69,16 @@ export default function OnboardingOneScreen() {
       >
         {/* Header with Back and Skip buttons */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={handleBack}
             activeOpacity={0.7}
           >
             <ArrowLeft size={20} color="#64748B" strokeWidth={2} />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.skipButton}
             onPress={handleSkip}
             activeOpacity={0.7}
@@ -90,7 +90,7 @@ export default function OnboardingOneScreen() {
         {/* Main Content */}
         <View style={styles.mainContent}>
           {/* Illustration Container */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.illustrationContainer,
               {
@@ -100,63 +100,69 @@ export default function OnboardingOneScreen() {
           >
             <View style={styles.imageWrapper}>
               <Image
-                source={{ uri: 'https://images.pexels.com/photos/3865556/pexels-photo-3865556.jpeg' }}
-                style={styles.illustrationImage}
-                resizeMode="cover"
+                source={require('../assets/images/crown.png')}
+                style={styles.phoneScreen}
+                resizeMode="contain"
               />
-              
+
               {/* Floating elements overlay */}
               <View style={styles.floatingOverlay}>
-                <Animated.View 
+                <Animated.View
                   style={[
-                    styles.floatingElement, 
+                    styles.floatingElement,
                     styles.element1,
                     {
                       opacity: fadeAnim,
                       transform: [
                         { scale: scaleAnim },
-                        { translateY: slideAnim.interpolate({
-                          inputRange: [0, 50],
-                          outputRange: [0, 10],
-                        })}
+                        {
+                          translateY: slideAnim.interpolate({
+                            inputRange: [0, 50],
+                            outputRange: [0, 10],
+                          })
+                        }
                       ]
                     }
                   ]}
                 >
                   <Text style={styles.floatingEmoji}>🌱</Text>
                 </Animated.View>
-                
-                <Animated.View 
+
+                <Animated.View
                   style={[
-                    styles.floatingElement, 
+                    styles.floatingElement,
                     styles.element2,
                     {
                       opacity: fadeAnim,
                       transform: [
                         { scale: scaleAnim },
-                        { translateY: slideAnim.interpolate({
-                          inputRange: [0, 50],
-                          outputRange: [0, -5],
-                        })}
+                        {
+                          translateY: slideAnim.interpolate({
+                            inputRange: [0, 50],
+                            outputRange: [0, -5],
+                          })
+                        }
                       ]
                     }
                   ]}
                 >
                   <Text style={styles.floatingEmoji}>💝</Text>
                 </Animated.View>
-                
-                <Animated.View 
+
+                <Animated.View
                   style={[
-                    styles.floatingElement, 
+                    styles.floatingElement,
                     styles.element3,
                     {
                       opacity: fadeAnim,
                       transform: [
                         { scale: scaleAnim },
-                        { translateY: slideAnim.interpolate({
-                          inputRange: [0, 50],
-                          outputRange: [0, 8],
-                        })}
+                        {
+                          translateY: slideAnim.interpolate({
+                            inputRange: [0, 50],
+                            outputRange: [0, 8],
+                          })
+                        }
                       ]
                     }
                   ]}
@@ -190,9 +196,9 @@ export default function OnboardingOneScreen() {
           activeOpacity={0.9}
         >
           <Text style={styles.nextText}>Next</Text>
-          <ArrowLeft 
-            size={20} 
-            color="#ffffff" 
+          <ArrowLeft
+            size={20}
+            color="#ffffff"
             strokeWidth={2}
             style={styles.nextArrow}
           />
@@ -252,17 +258,6 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     flex: 1,
-    borderRadius: 24,
-    overflow: 'hidden',
-    elevation: 12,
-    shadowColor: '#F59E0B',
-    shadowOffset: {
-      width: 0,
-      height: 12,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    position: 'relative',
   },
   illustrationImage: {
     width: '100%',
@@ -370,5 +365,15 @@ const styles = StyleSheet.create({
   },
   nextArrow: {
     transform: [{ rotate: '180deg' }],
+  },
+    phoneScreen: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 12,
+    alignSelf: 'center',
+
+    marginTop: 30,
+    marginLeft: 20
   },
 });

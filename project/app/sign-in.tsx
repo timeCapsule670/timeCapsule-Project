@@ -7,24 +7,22 @@ import {
     StyleSheet,
     SafeAreaView,
     StatusBar,
-    Alert,
     Image,
 } from 'react-native';
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff } from 'lucide-react-native';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 export default function SignInScreen() {
     const router = useRouter();
-     const [formData, setFormData] = useState({
-            fullName: '',
-            email: '',
-            password: '',
-        });
-        const [errors, setErrors] = useState({
-            fullName: '',
-            email: '',
-            password: '',
-        });
+    const [formData, setFormData] = useState({
+        email: '',
+        password: '',
+    });
+    const [errors, setErrors] = useState({
+        email: '',
+        password: '',
+        general: '',
+    });
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -35,9 +33,9 @@ export default function SignInScreen() {
 
     const validateForm = () => {
         const newErrors = {
-            fullName: '',
             email: '',
             password: '',
+            general: '',
         };
 
         if (!formData.email.trim()) {
@@ -59,9 +57,9 @@ export default function SignInScreen() {
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
 
-        // Clear error when user starts typing
-        if (errors[field as keyof typeof errors]) {
-            setErrors(prev => ({ ...prev, [field]: '' }));
+        // Clear errors when user starts typing
+        if (errors[field as keyof typeof errors] || errors.general) {
+            setErrors(prev => ({ ...prev, [field]: '', general: '' }));
         }
     };
 
@@ -73,14 +71,89 @@ export default function SignInScreen() {
         setIsLoading(true);
 
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // For demo purposes, we'll simulate a successful login with mock data
+            // In a real app, you would make an actual API call here
+            const mockResponse = {
+                ok: true,
+                json: async () => ({
+                    success: true,
+                    user: {
+                        id: '1',
+                        email: formData.email,
+                        first_name: 'Jamie', // This would come from your backend
+                        last_name: 'Smith',
+                    },
+                    token: 'mock-jwt-token'
+                })
+            };
 
-            // Navigate to main app or show success
-            Alert.alert('Success', 'Signed in successfully!');
-            router.push('/');
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            if (!mockResponse.ok) {
+                setErrors(prev => ({
+                    ...prev,
+                    general: 'Invalid email or password. Please try again.',
+                }));
+                return;
+            }
+
+            const responseData = await mockResponse.json();
+
+            if (responseData.success && responseData.user) {
+                // Extract the user's first name from the response
+                const firstName = responseData.user.first_name || 'there';
+
+                // Navigate to home tab with the user's name as a parameter
+                router.push({
+                    pathname: '/(tabs)',
+                    params: { firstName }
+                });
+            } else {
+                setErrors(prev => ({
+                    ...prev,
+                    general: 'Login failed. Please try again.',
+                }));
+            }
+
+            /* 
+            // Real API call would look like this:
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/login`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: formData.email,
+                password: formData.password,
+              }),
+            });
+      
+            if (!response.ok) {
+              const errorData = await response.json();
+              setErrors(prev => ({
+                ...prev,
+                general: errorData.message || 'Invalid email or password. Please try again.',
+              }));
+              return;
+            }
+      
+            const responseData = await response.json();
+            
+            if (responseData.success && responseData.user) {
+              const firstName = responseData.user.first_name || 'there';
+              router.push({
+                pathname: '/(tabs)',
+                params: { firstName }
+              });
+            }
+            */
+
         } catch (error) {
-            Alert.alert('Error', 'Failed to sign in. Please try again.');
+            setErrors(prev => ({
+                ...prev,
+                general: 'Network error. Please check your connection and try again.',
+            }));
         } finally {
             setIsLoading(false);
         }
@@ -91,7 +164,8 @@ export default function SignInScreen() {
     };
 
     const handleForgotPassword = () => {
-        Alert.alert('Forgot Password', 'Password reset functionality coming soon!');
+        // TODO: Implement forgot password functionality
+        console.log('Forgot password pressed');
     };
 
     return (
@@ -111,40 +185,26 @@ export default function SignInScreen() {
                 </View>
 
                 {/* Logo Section */}
-                <View style={styles.headerContent}>
-                    <View style={styles.logoSection}>
-                        <View style={styles.logoContainer}>
-                            <Image
-                                source={require('../assets/images/time-capsule.png')}
-                                style={styles.logoImage}
-                                resizeMode="contain"
-                            />
-                        </View>
-
-                        <Text style={styles.tagline}>Messages that grow with your child</Text>
+                <View style={styles.logoSection}>
+                    <View style={styles.logoContainer}>
+                        <Image
+                            source={require('../assets/images/time-capsule.png')}
+                            style={styles.logoImage}
+                            resizeMode="contain"
+                        />
                     </View>
+
+                    <Text style={styles.tagline}>Messages that grow with your child</Text>
                 </View>
 
                 {/* Form Section */}
                 <View style={styles.formSection}>
-                    {/* Email Input */}
-                     <View style={styles.inputContainer}>
-                        <View style={[styles.inputWrapper, errors.fullName ? styles.inputError : null]}>
-                            <User size={20} color="#64748B" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.textInput}
-                                placeholder="Full Name"
-                                placeholderTextColor="#94A3B8"
-                                value={formData.fullName}
-                                onChangeText={(value) => handleInputChange('fullName', value)}
-                                autoCapitalize="words"
-                                autoCorrect={false}
-                            />
+                    {/* General Error Message */}
+                    {errors.general ? (
+                        <View style={styles.generalErrorContainer}>
+                            <Text style={styles.generalErrorText}>{errors.general}</Text>
                         </View>
-                        {errors.fullName ? (
-                            <Text style={styles.errorText}>{errors.fullName}</Text>
-                        ) : null}
-                    </View>
+                    ) : null}
 
                     {/* Email Input */}
                     <View style={styles.inputContainer}>
@@ -228,6 +288,13 @@ export default function SignInScreen() {
                         <Text style={styles.linkText}>Privacy Policy</Text>
                     </Text>
 
+                    <View style={styles.signUpContainer}>
+                        <Text style={styles.signUpText}>Don't have an account? </Text>
+                        <TouchableOpacity onPress={() => router.push('/create-account')}>
+                            <Text style={styles.signUpLink}>Sign Up</Text>
+                        </TouchableOpacity>
+                    </View>
+
                     <Text style={styles.versionText}>Version 1.0.0</Text>
                 </View>
             </View>
@@ -244,12 +311,9 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 24,
     },
-    headerContent: {
-        flex: 1,
-    },
-     header: {
-        paddingTop: 50,
-        paddingBottom: 40,
+    header: {
+        paddingTop: 20,
+        paddingBottom: 20,
         flexDirection: 'row',
         alignItems: 'center',
     },
@@ -273,23 +337,14 @@ const styles = StyleSheet.create({
     },
     logoSection: {
         alignItems: 'center',
-        paddingBottom: 160,
-        flex: 1,
-        justifyContent: 'center',
+        paddingTop: 40,
+        paddingBottom: 60,
     },
-   logoContainer: {
+    logoContainer: {
         marginBottom: 10,
         alignItems: 'center',
         justifyContent: 'center',
         paddingTop: -5
-    },
-    tagline: {
-        fontSize: 15,
-        color: '#64748B',
-        textAlign: 'center',
-        lineHeight: 30,
-        paddingHorizontal: 10,
-        marginBottom: -30
     },
     logoImage: {
         width: 300,
@@ -301,13 +356,38 @@ const styles = StyleSheet.create({
         color: '#334155',
         marginBottom: 8,
         letterSpacing: -0.5,
+        fontFamily: 'Poppins-Bold',
+    },
+    tagline: {
+        fontSize: 16,
+        color: '#64748B',
+        textAlign: 'center',
+        lineHeight: 24,
+        paddingHorizontal: 20,
+        fontFamily: 'Poppins-Regular',
     },
     formSection: {
         flex: 1,
-        marginBottom: 300,
+        paddingTop: 20,
+    },
+    generalErrorContainer: {
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        marginBottom: 24,
+    },
+    generalErrorText: {
+        fontSize: 14,
+        color: '#DC2626',
+        textAlign: 'center',
+        fontWeight: '500',
+        fontFamily: 'Poppins-Medium',
     },
     inputContainer: {
-        marginBottom: 20,
+        marginBottom: 24,
     },
     inputWrapper: {
         flexDirection: 'row',
@@ -332,6 +412,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#334155',
         paddingVertical: 16,
+        fontFamily: 'Poppins-Regular',
     },
     eyeButton: {
         padding: 8,
@@ -343,6 +424,7 @@ const styles = StyleSheet.create({
         marginTop: 8,
         marginLeft: 4,
         fontWeight: '500',
+        fontFamily: 'Poppins-Medium',
     },
     forgotPasswordContainer: {
         alignItems: 'flex-end',
@@ -352,6 +434,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#334155',
         fontWeight: '600',
+        fontFamily: 'Poppins-SemiBold',
     },
     signInButton: {
         backgroundColor: '#334155',
@@ -377,6 +460,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         letterSpacing: 0.5,
+        fontFamily: 'Poppins-SemiBold',
     },
     footer: {
         paddingBottom: 32,
@@ -389,10 +473,12 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 18,
         paddingHorizontal: 16,
+        fontFamily: 'Poppins-Regular',
     },
     linkText: {
         color: '#334155',
         fontWeight: '600',
+        fontFamily: 'Poppins-SemiBold',
     },
     signUpContainer: {
         flexDirection: 'row',
@@ -401,15 +487,18 @@ const styles = StyleSheet.create({
     signUpText: {
         fontSize: 14,
         color: '#64748B',
+        fontFamily: 'Poppins-Regular',
     },
     signUpLink: {
         fontSize: 14,
         color: '#334155',
         fontWeight: '600',
+        fontFamily: 'Poppins-SemiBold',
     },
     versionText: {
         fontSize: 12,
         color: '#94A3B8',
         fontWeight: '500',
+        fontFamily: 'Poppins-Medium',
     },
 });

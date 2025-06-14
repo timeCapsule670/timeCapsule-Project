@@ -8,7 +8,8 @@ import {
     SafeAreaView,
     StatusBar,
     Alert,
-    Image
+    Image,
+    ToastAndroid
 } from 'react-native';
 import { ArrowLeft, User, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -83,13 +84,41 @@ export default function CreateAccountScreen() {
         setIsLoading(true);
 
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: formData.fullName,
+                    email: formData.email,
+                    password: formData.password
+                }),
+            });
 
-            // Navigate to onboarding screen instead of home
-             router.push('/onboarding-1');
-        } catch (error) {
-            Alert.alert('Error', 'Failed to create account. Please try again.');
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to create account');
+            }
+
+            ToastAndroid.showWithGravity(
+                'Account created successfully!',
+                ToastAndroid.LONG,
+                ToastAndroid.BOTTOM
+            );
+
+
+            setTimeout(() => {
+                router.push('/onboarding-1');
+            }, 1500);
+
+        } catch (error: any) {
+            ToastAndroid.showWithGravity(
+                error.message || 'Failed to create account. Please try again.',
+                ToastAndroid.LONG,
+                ToastAndroid.BOTTOM
+            );
         } finally {
             setIsLoading(false);
         }

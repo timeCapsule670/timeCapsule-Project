@@ -16,13 +16,14 @@ import {
 import { Bell, CreditCard as Edit3, Lightbulb, Chrome as Home, Play, Check, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
+import { Poppins_600SemiBold, Poppins_800ExtraBold } from '@expo-google-fonts/poppins';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showMessageTypeModal, setShowMessageTypeModal] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<string | null>(null);
-  
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -88,13 +89,13 @@ export default function WelcomeScreen() {
 
       const { status } = await Notifications.requestPermissionsAsync();
       setNotificationPermission(status);
-      
+
       if (status === 'granted') {
         Alert.alert('Success!', 'Notification reminders have been enabled. You\'ll receive gentle reminders to create and send messages.');
       } else {
         Alert.alert('Permissions Needed', 'To receive reminders, please enable notifications in your device settings.');
       }
-      
+
       setShowNotificationModal(false);
     } catch (error) {
       Alert.alert('Error', 'Failed to setup notifications. Please try again.');
@@ -145,8 +146,8 @@ export default function WelcomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      <Animated.View 
+
+      <Animated.View
         style={[
           styles.content,
           {
@@ -155,13 +156,13 @@ export default function WelcomeScreen() {
           }
         ]}
       >
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
           {/* Header with Family Icon */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.header,
               {
@@ -176,7 +177,7 @@ export default function WelcomeScreen() {
                 resizeMode="contain"
               />
             </View>
-            
+
             <Text style={styles.welcomeText}>Welcome To</Text>
             <Text style={styles.appName}>TimeCapsule</Text>
           </Animated.View>
@@ -189,7 +190,7 @@ export default function WelcomeScreen() {
           {/* Ready to Go Section */}
           <View style={styles.readySection}>
             <Text style={styles.readyTitle}>Here's what's ready to go:</Text>
-            
+
             <View style={styles.checklist}>
               <ChecklistItem text="Parent account created" delay={0} />
               <ChecklistItem text="Invites sent successfully" delay={200} />
@@ -207,7 +208,11 @@ export default function WelcomeScreen() {
               onPress={handleSetupNotifications}
               activeOpacity={0.8}
             >
-              <Bell size={24} color="#F59E0B" strokeWidth={2} />
+              <Image
+                source={require('../assets/images/twemoji_bell.png')}
+                style={styles.notificationLogo}
+                resizeMode="contain"
+              />
               <Text style={styles.notificationButtonText}>Set Up Notification Reminders</Text>
             </TouchableOpacity>
 
@@ -216,7 +221,10 @@ export default function WelcomeScreen() {
               onPress={handleCreateFirstMessage}
               activeOpacity={0.8}
             >
-              <Edit3 size={24} color="#ffffff" strokeWidth={2} />
+              <Image
+                source={require('../assets/images/emojione_pencil.png')}
+                style={styles.notificationLogo}
+                resizeMode='contain' />
               <Text style={styles.messageButtonText}>Create Your First Message</Text>
             </TouchableOpacity>
 
@@ -225,7 +233,10 @@ export default function WelcomeScreen() {
               onPress={handleExplorePrompts}
               activeOpacity={0.8}
             >
-              <Lightbulb size={24} color="#ffffff" strokeWidth={2} />
+              <Image
+                source={require('../assets/images/fxemoji_lightbulb.png')}
+                style={styles.notificationLogo}
+                resizeMode='contain' />
               <Text style={styles.promptsButtonText}>Explore Message Prompts</Text>
             </TouchableOpacity>
           </View>
@@ -234,28 +245,16 @@ export default function WelcomeScreen() {
           <Text style={styles.footerNote}>
             You can change or update any settings later in the menu.
           </Text>
-        </ScrollView>
 
-        {/* Bottom Actions */}
-        <View style={styles.bottomActions}>
+          {/* Home Button - Now inside ScrollView */}
           <TouchableOpacity
             style={styles.homeButton}
             onPress={handleGoHome}
             activeOpacity={0.9}
           >
-            <Home size={20} color="#ffffff" strokeWidth={2} />
             <Text style={styles.homeButtonText}>Home</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.tourButton}
-            onPress={handleTakeTour}
-            activeOpacity={0.8}
-          >
-            <Play size={16} color="#6B7280" strokeWidth={2} />
-            <Text style={styles.tourButtonText}>Take a Tour</Text>
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
       </Animated.View>
 
       {/* Notification Permission Modal */}
@@ -276,11 +275,11 @@ export default function WelcomeScreen() {
                 <X size={24} color="#6B7280" strokeWidth={2} />
               </TouchableOpacity>
             </View>
-            
+
             <Text style={styles.modalDescription}>
               Get gentle reminders to create and send meaningful messages to your child. You can customize these reminders anytime.
             </Text>
-            
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancelButton}
@@ -288,7 +287,7 @@ export default function WelcomeScreen() {
               >
                 <Text style={styles.modalCancelText}>Maybe Later</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={styles.modalConfirmButton}
                 onPress={requestNotificationPermission}
@@ -318,11 +317,11 @@ export default function WelcomeScreen() {
                 <X size={24} color="#6B7280" strokeWidth={2} />
               </TouchableOpacity>
             </View>
-            
+
             <Text style={styles.modalDescription}>
               What type of message would you like to create?
             </Text>
-            
+
             <View style={styles.messageTypeOptions}>
               <TouchableOpacity
                 style={styles.messageTypeButton}
@@ -331,7 +330,7 @@ export default function WelcomeScreen() {
                 <Text style={styles.messageTypeEmoji}>🎥</Text>
                 <Text style={styles.messageTypeText}>Video Message</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={styles.messageTypeButton}
                 onPress={() => handleMessageTypeSelection('audio')}
@@ -339,7 +338,7 @@ export default function WelcomeScreen() {
                 <Text style={styles.messageTypeEmoji}>🎙️</Text>
                 <Text style={styles.messageTypeText}>Audio Message</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={styles.messageTypeButton}
                 onPress={() => handleMessageTypeSelection('text')}
@@ -369,7 +368,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 40, // Increased padding at bottom to accommodate home button
   },
   header: {
     alignItems: 'center',
@@ -378,43 +377,38 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 120,
     height: 120,
-    borderRadius: 60,
-    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
-    shadowColor: '#3B4F75',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 3,
-    borderColor: '#EEF2FF',
+    marginBottom: 5,
   },
   familyIcon: {
     width: 80,
     height: 80,
   },
+  notificationLogo: {
+    width: 25,
+    height: 30,
+  },
   welcomeText: {
     fontSize: 18,
     color: '#6B7280',
-    marginBottom: 4,
+    marginBottom: 2,
+    fontFamily: 'Poppins-Medium',
   },
   appName: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
     color: '#1F2937',
+    marginBottom: 10,
     letterSpacing: -0.5,
   },
   description: {
-    fontSize: 16,
+    fontSize: 12,
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 40,
+    fontFamily: 'Poppins-Regular',
+    marginBottom: 30,
     paddingHorizontal: 8,
   },
   readySection: {
@@ -430,7 +424,9 @@ const styles = StyleSheet.create({
   checklist: {
     gap: 16,
     backgroundColor: '#F5F5F5',
-    padding: 15
+    padding: 15,
+    borderRadius: 10,
+    paddingVertical: 30
   },
   checklistItem: {
     flexDirection: 'row',
@@ -456,6 +452,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
     textAlign: 'center',
+    fontFamily: 'Poppins-Regular',
     marginBottom: 32,
   },
   actionButtons: {
@@ -479,32 +476,34 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   notificationButton: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#E8E8E8',
     borderWidth: 2,
-    borderColor: '#F59E0B',
+    borderColor: '#E8E8E8',
   },
   notificationButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#92400E',
+    fontSize: 13,
+    color: '#000000',
+    fontFamily: 'Poppins-Regular'
   },
   messageButton: {
-    backgroundColor: '#8B5CF6',
-    shadowColor: '#8B5CF6',
+    backgroundColor: '#9DAACA',
+    shadowColor: '#9DAACA',
   },
   messageButtonText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#000000',
+    fontFamily: 'Poppins-Regular'
   },
   promptsButton: {
-    backgroundColor: '#EC4899',
-    shadowColor: '#EC4899',
+    backgroundColor: '#D6C7ED',
+    shadowColor: '#D6C7ED',
   },
   promptsButtonText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#0000000',
+    fontFamily: 'Poppins-Regular'
   },
   footerNote: {
     fontSize: 14,
@@ -512,14 +511,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 16,
-  },
-  bottomActions: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-    gap: 16,
+    marginBottom: 24, // Added margin to separate from home button
   },
   homeButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#FCB32B',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 32,
@@ -527,31 +522,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#F59E0B',
+    shadowColor: '#FCB32B',
     shadowOffset: {
       width: 0,
       height: 8,
     },
     shadowOpacity: 0.25,
     shadowRadius: 16,
-    elevation: 8,
+    marginTop: 16, // Added margin to separate from other content
   },
   homeButtonText: {
-    color: '#ffffff',
+    color: '#000000',
     fontSize: 18,
     fontWeight: '600',
-  },
-  tourButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 8,
-  },
-  tourButtonText: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,

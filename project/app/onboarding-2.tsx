@@ -57,8 +57,8 @@ export default function OnboardingTwoScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      <Animated.View 
+
+      <Animated.View
         style={[
           styles.content,
           {
@@ -69,16 +69,16 @@ export default function OnboardingTwoScreen() {
       >
         {/* Header with Back and Skip buttons */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={handleBack}
             activeOpacity={0.7}
           >
             <ArrowLeft size={20} color="#64748B" strokeWidth={2} />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.skipButton}
             onPress={handleSkip}
             activeOpacity={0.7}
@@ -90,7 +90,7 @@ export default function OnboardingTwoScreen() {
         {/* Main Content */}
         <View style={styles.mainContent}>
           {/* Illustration Container */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.illustrationContainer,
               {
@@ -99,44 +99,15 @@ export default function OnboardingTwoScreen() {
             ]}
           >
             <View style={styles.imageWrapper}>
-              <Image
-                source={{ uri: 'https://images.pexels.com/photos/4145353/pexels-photo-4145353.jpeg' }}
-                style={styles.illustrationImage}
-                resizeMode="cover"
-              />
-              
+
+
               {/* Phone mockup overlay */}
               <View style={styles.phoneOverlay}>
-                <Animated.View 
-                  style={[
-                    styles.phoneContainer,
-                    {
-                      opacity: fadeAnim,
-                      transform: [
-                        { scale: scaleAnim },
-                        { translateY: slideAnim.interpolate({
-                          inputRange: [0, 50],
-                          outputRange: [0, 10],
-                        })}
-                      ]
-                    }
-                  ]}
-                >
-                  <View style={styles.phoneScreen}>
-                    <View style={styles.messageContainer}>
-                      <View style={styles.messageHeader}>
-                        <Text style={styles.messageTitle}>I'm proud of you! 👏</Text>
-                      </View>
-                      <View style={styles.messageBody}>
-                        <Text style={styles.messageText}>🎉 Happy 16th Birthday! 🎉</Text>
-                        <Text style={styles.messageText}>I love you more than words can say.</Text>
-                        <Text style={styles.messageText}>From the moment you were born, I knew you were something truly special.</Text>
-                        <Text style={styles.messageText}>Watching you grow into the incredible person you are today has been the greatest gift of my life.</Text>
-                        <Text style={styles.messageText}>No matter how old you get, you'll always be my heart.</Text>
-                      </View>
-                    </View>
-                  </View>
-                </Animated.View>
+                <Image
+                  source={require('../assets/images/Frame 20.png')}
+                  style={styles.phoneScreen}
+                  resizeMode="contain"
+                />
               </View>
             </View>
           </Animated.View>
@@ -164,9 +135,9 @@ export default function OnboardingTwoScreen() {
           activeOpacity={0.9}
         >
           <Text style={styles.nextText}>Next</Text>
-          <ArrowLeft 
-            size={20} 
-            color="#ffffff" 
+          <ArrowLeft
+            size={20}
+            color="#ffffff"
             strokeWidth={2}
             style={styles.nextArrow}
           />
@@ -228,15 +199,6 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 24,
     overflow: 'hidden',
-    elevation: 12,
-    shadowColor: '#8B5CF6',
-    shadowOffset: {
-      width: 0,
-      height: 12,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    position: 'relative',
   },
   illustrationImage: {
     width: '100%',
@@ -270,6 +232,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderRadius: 16,
     padding: 12,
+    alignSelf: 'center',
+
+    marginTop: 30,
+    marginLeft: 45
   },
   messageContainer: {
     backgroundColor: '#E0E7FF',
@@ -296,16 +262,17 @@ const styles = StyleSheet.create({
   textContent: {
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 40,
+    marginBottom: 4,
+    marginTop: -75
   },
   title: {
     fontSize: 32,
-    fontWeight: '700',
     color: '#1F2937',
     textAlign: 'center',
     lineHeight: 40,
     marginBottom: 16,
     letterSpacing: -0.5,
+    fontFamily: 'Poppins-Bold'
   },
   description: {
     fontSize: 16,
@@ -317,8 +284,9 @@ const styles = StyleSheet.create({
   pagination: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     marginBottom: 40,
+    marginTop: 190
   },
   dot: {
     width: 8,
