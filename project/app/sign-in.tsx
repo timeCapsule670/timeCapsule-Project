@@ -11,157 +11,129 @@ import {
 } from 'react-native';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/libs/superbase';
 
 export default function SignInScreen() {
-    const router = useRouter();
-    const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-    });
-    const [errors, setErrors] = useState({
-        email: '',
-        password: '',
-        general: '',
-    });
-    const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [errors, setErrors] = useState({
+    email: '',
+    password: '',
+    general: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const validateEmail = (email: string) => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      email: '',
+      password: '',
+      general: '',
     };
 
-    const validateForm = () => {
-        const newErrors = {
-            email: '',
-            password: '',
-            general: '',
-        };
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
 
-        if (!formData.email.trim()) {
-            newErrors.email = 'Email is required';
-        } else if (!validateEmail(formData.email)) {
-            newErrors.email = 'Please enter a valid email address';
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    setErrors(newErrors);
+    return !Object.values(newErrors).some(error => error !== '');
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear errors when user starts typing
+    if (errors[field as keyof typeof errors] || errors.general) {
+      setErrors(prev => ({ ...prev, [field]: '', general: '' }));
+    }
+  };
+
+  const handleSignIn = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) {
+        console.error('Supabase sign-in error:', error);
+        setErrors(prev => ({
+          ...prev,
+          general: error.message || 'Invalid email or password. Please try again.',
+        }));
+        return;
+      }
+
+      if (data.user) {
+        // Get the director profile for this user
+        const { data: directorData, error: directorError } = await supabase
+          .from('directors')
+          .select('first_name')
+          .eq('auth_user_id', data.user.id)
+          .single();
+
+        if (directorError) {
+          console.error('Error fetching director profile:', directorError);
+          // Still proceed to home, but without the first name
+          router.push({
+            pathname: '/(tabs)',
+            params: { firstName: 'there' }
+          });
+          return;
         }
 
-        if (!formData.password) {
-            newErrors.password = 'Password is required';
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'Password must be at least 6 characters';
-        }
+        // Extract the user's first name from the director profile
+        const firstName = directorData?.first_name || 'there';
+        
+        // Navigate to home tab with the user's name as a parameter
+        router.push({
+          pathname: '/(tabs)',
+          params: { firstName }
+        });
+      } else {
+        setErrors(prev => ({
+          ...prev,
+          general: 'Login failed. Please try again.',
+        }));
+      }
 
-        setErrors(newErrors);
-        return !Object.values(newErrors).some(error => error !== '');
-    };
+    } catch (error) {
+      console.error('Unexpected error during sign-in:', error);
+      setErrors(prev => ({
+        ...prev,
+        general: 'Network error. Please check your connection and try again.',
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const handleInputChange = (field: string, value: string) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
-
-        // Clear errors when user starts typing
-        if (errors[field as keyof typeof errors] || errors.general) {
-            setErrors(prev => ({ ...prev, [field]: '', general: '' }));
-        }
-    };
-
-    const handleSignIn = async () => {
-        if (!validateForm()) {
-            return;
-        }
-
-        setIsLoading(true);
-
-        try {
-            // For demo purposes, we'll simulate a successful login with mock data
-            // In a real app, you would make an actual API call here
-            const mockResponse = {
-                ok: true,
-                json: async () => ({
-                    success: true,
-                    user: {
-                        id: '1',
-                        email: formData.email,
-                        first_name: 'Jamie', // This would come from your backend
-                        last_name: 'Smith',
-                    },
-                    token: 'mock-jwt-token'
-                })
-            };
-
-            // Simulate network delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            if (!mockResponse.ok) {
-                setErrors(prev => ({
-                    ...prev,
-                    general: 'Invalid email or password. Please try again.',
-                }));
-                return;
-            }
-
-            const responseData = await mockResponse.json();
-
-            if (responseData.success && responseData.user) {
-                // Extract the user's first name from the response
-                const firstName = responseData.user.first_name || 'there';
-
-                // Navigate to home tab with the user's name as a parameter
-                router.push({
-                    pathname: '/(tabs)',
-                    params: { firstName }
-                });
-            } else {
-                setErrors(prev => ({
-                    ...prev,
-                    general: 'Login failed. Please try again.',
-                }));
-            }
-
-            /* 
-            // Real API call would look like this:
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/login`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: formData.email,
-                password: formData.password,
-              }),
-            });
-      
-            if (!response.ok) {
-              const errorData = await response.json();
-              setErrors(prev => ({
-                ...prev,
-                general: errorData.message || 'Invalid email or password. Please try again.',
-              }));
-              return;
-            }
-      
-            const responseData = await response.json();
-            
-            if (responseData.success && responseData.user) {
-              const firstName = responseData.user.first_name || 'there';
-              router.push({
-                pathname: '/(tabs)',
-                params: { firstName }
-              });
-            }
-            */
-
-        } catch (error) {
-            setErrors(prev => ({
-                ...prev,
-                general: 'Network error. Please check your connection and try again.',
-            }));
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleGoBack = () => {
-        router.back();
-    };
+  const handleGoBack = () => {
+    router.back();
+  };
 
     const handleForgotPassword = () => {
         // TODO: Implement forgot password functionality

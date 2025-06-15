@@ -51,7 +51,7 @@ export default function OnboardingScreen() {
   };
 
   const handleGetStarted = () => {
-    router.push('/family-setup');
+    router.push('/child-profile-setup');
   };
 
   return (

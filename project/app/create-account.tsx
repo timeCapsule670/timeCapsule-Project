@@ -13,120 +13,144 @@ import {
 } from 'react-native';
 import { ArrowLeft, User, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from "@/libs/superbase"
 
 export default function CreateAccountScreen() {
     const router = useRouter();
-    const [formData, setFormData] = useState({
-        fullName: '',
-        email: '',
-        password: '',
-    });
-    const [errors, setErrors] = useState({
-        fullName: '',
-        email: '',
-        password: '',
-    });
-    const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+  });
+  const [errors, setErrors] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    general: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const validateEmail = (email: string) => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    return password.length >= 8;
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      fullName: '',
+      email: '',
+      password: '',
+      general: '',
     };
 
-    const validatePassword = (password: string) => {
-        return password.length >= 8;
-    };
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Full name is required';
+    } else if (formData.fullName.trim().length < 2) {
+      newErrors.fullName = 'Full name must be at least 2 characters';
+    }
 
-    const validateForm = () => {
-        const newErrors = {
-            fullName: '',
-            email: '',
-            password: '',
-        };
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
 
-        if (!formData.fullName.trim()) {
-            newErrors.fullName = 'Full name is required';
-        } else if (formData.fullName.trim().length < 2) {
-            newErrors.fullName = 'Full name must be at least 2 characters';
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (!validatePassword(formData.password)) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+
+    setErrors(newErrors);
+    return !Object.values(newErrors).some(error => error !== '');
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear errors when user starts typing
+    if (errors[field as keyof typeof errors] || errors.general) {
+      setErrors(prev => ({ ...prev, [field]: '', general: '' }));
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Parse the full name into first and last name
+      const nameParts = formData.fullName.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Generate a username from the first name
+      const generateUsername = (name: string): string => {
+        const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const timestamp = Date.now().toString().slice(-6);
+        return `${cleanName}${timestamp}`;
+      };
+
+      const username = generateUsername(firstName);
+
+      // Sign up with Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            username: username,
+            email: formData.email,
+          }
         }
+      });
 
-        if (!formData.email.trim()) {
-            newErrors.email = 'Email is required';
-        } else if (!validateEmail(formData.email)) {
-            newErrors.email = 'Please enter a valid email address';
-        }
+      if (error) {
+        console.error('Supabase sign-up error:', error);
+        setErrors(prev => ({
+          ...prev,
+          general: error.message || 'Failed to create account. Please try again.',
+        }));
+        return;
+      }
 
-        if (!formData.password) {
-            newErrors.password = 'Password is required';
-        } else if (!validatePassword(formData.password)) {
-            newErrors.password = 'Password must be at least 8 characters';
-        }
+      if (data.user) {
+        // Account created successfully
+        console.log('Account created successfully:', data.user);
+        
+        // Navigate to onboarding
+        router.push('/onboarding');
+      } else {
+        setErrors(prev => ({
+          ...prev,
+          general: 'Account creation failed. Please try again.',
+        }));
+      }
 
-        setErrors(newErrors);
-        return !Object.values(newErrors).some(error => error !== '');
-    };
+    } catch (error) {
+      console.error('Unexpected error during account creation:', error);
+      setErrors(prev => ({
+        ...prev,
+        general: 'Network error. Please check your connection and try again.',
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const handleInputChange = (field: string, value: string) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
-
-        // Clear error when user starts typing
-        if (errors[field as keyof typeof errors]) {
-            setErrors(prev => ({ ...prev, [field]: '' }));
-        }
-    };
-
-    const handleCreateAccount = async () => {
-        if (!validateForm()) {
-            return;
-        }
-
-        setIsLoading(true);
-
-        try {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/auth/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: formData.fullName,
-                    email: formData.email,
-                    password: formData.password
-                }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to create account');
-            }
-
-            ToastAndroid.showWithGravity(
-                'Account created successfully!',
-                ToastAndroid.LONG,
-                ToastAndroid.BOTTOM
-            );
-
-
-            setTimeout(() => {
-                router.push('/onboarding-1');
-            }, 1500);
-
-        } catch (error: any) {
-            ToastAndroid.showWithGravity(
-                error.message || 'Failed to create account. Please try again.',
-                ToastAndroid.LONG,
-                ToastAndroid.BOTTOM
-            );
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleGoBack = () => {
-        router.back();
-    };
+  const handleGoBack = () => {
+    router.back();
+  };
 
     return (
         <SafeAreaView style={styles.container}>

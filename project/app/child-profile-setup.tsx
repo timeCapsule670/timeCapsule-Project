@@ -10,16 +10,19 @@ import {
   Animated,
   ScrollView,
   Platform,
+  Alert,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ArrowLeft, User, Calendar, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/libs/superbase';
 
 interface Child {
   id: string;
   name: string;
   birthday: string;
   birthdayDate?: Date;
+  username?: string;
 }
 
 export default function ChildProfileSetupScreen() {
@@ -31,6 +34,7 @@ export default function ChildProfileSetupScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentChildIdForDatePicker, setCurrentChildIdForDatePicker] = useState<string | null>(null);
   const [tempSelectedDate, setTempSelectedDate] = useState<Date>(new Date());
+  const [isSaving, setIsSaving] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const progressAnim = useRef(new Animated.Value(0.4)).current;
@@ -49,7 +53,7 @@ export default function ChildProfileSetupScreen() {
         useNativeDriver: true,
       }),
       Animated.timing(progressAnim, {
-        toValue: 0.6, // 60% progress (third step)
+        toValue: 0.2, // 20% progress (first step)
         duration: 800,
         useNativeDriver: false,
       }),
@@ -79,6 +83,12 @@ export default function ChildProfileSetupScreen() {
       }
     }
     return null;
+  };
+
+  const generateUsername = (firstName: string): string => {
+    const cleanName = firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const timestamp = Date.now().toString().slice(-6);
+    return `${cleanName}${timestamp}`;
   };
 
   const handleInputChange = (childId: string, field: 'name' | 'birthday', value: string) => {
@@ -219,10 +229,58 @@ export default function ChildProfileSetupScreen() {
     return isValid;
   };
 
-  const handleNext = () => {
-    if (validateForm()) {
-      // Navigate to invite child screen
-      router.push('/invite-child');
+  const handleNext = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const actorsToInsert = children.map(child => {
+        const firstName = child.name.trim();
+        const dateOfBirth = child.birthdayDate ? child.birthdayDate.toISOString().split('T')[0] : null;
+        const generatedUsername = generateUsername(firstName);
+
+        return {
+          first_name: firstName,
+          last_name: '', // Empty string as it's not collected in the UI
+          date_of_birth: dateOfBirth,
+          gender: null, // Not collected in current UI
+          notes: null, // Not collected in current UI
+          username: generatedUsername,
+        };
+      });
+
+      const { data, error } = await supabase
+        .from('actors')
+        .insert(actorsToInsert)
+        .select();
+
+      if (error) {
+        console.error('Error inserting actors:', error);
+        Alert.alert(
+          'Error', 
+          'Failed to save child profiles. Please check your connection and try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      console.log('Successfully saved actors:', data);
+      
+      // Navigate to family setup screen on success
+      router.push('/family-setup');
+      
+    } catch (error) {
+      console.error('Unexpected error during save:', error);
+      Alert.alert(
+        'Error', 
+        'An unexpected error occurred. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -416,13 +474,15 @@ export default function ChildProfileSetupScreen() {
           <TouchableOpacity
             style={[
               styles.nextButton,
-              !isFormValid && styles.nextButtonDisabled,
+              (!isFormValid || isSaving) && styles.nextButtonDisabled,
             ]}
             onPress={handleNext}
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSaving}
             activeOpacity={0.9}
           >
-            <Text style={styles.nextButtonText}>Next</Text>
+            <Text style={styles.nextButtonText}>
+              {isSaving ? 'Saving...' : 'Next'}
+            </Text>
             <ArrowLeft 
               size={20} 
               color="#ffffff" 

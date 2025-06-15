@@ -8,9 +8,16 @@ import {
   StatusBar,
   Animated,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { ArrowLeft, GraduationCap, Smile, PartyPopper, MessageSquare, Heart, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/libs/superbase';
+
+interface Category {
+  id: string;
+  name: string;
+}
 
 interface MomentType {
   id: string;
@@ -22,11 +29,30 @@ interface MomentType {
 export default function MomentsSelectionScreen() {
   const router = useRouter();
   const [selectedMoments, setSelectedMoments] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [momentTypes, setMomentTypes] = useState<MomentType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
-  const progressAnim = useRef(new Animated.Value(0.2)).current;
+  const progressAnim = useRef(new Animated.Value(0.4)).current;
+
+  // Mapping function to get icon and emoji for category names
+  const getCategoryVisuals = (categoryName: string) => {
+    const visuals: Record<string, { icon: React.ComponentType<any>; emoji: string }> = {
+      'Milestones': { icon: GraduationCap, emoji: '🎓' },
+      'Emotional Support': { icon: Smile, emoji: '😊' },
+      'Celebrations and Encouragement': { icon: PartyPopper, emoji: '🎉' },
+      'Life Advice': { icon: MessageSquare, emoji: '💬' },
+      'Just Because': { icon: Heart, emoji: '❤️' },
+    };
+    
+    return visuals[categoryName] || { icon: Heart, emoji: '💝' };
+  };
 
   useEffect(() => {
+    fetchCategories();
+    
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -40,12 +66,49 @@ export default function MomentsSelectionScreen() {
         useNativeDriver: true,
       }),
       Animated.timing(progressAnim, {
-        toValue: 0.4, // 40% progress (second step)
+        toValue: 0.6, // 60% progress (third step)
         duration: 800,
         useNativeDriver: false,
       }),
     ]).start();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching categories:', error);
+        Alert.alert('Error', 'Failed to load categories. Please try again.');
+        return;
+      }
+
+      setCategories(data || []);
+      
+      // Transform categories into moment types with visual elements
+      const transformedMoments: MomentType[] = (data || []).map(category => {
+        const visuals = getCategoryVisuals(category.name);
+        return {
+          id: category.id,
+          label: category.name,
+          icon: visuals.icon,
+          emoji: visuals.emoji,
+        };
+      });
+      
+      setMomentTypes(transformedMoments);
+    } catch (error) {
+      console.error('Unexpected error fetching categories:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleBack = () => {
     router.back();
@@ -75,45 +138,95 @@ export default function MomentsSelectionScreen() {
     ]).start();
   };
 
-  const handleNext = () => {
-    if (selectedMoments.length > 0) {
-      // Navigate to next setup step or main app
-      router.push('/child-profile-setup');
+  const handleNext = async () => {
+    if (selectedMoments.length === 0) {
+      Alert.alert('Selection Required', 'Please select at least one moment type to continue.');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Get the current authenticated user
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session?.user) {
+        Alert.alert(
+          'Authentication Error',
+          'Please sign in again to continue.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const authUserId = session.user.id;
+
+      // Get the director record for the current user
+      const { data: directorData, error: directorError } = await supabase
+        .from('directors')
+        .select('id')
+        .eq('auth_user_id', authUserId)
+        .single();
+
+      if (directorError || !directorData) {
+        console.error('Error fetching director:', directorError);
+        Alert.alert(
+          'Error',
+          'Could not find your profile. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const directorId = directorData.id;
+
+      // Create director-category relationships
+      const directorCategoriesToInsert = selectedMoments.map(categoryId => ({
+        director_id: directorId,
+        category_id: categoryId,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('director_categories')
+        .insert(directorCategoriesToInsert);
+
+      if (insertError) {
+        console.error('Error saving moment selections:', insertError);
+        Alert.alert(
+          'Error',
+          'Failed to save your selections. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      console.log('Successfully saved moment selections');
+      
+      // Navigate to invite child screen
+      router.push('/invite-child');
+      
+    } catch (error) {
+      console.error('Unexpected error during save:', error);
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const momentTypes: MomentType[] = [
-    { 
-      id: 'milestones', 
-      label: 'Milestones', 
-      icon: GraduationCap,
-      emoji: '🎓'
-    },
-    { 
-      id: 'emotional-support', 
-      label: 'Emotional Support', 
-      icon: Smile,
-      emoji: '😊'
-    },
-    { 
-      id: 'celebrations', 
-      label: 'Celebrations & Encouragement', 
-      icon: PartyPopper,
-      emoji: '🎉'
-    },
-    { 
-      id: 'life-advice', 
-      label: 'Life Advice', 
-      icon: MessageSquare,
-      emoji: '💬'
-    },
-    { 
-      id: 'just-because', 
-      label: 'Just Because', 
-      icon: Heart,
-      emoji: '❤️'
-    },
-  ];
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading moments...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -200,6 +313,7 @@ export default function MomentsSelectionScreen() {
                       ]}
                       onPress={() => handleMomentToggle(moment.id)}
                       activeOpacity={0.8}
+                      disabled={isSaving}
                     >
                       <View style={styles.momentContent}>
                         <View style={styles.momentIconContainer}>
@@ -234,13 +348,15 @@ export default function MomentsSelectionScreen() {
           <TouchableOpacity
             style={[
               styles.nextButton,
-              selectedMoments.length === 0 && styles.nextButtonDisabled,
+              (selectedMoments.length === 0 || isSaving) && styles.nextButtonDisabled,
             ]}
             onPress={handleNext}
-            disabled={selectedMoments.length === 0}
+            disabled={selectedMoments.length === 0 || isSaving}
             activeOpacity={0.9}
           >
-            <Text style={styles.nextButtonText}>Next</Text>
+            <Text style={styles.nextButtonText}>
+              {isSaving ? 'Saving...' : 'Next'}
+            </Text>
             <ArrowLeft 
               size={20} 
               color="#ffffff" 
@@ -267,10 +383,20 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 45,
+    paddingTop: 20,
     paddingBottom: 24,
     justifyContent: 'space-between',
   },
@@ -286,7 +412,7 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     flex: 1,
     textAlign: 'center',
-    marginHorizontal: 10,
+    marginHorizontal: 16,
   },
   headerSpacer: {
     width: 40,
@@ -316,7 +442,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   question: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '600',
     color: '#1F2937',
     lineHeight: 32,

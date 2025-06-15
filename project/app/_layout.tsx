@@ -16,6 +16,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import LoadingOverlay from '@/components/LoadingOverlay';
+import { supabase } from '@/libs/superbase';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
@@ -42,13 +43,29 @@ export default function RootLayout() {
   }, [fontsLoaded, fontError]);
 
   useEffect(() => {
-    // Simulate app initialization time
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2500); // Show loading for 2.5 seconds
+    const initializeApp = async () => {
+      try {
+        // Wait for fonts to load
+        if (!fontsLoaded && !fontError) {
+          return;
+        }
 
-    return () => clearTimeout(timer);
-  }, []);
+        // Initialize Supabase session
+        await supabase.auth.getSession();
+        
+        // Simulate app initialization time for smooth UX
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        // Still proceed to avoid infinite loading
+        setIsLoading(false);
+      }
+    };
+
+    initializeApp();
+  }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) {
     return null;
@@ -68,6 +85,7 @@ export default function RootLayout() {
         <Stack.Screen name="child-profile-setup" />
         <Stack.Screen name="invite-child" />
         <Stack.Screen name="welcome" />
+        <Stack.Screen name="create-message" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" />
       </Stack>

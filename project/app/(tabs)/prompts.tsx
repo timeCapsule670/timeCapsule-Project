@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -22,8 +23,14 @@ import {
   Heart,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/libs/superbase';
 
 const { width } = Dimensions.get('window');
+
+interface Category {
+  id: string;
+  name: string;
+}
 
 interface PromptCategory {
   id: string;
@@ -42,45 +49,94 @@ interface PromptCard {
 
 export default function PromptsScreen() {
   const router = useRouter();
-  const [selectedCategory, setSelectedCategory] = useState<string>('emotional-support');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const categories: PromptCategory[] = [
-    {
-      id: 'emotional-support',
-      label: 'Emotional Support',
-      emoji: '😊',
-      color: '#000000',
-      backgroundColor: '#D6C7ED',
-    },
-    {
-      id: 'milestones',
-      label: 'Milestones',
-      emoji: '🎓',
-      color: '#F59E0B',
-      backgroundColor: '#FEF3C7',
-    },
-    {
-      id: 'celebrations',
-      label: 'Celebrations',
-      emoji: '🎉',
-      color: '#EC4899',
-      backgroundColor: '#FCE7F3',
-    },
-    {
-      id: 'life-advice',
-      label: 'Life Advice',
-      emoji: '💬',
-      color: '#3B82F6',
-      backgroundColor: '#DBEAFE',
-    },
-    {
-      id: 'just-because',
-      label: 'Just Because',
-      emoji: '❤️',
-      color: '#EF4444',
-      backgroundColor: '#FEF2F2',
-    },
-  ];
+  // Mapping function to get visual properties for category names
+  const getCategoryVisuals = (categoryName: string) => {
+    const visuals: Record<string, { emoji: string; color: string; backgroundColor: string }> = {
+      'Emotional Support': {
+        emoji: '😊',
+        color: '#8B5CF6',
+        backgroundColor: '#F3E8FF',
+      },
+      'Milestones': {
+        emoji: '🎓',
+        color: '#F59E0B',
+        backgroundColor: '#FEF3C7',
+      },
+      'Celebrations and Encouragement': {
+        emoji: '🎉',
+        color: '#EC4899',
+        backgroundColor: '#FCE7F3',
+      },
+      'Life Advice': {
+        emoji: '💬',
+        color: '#3B82F6',
+        backgroundColor: '#DBEAFE',
+      },
+      'Just Because': {
+        emoji: '❤️',
+        color: '#EF4444',
+        backgroundColor: '#FEF2F2',
+      },
+    };
+    
+    return visuals[categoryName] || {
+      emoji: '💝',
+      color: '#6B7280',
+      backgroundColor: '#F3F4F6',
+    };
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching categories:', error);
+        Alert.alert('Error', 'Failed to load categories. Please try again.');
+        return;
+      }
+
+      setCategories(data || []);
+      
+      // Transform categories into prompt categories with visual elements
+      const transformedCategories: PromptCategory[] = (data || []).map(category => {
+        const visuals = getCategoryVisuals(category.name);
+        return {
+          id: category.id,
+          label: category.name,
+          emoji: visuals.emoji,
+          color: visuals.color,
+          backgroundColor: visuals.backgroundColor,
+        };
+      });
+      
+      setPromptCategories(transformedCategories);
+      
+      // Set the first category as selected by default
+      if (transformedCategories.length > 0) {
+        setSelectedCategory(transformedCategories[0].id);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching categories:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const prompts: PromptCard[] = [
     {
@@ -121,8 +177,12 @@ export default function PromptsScreen() {
     },
   ];
 
+  // Find the selected category name for filtering prompts
+  const selectedCategoryName = promptCategories.find(cat => cat.id === selectedCategory)?.label || '';
+  const categorySlug = selectedCategoryName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  
   const filteredPrompts = prompts.filter(
-    (prompt) => prompt.category === selectedCategory
+    (prompt) => prompt.category === categorySlug
   );
 
   const handleBack = () => {
@@ -131,23 +191,44 @@ export default function PromptsScreen() {
 
   const handleGenerateAI = () => {
     console.log('Generate AI prompts');
-    // Logic for AI generation
+    Alert.alert('Coming Soon', 'AI prompt generation feature is coming soon!');
   };
 
-  const handleUsePrompt = (promptId: string) => {
-    console.log('Using prompt:', promptId);
-    // Logic to use the selected prompt
+ const handleUsePrompt = (promptId: string) => {
+    const selectedPrompt = prompts.find(prompt => prompt.id === promptId);
+    if (selectedPrompt) {
+      // Navigate to create-message with the selected prompt data
+      router.push({
+        pathname: '/create-message',
+        params: {
+          promptText: selectedPrompt.text,
+          promptTags: selectedPrompt.tags.join(','),
+          promptId: selectedPrompt.id,
+        }
+      });
+    }
   };
 
   const handleEditPrompt = (promptId: string) => {
     console.log('Editing prompt:', promptId);
-    // Logic to edit the selected prompt
+    Alert.alert('Coming Soon', 'Prompt editing feature is coming soon!');
   };
 
   const handleBookmarkPrompt = (promptId: string) => {
     console.log('Bookmarking prompt:', promptId);
-    // Logic to bookmark the selected prompt
+    Alert.alert('Coming Soon', 'Bookmark feature is coming soon!');
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading prompts...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -206,7 +287,7 @@ export default function PromptsScreen() {
             contentContainerStyle={styles.categoriesContainer}
             style={styles.categoriesScrollView}
           >
-            {categories.map((category) => (
+            {promptCategories.map((category) => (
               <TouchableOpacity
                 key={category.id}
                 style={[
@@ -234,42 +315,50 @@ export default function PromptsScreen() {
 
           {/* Prompt Cards */}
           <View style={styles.promptsList}>
-            {filteredPrompts.map((prompt) => (
-              <View key={prompt.id} style={styles.promptCard}>
-                <View style={styles.promptCardHeader}>
-                  <Text style={styles.promptCardText}>{prompt.text}</Text>
-                  <TouchableOpacity
-                    onPress={() => handleBookmarkPrompt(prompt.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Bookmark size={20} color="#9CA3AF" strokeWidth={2} />
-                  </TouchableOpacity>
+            {filteredPrompts.length > 0 ? (
+              filteredPrompts.map((prompt) => (
+                <View key={prompt.id} style={styles.promptCard}>
+                  <View style={styles.promptCardHeader}>
+                    <Text style={styles.promptCardText}>{prompt.text}</Text>
+                    <TouchableOpacity
+                      onPress={() => handleBookmarkPrompt(prompt.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Bookmark size={20} color="#9CA3AF" strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.promptCardTags}>
+                    {prompt.tags.map((tag, index) => (
+                      <View key={index} style={styles.tag}>
+                        <Text style={styles.tagText}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.promptCardActions}>
+                    <TouchableOpacity
+                      style={styles.usePromptButton}
+                      onPress={() => handleUsePrompt(prompt.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.usePromptButtonText}>Use Prompt</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.editPromptButton}
+                      onPress={() => handleEditPrompt(prompt.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Edit size={20} color="#6B7280" strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View style={styles.promptCardTags}>
-                  {prompt.tags.map((tag, index) => (
-                    <View key={index} style={styles.tag}>
-                      <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.promptCardActions}>
-                  <TouchableOpacity
-                    style={styles.usePromptButton}
-                    onPress={() => handleUsePrompt(prompt.id)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.usePromptButtonText}>Use Prompt</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.editPromptButton}
-                    onPress={() => handleEditPrompt(prompt.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Edit size={20} color="#6B7280" strokeWidth={2} />
-                  </TouchableOpacity>
-                </View>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>
+                  No prompts available for this category yet. Check back soon!
+                </Text>
               </View>
-            ))}
+            )}
           </View>
 
           {/* Need More Ideas Section */}
@@ -304,6 +393,31 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+  },
+    emptyState: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    fontFamily: 'Poppins-Regular',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -313,6 +427,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  logoImage: {
+    width: 15,
+    height: 15,
   },
   backButton: {
     width: 40,
@@ -512,7 +630,7 @@ const styles = StyleSheet.create({
   },
   usePromptButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: 'Inter-Regular',
   },
   editPromptButton: {
@@ -526,7 +644,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   moreIdeasCard: {
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#D6C7ED',
     borderRadius: 16,
     marginHorizontal: 24,
     padding: 20,
@@ -543,7 +661,7 @@ const styles = StyleSheet.create({
   moreIdeasTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#6D28D9',
+    color: '#2F3A56',
     marginBottom: 16,
     fontFamily: 'Poppins-SemiBold',
   },
@@ -557,8 +675,7 @@ const styles = StyleSheet.create({
   },
   moreIdeasChecklistText: {
     fontSize: 14,
-    color: '#6D28D9',
-    fontFamily: 'Poppins-Regular',
+    color: '#2F3A56',
+    fontFamily: 'Inter-Regular',
   },
 });
-

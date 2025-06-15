@@ -7,16 +7,20 @@ import {
   SafeAreaView,
   StatusBar,
   Animated,
+  Alert,
 } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { supabase } from '@/libs/superbase';
 
 export default function FamilySetupScreen() {
   const router = useRouter();
+  const { actorIds } = useLocalSearchParams();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0.2)).current;
 
   useEffect(() => {
     // Entrance animation
@@ -32,7 +36,7 @@ export default function FamilySetupScreen() {
         useNativeDriver: true,
       }),
       Animated.timing(progressAnim, {
-        toValue: 0.2, // 20% progress (first step)
+        toValue: 0.4, // 40% progress (second step)
         duration: 800,
         useNativeDriver: false,
       }),
@@ -61,18 +65,123 @@ export default function FamilySetupScreen() {
     ]).start();
   };
 
-  const handleNext = () => {
-    if (selectedRole) {
-      // Navigate to next setup step or main app
+  const handleNext = async () => {
+    if (!selectedRole) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Get the current authenticated user
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session?.user) {
+        Alert.alert(
+          'Authentication Error',
+          'Please sign in again to continue.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const authUserId = session.user.id;
+
+      // Get the director record for the current user
+      const { data: directorData, error: directorError } = await supabase
+        .from('directors')
+        .select('id')
+        .eq('auth_user_id', authUserId)
+        .single();
+
+      if (directorError || !directorData) {
+        console.error('Error fetching director:', directorError);
+        Alert.alert(
+          'Error',
+          'Could not find your profile. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const directorId = directorData.id;
+
+      // Update the director's role/type
+      const { error: updateError } = await supabase
+        .from('directors')
+        .update({ director_type: selectedRole })
+        .eq('id', directorId);
+
+      if (updateError) {
+        console.error('Error updating director:', updateError);
+        Alert.alert(
+          'Error',
+          'Failed to update your profile. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Parse actor IDs from the route parameters
+      let actorIdsList: string[] = [];
+      if (actorIds) {
+        try {
+          // Handle both string and array formats
+          if (typeof actorIds === 'string') {
+            actorIdsList = actorIds.split(',').filter(id => id.trim());
+          } else if (Array.isArray(actorIds)) {
+            actorIdsList = actorIds.filter(id => typeof id === 'string' && id.trim());
+          }
+        } catch (parseError) {
+          console.error('Error parsing actor IDs:', parseError);
+        }
+      }
+
+      // Create director-actor relationships if we have actor IDs
+      if (actorIdsList.length > 0) {
+        const relationshipsToInsert = actorIdsList.map(actorId => ({
+          director_id: directorId,
+          actor_id: actorId.trim(),
+          relationship: selectedRole,
+        }));
+
+        const { error: relationshipError } = await supabase
+          .from('director_actor')
+          .insert(relationshipsToInsert);
+
+        if (relationshipError) {
+          console.error('Error creating relationships:', relationshipError);
+          Alert.alert(
+            'Warning',
+            'Your profile was updated, but there was an issue linking to child profiles. You can set this up later.',
+            [{ text: 'Continue', onPress: () => router.push('/moments-selection') }]
+          );
+          return;
+        }
+
+        console.log('Successfully created director-actor relationships');
+      }
+
+      // Navigate to moments selection screen on success
       router.push('/moments-selection');
+      
+    } catch (error) {
+      console.error('Unexpected error during save:', error);
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const roles = [
-    { id: 'mom', label: 'Mom' },
-    { id: 'dad', label: 'Dad' },
-    { id: 'guardian', label: 'Guardian' },
-    { id: 'other', label: 'Other' },
+    { id: 'Mom', label: 'Mom' },
+    { id: 'Dad', label: 'Dad' },
+    { id: 'Guardian', label: 'Guardian' },
+    { id: 'Other', label: 'Other' },
   ];
 
   return (
@@ -148,6 +257,7 @@ export default function FamilySetupScreen() {
                   ]}
                   onPress={() => handleRoleSelect(role.id)}
                   activeOpacity={0.8}
+                  disabled={isSaving}
                 >
                   <Text 
                     style={[
@@ -174,13 +284,15 @@ export default function FamilySetupScreen() {
           <TouchableOpacity
             style={[
               styles.nextButton,
-              !selectedRole && styles.nextButtonDisabled,
+              (!selectedRole || isSaving) && styles.nextButtonDisabled,
             ]}
             onPress={handleNext}
-            disabled={!selectedRole}
+            disabled={!selectedRole || isSaving}
             activeOpacity={0.9}
           >
-            <Text style={styles.nextButtonText}>Next</Text>
+            <Text style={styles.nextButtonText}>
+              {isSaving ? 'Saving...' : 'Next'}
+            </Text>
             <ArrowLeft 
               size={20} 
               color="#ffffff" 
@@ -210,7 +322,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 30,
+    paddingTop: 20,
     paddingBottom: 24,
     justifyContent: 'space-between',
   },
@@ -250,14 +362,14 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   question: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '600',
     color: '#1F2937',
     lineHeight: 32,
     marginBottom: 40,
   },
   rolesContainer: {
-    gap: 10,
+    gap: 16,
   },
   roleButton: {
     backgroundColor: '#F3F4F6',
@@ -310,7 +422,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   footer: {
-    paddingBottom: 57,
+    paddingBottom: 32,
     gap: 24,
   },
   nextButton: {

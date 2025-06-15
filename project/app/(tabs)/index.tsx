@@ -12,6 +12,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Plus, GraduationCap, PartyPopper, Heart, Calendar, MessageSquare } from 'lucide-react-native';
+import { useLocalSearchParams } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -25,9 +26,11 @@ interface SuggestedMessage {
 }
 
 export default function HomeScreen() {
+  const { firstName } = useLocalSearchParams();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
+   const userName = Array.isArray(firstName) ? firstName[0] : firstName || 'there';
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -143,7 +146,7 @@ export default function HomeScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.greeting}>Hi Oluwapelumi👋</Text>
+            <Text style={styles.greeting}>Hi {userName} 👋</Text>
             <Text style={styles.subtitle}>Time to create some memorable messages</Text>
           </View>
 
