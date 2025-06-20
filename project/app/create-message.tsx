@@ -31,351 +31,364 @@ interface MessageType {
     color: string;
     backgroundColor: string;
 }
-
 export default function CreateMessageScreen() {
-    const router = useRouter();
-    const { promptText, promptTags, promptId } = useLocalSearchParams();
+  const router = useRouter();
+  const { promptText, promptTags, promptId } = useLocalSearchParams();
+  
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedChild, setSelectedChild] = useState<string | null>(null);
+  const [selectedMessageType, setSelectedMessageType] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
-    const [children, setChildren] = useState<Child[]>([]);
-    const [selectedChild, setSelectedChild] = useState<string | null>(null);
-    const [selectedMessageType, setSelectedMessageType] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    fetchChildren();
+    
+    // Entrance animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(30)).current;
+    // Pre-select message type based on prompt tags
+    if (promptTags) {
+      const tags = Array.isArray(promptTags) ? promptTags : promptTags.split(',');
+      if (tags.includes('#VideoMessage')) {
+        setSelectedMessageType('video');
+      } else if (tags.includes('#VoiceMessage') || tags.includes('#AudioMessage')) {
+        setSelectedMessageType('audio');
+      } else if (tags.includes('#TextMessage')) {
+        setSelectedMessageType('text');
+      }
+    }
+  }, [promptTags]);
 
-    useEffect(() => {
-        fetchChildren();
+  const fetchChildren = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('actors')
+        .select('id, first_name, last_name, date_of_birth, username')
+        .order('first_name');
 
-        // Entrance animation
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 600,
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 500,
-                useNativeDriver: true,
-            }),
-        ]).start();
+      if (error) {
+        console.error('Error fetching children:', error);
+        Alert.alert('Error', 'Failed to load children. Please try again.');
+        return;
+      }
 
-        // Pre-select message type based on prompt tags
-        if (promptTags) {
-            const tags = Array.isArray(promptTags) ? promptTags : promptTags.split(',');
-            if (tags.includes('#VideoMessage')) {
-                setSelectedMessageType('video');
-            } else if (tags.includes('#VoiceMessage') || tags.includes('#AudioMessage')) {
-                setSelectedMessageType('audio');
-            } else if (tags.includes('#TextMessage')) {
-                setSelectedMessageType('text');
-            }
-        }
-    }, [promptTags]);
+      setChildren(data || []);
+    } catch (error) {
+      console.error('Unexpected error fetching children:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const fetchChildren = async () => {
-        try {
-            setIsLoading(true);
+  const calculateAge = (dateOfBirth: string): number => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
 
-            const { data, error } = await supabase
-                .from('actors')
-                .select('id, first_name, last_name, date_of_birth, username')
-                .order('first_name');
+  const messageTypes: MessageType[] = [
+    {
+      id: 'video',
+      label: 'Video Message',
+      icon: Video,
+      emoji: '🎥',
+      color: '#EF4444',
+      backgroundColor: '#FEF2F2',
+    },
+    {
+      id: 'audio',
+      label: 'Audio Message',
+      icon: Mic,
+      emoji: '🎙️',
+      color: '#8B5CF6',
+      backgroundColor: '#F3E8FF',
+    },
+    {
+      id: 'text',
+      label: 'Text Message',
+      icon: MessageSquare,
+      emoji: '✍️',
+      color: '#3B82F6',
+      backgroundColor: '#DBEAFE',
+    },
+  ];
 
-            if (error) {
-                console.error('Error fetching children:', error);
-                Alert.alert('Error', 'Failed to load children. Please try again.');
-                return;
-            }
+  const handleBack = () => {
+    router.back();
+  };
 
-            setChildren(data || []);
-        } catch (error) {
-            console.error('Unexpected error fetching children:', error);
-            Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  const handleChildSelect = (childId: string) => {
+    setSelectedChild(childId);
+    
+    // Animate selection
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
-    const calculateAge = (dateOfBirth: string): number => {
-        const today = new Date();
-        const birthDate = new Date(dateOfBirth);
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
+  const handleMessageTypeSelect = (typeId: string) => {
+    setSelectedMessageType(typeId);
+    
+    // Animate selection
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-
-        return age;
-    };
-
-    const messageTypes: MessageType[] = [
-        {
-            id: 'video',
-            label: 'Video Message',
-            icon: Video,
-            emoji: '🎥',
-            color: '#EF4444',
-            backgroundColor: '#FEF2F2',
-        },
-        {
-            id: 'audio',
-            label: 'Audio Message',
-            icon: Mic,
-            emoji: '🎙️',
-            color: '#8B5CF6',
-            backgroundColor: '#F3E8FF',
-        },
-        {
-            id: 'text',
-            label: 'Text Message',
-            icon: MessageSquare,
-            emoji: '✍️',
-            color: '#3B82F6',
-            backgroundColor: '#DBEAFE',
-        },
-    ];
-
-    const handleBack = () => {
-        router.back();
-    };
-
-    const handleChildSelect = (childId: string) => {
-        setSelectedChild(childId);
-
-        // Animate selection
-        Animated.sequence([
-            Animated.timing(fadeAnim, {
-                toValue: 0.9,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-        ]).start();
-    };
-
-    const handleMessageTypeSelect = (typeId: string) => {
-        setSelectedMessageType(typeId);
-
-        // Animate selection
-        Animated.sequence([
-            Animated.timing(fadeAnim, {
-                toValue: 0.9,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-        ]).start();
-    };
-
-    const handleRecordMessage = () => {
-        if (!selectedChild || !selectedMessageType) {
-            return;
-        }
-
-        const selectedChildData = children.find(child => child.id === selectedChild);
-        const selectedTypeData = messageTypes.find(type => type.id === selectedMessageType);
-
-        Alert.alert(
-            'Record Message',
-            `Ready to record ${selectedTypeData?.label.toLowerCase()} for ${selectedChildData?.first_name}!`,
-            [{ text: 'OK' }]
-        );
-    };
-
-    const isFormValid = selectedChild && selectedMessageType;
-
-    if (isLoading) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-                <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Loading...</Text>
-                </View>
-            </SafeAreaView>
-        );
+  const handleRecordMessage = () => {
+    if (!selectedChild || !selectedMessageType) {
+      return;
     }
 
+    const selectedChildData = children.find(child => child.id === selectedChild);
+    
+    if (selectedMessageType === 'audio') {
+      // Navigate to audio recording screen
+      router.push({
+        pathname: '/record-audio-message',
+        params: {
+          childId: selectedChild,
+          promptText: promptText || '',
+          promptTags: promptTags || '',
+          promptId: promptId || '',
+        }
+      });
+    } else {
+      // For other message types, show placeholder
+      const selectedTypeData = messageTypes.find(type => type.id === selectedMessageType);
+      Alert.alert(
+        'Coming Soon',
+        `${selectedTypeData?.label} creation feature is coming soon!`,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const isFormValid = selectedChild && selectedMessageType;
+
+  if (isLoading) {
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
-            <Animated.View
-                style={[
-                    styles.content,
-                    {
-                        opacity: fadeAnim,
-                        transform: [{ translateY: slideAnim }],
-                    }
-                ]}
-            >
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={handleBack}
-                        activeOpacity={0.7}
-                    >
-                        <ArrowLeft size={24} color="#374151" strokeWidth={2} />
-                    </TouchableOpacity>
-
-                    <Text style={styles.headerTitle}>Create Message</Text>
-                    <View style={styles.headerSpacer} />
-                </View>
-
-                <ScrollView
-                    style={styles.scrollView}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
-                >
-                    {/* Selected Prompt Section */}
-                    {promptText && (
-                        <View style={styles.promptSection}>
-                            <Text style={styles.promptSectionTitle}>Your Selected Prompt</Text>
-                            <View style={styles.promptCard}>
-                                <Text style={styles.promptText}>{promptText}</Text>
-                                {promptTags && (
-                                    <View style={styles.promptTags}>
-                                        {(Array.isArray(promptTags) ? promptTags : promptTags.split(',')).map((tag, index) => (
-                                            <View key={index} style={styles.promptTag}>
-                                                <Text style={styles.promptTagText}>{tag}</Text>
-                                            </View>
-                                        ))}
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-                    )}
-
-                    {/* Who is this message for? */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Who is this message for?</Text>
-
-                        <View style={styles.childrenContainer}>
-                            {children.map((child) => {
-                                const age = calculateAge(child.date_of_birth);
-                                const isSelected = selectedChild === child.id;
-
-                                return (
-                                    <TouchableOpacity
-                                        key={child.id}
-                                        style={[
-                                            styles.childCard,
-                                            isSelected && styles.childCardSelected,
-                                        ]}
-                                        onPress={() => handleChildSelect(child.id)}
-                                        activeOpacity={0.8}
-                                    >
-                                        <View style={styles.childImageContainer}>
-                                            <Image
-                                                source={{ uri: 'https://images.pexels.com/photos/1620760/pexels-photo-1620760.jpeg' }}
-                                                style={styles.childImage}
-                                                resizeMode="cover"
-                                            />
-                                            {isSelected && (
-                                                <View style={styles.selectedOverlay}>
-                                                    <Check size={20} color="#ffffff" strokeWidth={3} />
-                                                </View>
-                                            )}
-                                        </View>
-
-                                        <View style={styles.childInfo}>
-                                            <Text style={[
-                                                styles.childName,
-                                                isSelected && styles.childNameSelected,
-                                            ]}>
-                                                {child.first_name}
-                                            </Text>
-                                            <Text style={[
-                                                styles.childAge,
-                                                isSelected && styles.childAgeSelected,
-                                            ]}>
-                                                {age} years old
-                                            </Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                    </View>
-
-                    {/* How would you like to share this message? */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>How would you like to share this message?</Text>
-
-                        <View style={styles.messageTypesContainer}>
-                            {messageTypes.map((type) => {
-                                const isSelected = selectedMessageType === type.id;
-                                const IconComponent = type.icon;
-
-                                return (
-                                    <TouchableOpacity
-                                        key={type.id}
-                                        style={[
-                                            styles.messageTypeCard,
-                                            isSelected && {
-                                                backgroundColor: type.backgroundColor ?? '#EEF2FF',
-                                                borderColor: type.color ?? '#3B4F75',
-                                            }
-                                        ]}
-                                        onPress={() => handleMessageTypeSelect(type.id)}
-                                        activeOpacity={0.8}
-                                    >
-                                        <View style={styles.messageTypeContent}>
-                                            <View style={[
-                                                styles.messageTypeIconContainer,
-                                                { backgroundColor: isSelected ? type.color : '#F3F4F6' }
-                                            ]}>
-                                                <Text style={styles.messageTypeEmoji}>{type.emoji}</Text>
-                                            </View>
-
-                                            <Text style={[
-                                                styles.messageTypeLabel,
-                                                isSelected && { color: type.color },
-                                            ]}>
-                                                {type.label}
-                                            </Text>
-                                        </View>
-
-                                        {isSelected && (
-                                            <View style={[styles.selectedIndicator, { backgroundColor: type.color }]}>
-                                                <Check size={16} color="#ffffff" strokeWidth={3} />
-                                            </View>
-                                        )}
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                    </View>
-                </ScrollView>
-
-                {/* Record Message Button */}
-                <View style={styles.footer}>
-                    <TouchableOpacity
-                        style={[
-                            styles.recordButton,
-                            !isFormValid && styles.recordButtonDisabled,
-                        ]}
-                        onPress={handleRecordMessage}
-                        disabled={!isFormValid}
-                        activeOpacity={0.9}
-                    >
-                        <Text style={styles.recordButtonText}>Record Message</Text>
-                    </TouchableOpacity>
-                </View>
-            </Animated.View>
-        </SafeAreaView>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
     );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      <Animated.View 
+        style={[
+          styles.content,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }
+        ]}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={handleBack}
+            activeOpacity={0.7}
+          >
+            <ArrowLeft size={24} color="#374151" strokeWidth={2} />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Create Message</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Selected Prompt Section */}
+          {promptText && (
+            <View style={styles.promptSection}>
+              <Text style={styles.promptSectionTitle}>Your Selected Prompt</Text>
+              <View style={styles.promptCard}>
+                <Text style={styles.promptText}>{promptText}</Text>
+                {promptTags && (
+                  <View style={styles.promptTags}>
+                    {(Array.isArray(promptTags) ? promptTags : promptTags.split(',')).map((tag, index) => (
+                      <View key={index} style={styles.promptTag}>
+                        <Text style={styles.promptTagText}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Who is this message for? */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Who is this message for?</Text>
+            
+            <View style={styles.childrenContainer}>
+              {children.map((child) => {
+                const age = calculateAge(child.date_of_birth);
+                const isSelected = selectedChild === child.id;
+                
+                return (
+                  <TouchableOpacity
+                    key={child.id}
+                    style={[
+                      styles.childCard,
+                      isSelected && styles.childCardSelected,
+                    ]}
+                    onPress={() => handleChildSelect(child.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.childImageContainer}>
+                      <Image
+                        source={{ uri: 'https://images.pexels.com/photos/1620760/pexels-photo-1620760.jpeg' }}
+                        style={styles.childImage}
+                        resizeMode="cover"
+                      />
+                      {isSelected && (
+                        <View style={styles.selectedOverlay}>
+                          <Check size={20} color="#ffffff" strokeWidth={3} />
+                        </View>
+                      )}
+                    </View>
+                    
+                    <View style={styles.childInfo}>
+                      <Text style={[
+                        styles.childName,
+                        isSelected && styles.childNameSelected,
+                      ]}>
+                        {child.first_name}
+                      </Text>
+                      <Text style={[
+                        styles.childAge,
+                        isSelected && styles.childAgeSelected,
+                      ]}>
+                        {age} years old
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* How would you like to share this message? */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>How would you like to share this message?</Text>
+            
+            <View style={styles.messageTypesContainer}>
+              {messageTypes.map((type) => {
+                const isSelected = selectedMessageType === type.id;
+                const IconComponent = type.icon;
+                
+                return (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[
+                      styles.messageTypeCard,
+                      isSelected && {
+                        backgroundColor: type.backgroundColor,
+                        borderColor: type.color,
+                      },
+                    ]}
+                    onPress={() => handleMessageTypeSelect(type.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.messageTypeContent}>
+                      <View style={[
+                        styles.messageTypeIconContainer,
+                        { backgroundColor: isSelected ? type.color : '#F3F4F6' }
+                      ]}>
+                        <Text style={styles.messageTypeEmoji}>{type.emoji}</Text>
+                      </View>
+                      
+                      <Text style={[
+                        styles.messageTypeLabel,
+                        isSelected && { color: type.color },
+                      ]}>
+                        {type.label}
+                      </Text>
+                    </View>
+                    
+                    {isSelected && (
+                      <View style={[styles.selectedIndicator, { backgroundColor: type.color }]}>
+                        <Check size={16} color="#ffffff" strokeWidth={3} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Record Message Button */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[
+              styles.recordButton,
+              !isFormValid && styles.recordButtonDisabled,
+            ]}
+            onPress={handleRecordMessage}
+            disabled={!isFormValid}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.recordButtonText}>Record Message</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
