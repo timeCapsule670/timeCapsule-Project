@@ -51,6 +51,7 @@ export default function MomentsSelectionScreen() {
   };
 
   useEffect(() => {
+    console.log('🔍 Moments Selection - Component mounted');
     fetchCategories();
     
     // Entrance animation
@@ -76,6 +77,7 @@ export default function MomentsSelectionScreen() {
   const fetchCategories = async () => {
     try {
       setIsLoading(true);
+      console.log('📋 Moments Selection - Fetching categories...');
       
       const { data, error } = await supabase
         .from('categories')
@@ -83,11 +85,12 @@ export default function MomentsSelectionScreen() {
         .order('name');
 
       if (error) {
-        console.error('Error fetching categories:', error);
+        console.error('❌ Moments Selection - Error fetching categories:', error);
         Alert.alert('Error', 'Failed to load categories. Please try again.');
         return;
       }
 
+      console.log('✅ Moments Selection - Categories fetched:', data);
       setCategories(data || []);
       
       // Transform categories into moment types with visual elements
@@ -102,8 +105,9 @@ export default function MomentsSelectionScreen() {
       });
       
       setMomentTypes(transformedMoments);
+      console.log('📊 Moments Selection - Transformed moment types:', transformedMoments);
     } catch (error) {
-      console.error('Unexpected error fetching categories:', error);
+      console.error('💥 Moments Selection - Unexpected error fetching categories:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -116,11 +120,13 @@ export default function MomentsSelectionScreen() {
 
   const handleMomentToggle = (momentId: string) => {
     setSelectedMoments(prev => {
-      if (prev.includes(momentId)) {
-        return prev.filter(id => id !== momentId);
-      } else {
-        return [...prev, momentId];
-      }
+      const newSelection = prev.includes(momentId)
+        ? prev.filter(id => id !== momentId)
+        : [...prev, momentId];
+      
+      console.log('🔄 Moments Selection - Moment toggled:', momentId);
+      console.log('📊 Moments Selection - New selection:', newSelection);
+      return newSelection;
     });
     
     // Animate selection
@@ -140,17 +146,33 @@ export default function MomentsSelectionScreen() {
 
   const handleNext = async () => {
     if (selectedMoments.length === 0) {
+      console.log('❌ Moments Selection - No moments selected');
       Alert.alert('Selection Required', 'Please select at least one moment type to continue.');
       return;
     }
+
+    console.log('🚀 Moments Selection - Starting handleNext process');
+    console.log('📝 Moments Selection - Selected moments:', selectedMoments);
 
     setIsSaving(true);
 
     try {
       // Get the current authenticated user
+      console.log('🔐 Moments Selection - Getting authenticated user session...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session?.user) {
+      if (sessionError) {
+        console.error('❌ Moments Selection - Session error:', sessionError);
+        Alert.alert(
+          'Authentication Error',
+          'Please sign in again to continue.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      if (!session?.user) {
+        console.error('❌ Moments Selection - No authenticated user found');
         Alert.alert(
           'Authentication Error',
           'Please sign in again to continue.',
@@ -160,16 +182,28 @@ export default function MomentsSelectionScreen() {
       }
 
       const authUserId = session.user.id;
+      console.log('✅ Moments Selection - Authenticated user ID:', authUserId);
 
       // Get the director record for the current user
+      console.log('👤 Moments Selection - Fetching director profile...');
       const { data: directorData, error: directorError } = await supabase
         .from('directors')
         .select('id')
         .eq('auth_user_id', authUserId)
         .single();
 
-      if (directorError || !directorData) {
-        console.error('Error fetching director:', directorError);
+      if (directorError) {
+        console.error('❌ Moments Selection - Director fetch error:', directorError);
+        Alert.alert(
+          'Error',
+          'Could not find your profile. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      if (!directorData) {
+        console.error('❌ Moments Selection - No director data returned');
         Alert.alert(
           'Error',
           'Could not find your profile. Please try again.',
@@ -179,34 +213,87 @@ export default function MomentsSelectionScreen() {
       }
 
       const directorId = directorData.id;
+      console.log('✅ Moments Selection - Director ID found:', directorId);
 
-      // Create director-category relationships
-      const directorCategoriesToInsert = selectedMoments.map(categoryId => ({
+      // First, check if any of these relationships already exist
+      console.log('🔍 Moments Selection - Checking for existing relationships...');
+      const { data: existingRelationships, error: checkError } = await supabase
+        .from('director_categories')
+        .select('category_id')
+        .eq('director_id', directorId)
+        .in('category_id', selectedMoments);
+
+      if (checkError) {
+        console.error('❌ Moments Selection - Error checking existing relationships:', checkError);
+        // Continue anyway, we'll handle duplicates in the insert
+      }
+
+      const existingCategoryIds = existingRelationships?.map(rel => rel.category_id) || [];
+      console.log('📊 Moments Selection - Existing category relationships:', existingCategoryIds);
+
+      // Filter out categories that already exist
+      const newCategoryIds = selectedMoments.filter(categoryId => !existingCategoryIds.includes(categoryId));
+      console.log('📊 Moments Selection - New categories to insert:', newCategoryIds);
+
+      if (newCategoryIds.length === 0) {
+        console.log('ℹ️ Moments Selection - All selected categories already exist, skipping insert');
+        // All categories already exist, just proceed to next screen
+        router.push('/invite-child');
+        return;
+      }
+
+      // Create director-category relationships for new categories only
+      console.log('🔗 Moments Selection - Creating director-category relationships...');
+      const directorCategoriesToInsert = newCategoryIds.map(categoryId => ({
         director_id: directorId,
         category_id: categoryId,
       }));
 
-      const { error: insertError } = await supabase
+      console.log('📝 Moments Selection - Relationships to insert:', directorCategoriesToInsert);
+
+      const { data: insertedData, error: insertError } = await supabase
         .from('director_categories')
-        .insert(directorCategoriesToInsert);
+        .insert(directorCategoriesToInsert)
+        .select();
 
       if (insertError) {
-        console.error('Error saving moment selections:', insertError);
+        console.error('❌ Moments Selection - Error saving moment selections:', insertError);
+        console.error('❌ Moments Selection - Insert error details:', {
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+          code: insertError.code
+        });
+        console.error('❌ Moments Selection - Failed insert data:', directorCategoriesToInsert);
+
+        // Provide more specific error messages
+        let errorMessage = 'Failed to save your selections. Please try again.';
+        
+        if (insertError.code === '23505') {
+          // Duplicate key error - this shouldn't happen now, but just in case
+          errorMessage = 'Some of your selections already exist. Please refresh and try again.';
+        } else if (insertError.code === '42501') {
+          errorMessage = 'Permission denied. Please check your account permissions.';
+        }
+
         Alert.alert(
           'Error',
-          'Failed to save your selections. Please try again.',
+          errorMessage,
           [{ text: 'OK' }]
         );
         return;
       }
 
-      console.log('Successfully saved moment selections');
+      console.log('✅ Moments Selection - Successfully saved moment selections');
+      console.log('📊 Moments Selection - Inserted data:', insertedData);
       
       // Navigate to invite child screen
+      console.log('🎉 Moments Selection - Process completed successfully, navigating to invite child');
       router.push('/invite-child');
       
     } catch (error) {
-      console.error('Unexpected error during save:', error);
+      console.error('💥 Moments Selection - Unexpected error during save:', error);
+      console.error('💥 Moments Selection - Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       Alert.alert(
         'Error',
         'An unexpected error occurred. Please try again.',
@@ -214,6 +301,7 @@ export default function MomentsSelectionScreen() {
       );
     } finally {
       setIsSaving(false);
+      console.log('🏁 Moments Selection - handleNext process finished');
     }
   };
 

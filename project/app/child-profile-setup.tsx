@@ -40,6 +40,8 @@ export default function ChildProfileSetupScreen() {
   const progressAnim = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
+    console.log('🔍 Child Profile Setup - Component mounted');
+    
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -231,12 +233,43 @@ export default function ChildProfileSetupScreen() {
 
   const handleNext = async () => {
     if (!validateForm()) {
+      console.log('❌ Child Profile Setup - Form validation failed');
       return;
     }
+
+    console.log('🚀 Child Profile Setup - Starting handleNext process');
+    console.log('👥 Child Profile Setup - Children to save:', children);
 
     setIsSaving(true);
 
     try {
+      // Check authentication first
+      console.log('🔐 Child Profile Setup - Checking authentication...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('❌ Child Profile Setup - Session error:', sessionError);
+        Alert.alert(
+          'Authentication Error', 
+          'Please sign in again to continue.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      if (!session?.user) {
+        console.error('❌ Child Profile Setup - No authenticated user');
+        Alert.alert(
+          'Authentication Error', 
+          'Please sign in again to continue.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      console.log('✅ Child Profile Setup - User authenticated:', session.user.id);
+
+      // Step 1: Insert actors (children) first
       const actorsToInsert = children.map(child => {
         const firstName = child.name.trim();
         const dateOfBirth = child.birthdayDate ? child.birthdayDate.toISOString().split('T')[0] : null;
@@ -252,28 +285,123 @@ export default function ChildProfileSetupScreen() {
         };
       });
 
-      const { data, error } = await supabase
+      console.log('📝 Child Profile Setup - Actors to insert:', actorsToInsert);
+
+      const { data: insertedActors, error: actorsError } = await supabase
         .from('actors')
         .insert(actorsToInsert)
         .select();
 
-      if (error) {
-        console.error('Error inserting actors:', error);
+      if (actorsError) {
+        console.error('❌ Child Profile Setup - Error inserting actors:', actorsError);
+        console.error('❌ Child Profile Setup - Error details:', {
+          message: actorsError.message,
+          details: actorsError.details,
+          hint: actorsError.hint,
+          code: actorsError.code
+        });
+        console.error('❌ Child Profile Setup - Failed actors data:', actorsToInsert);
+        
+        // Provide more specific error messages based on the error code
+        let errorMessage = 'Failed to save child profiles. Please try again.';
+        
+        if (actorsError.code === '42501') {
+          errorMessage = 'Permission denied. Please check your account permissions and try again.';
+        } else if (actorsError.code === '23505') {
+          errorMessage = 'A child with this information already exists. Please check the details and try again.';
+        } else if (actorsError.message.includes('row-level security')) {
+          errorMessage = 'Security policy violation. Please contact support if this issue persists.';
+        }
+        
         Alert.alert(
           'Error', 
-          'Failed to save child profiles. Please check your connection and try again.',
+          errorMessage,
           [{ text: 'OK' }]
         );
         return;
       }
 
-      console.log('Successfully saved actors:', data);
+      console.log('✅ Child Profile Setup - Successfully saved actors:', insertedActors);
+
+      // Step 2: Get the director profile for the current user
+      console.log('👤 Child Profile Setup - Fetching director profile...');
+      const { data: directorData, error: directorError } = await supabase
+        .from('directors')
+        .select('id, director_type')
+        .eq('auth_user_id', session.user.id)
+        .single();
+
+      if (directorError) {
+        console.error('❌ Child Profile Setup - Director fetch error:', directorError);
+        // Continue without creating relationships - they can be created later
+        console.log('⚠️ Child Profile Setup - Continuing without director relationships');
+        
+        // Navigate to family setup with actor IDs
+        const actorIds = insertedActors.map(actor => actor.id);
+        router.push({
+          pathname: '/family-setup',
+          params: { actorIds: actorIds.join(',') }
+        });
+        return;
+      }
+
+      if (!directorData) {
+        console.log('⚠️ Child Profile Setup - No director profile found, will create relationships later');
+        
+        // Navigate to family setup with actor IDs
+        const actorIds = insertedActors.map(actor => actor.id);
+        router.push({
+          pathname: '/family-setup',
+          params: { actorIds: actorIds.join(',') }
+        });
+        return;
+      }
+
+      console.log('✅ Child Profile Setup - Director found:', directorData);
+
+      // Step 3: Create director-actor relationships immediately
+      const directorId = directorData.id;
+      const actorIds = insertedActors.map(actor => actor.id);
       
-      // Navigate to family setup screen on success
-      router.push('/family-setup');
+      console.log('🔗 Child Profile Setup - Creating director-actor relationships...');
+      const relationshipsToInsert = actorIds.map(actorId => ({
+        director_id: directorId,
+        actor_id: actorId,
+        relationship: directorData.director_type || 'Parent', // Use existing director type or default
+      }));
+
+      console.log('📝 Child Profile Setup - Relationships to insert:', relationshipsToInsert);
+
+      const { data: insertedRelationships, error: relationshipError } = await supabase
+        .from('director_actor')
+        .insert(relationshipsToInsert)
+        .select();
+
+      if (relationshipError) {
+        console.error('❌ Child Profile Setup - Relationship insertion error:', relationshipError);
+        console.error('❌ Child Profile Setup - Relationship error details:', {
+          message: relationshipError.message,
+          details: relationshipError.details,
+          hint: relationshipError.hint,
+          code: relationshipError.code
+        });
+        
+        // Continue to family setup even if relationships failed - they can be created there
+        console.log('⚠️ Child Profile Setup - Continuing to family setup despite relationship error');
+      } else {
+        console.log('✅ Child Profile Setup - Successfully created director-actor relationships');
+        console.log('📊 Child Profile Setup - Inserted relationships:', insertedRelationships);
+      }
+      
+      // Navigate to family setup screen with actor IDs
+      router.push({
+        pathname: '/family-setup',
+        params: { actorIds: actorIds.join(',') }
+      });
       
     } catch (error) {
-      console.error('Unexpected error during save:', error);
+      console.error('💥 Child Profile Setup - Unexpected error during save:', error);
+      console.error('💥 Child Profile Setup - Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       Alert.alert(
         'Error', 
         'An unexpected error occurred. Please try again.',
@@ -281,6 +409,7 @@ export default function ChildProfileSetupScreen() {
       );
     } finally {
       setIsSaving(false);
+      console.log('🏁 Child Profile Setup - handleNext process finished');
     }
   };
 

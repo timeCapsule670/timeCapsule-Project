@@ -83,9 +83,13 @@ export default function RootLayout() {
         <Stack.Screen name="family-setup" />
         <Stack.Screen name="moments-selection" />
         <Stack.Screen name="child-profile-setup" />
+        <Stack.Screen name="final-review" />
         <Stack.Screen name="invite-child" />
         <Stack.Screen name="welcome" />
+        <Stack.Screen name="message-settings" />
         <Stack.Screen name="create-message" />
+        <Stack.Screen name="preview-message" />
+        <Stack.Screen name="schedule-delivery" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" />
       </Stack>

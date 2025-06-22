@@ -33,320 +33,336 @@ interface Child {
 
 export default function RecordAudioMessageScreen() {
     const router = useRouter();
-    const { childId, promptText, promptTags, promptId } = useLocalSearchParams();
+  const { childId, promptText, promptTags, promptId } = useLocalSearchParams();
+  
+  const [child, setChild] = useState<Child | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [recording, setRecording] = useState<any>(null);
+  const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordDuration, setRecordDuration] = useState(0);
+  const [playbackObject, setPlaybackObject] = useState<any>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showReRecordModal, setShowReRecordModal] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const waveAnim = useRef(new Animated.Value(0)).current;
+  const recordButtonScale = useRef(new Animated.Value(1)).current;
+  
+  const recordingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    const [child, setChild] = useState<Child | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [recording, setRecording] = useState<any>(null);
-    const [recordedUri, setRecordedUri] = useState<string | null>(null);
-    const [isRecording, setIsRecording] = useState(false);
-    const [recordDuration, setRecordDuration] = useState(0);
-    const [playbackObject, setPlaybackObject] = useState<any>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [showReRecordModal, setShowReRecordModal] = useState(false);
-    const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetchChildData();
+    requestAudioPermission();
+    
+    // Entrance animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(30)).current;
-    const pulseAnim = useRef(new Animated.Value(1)).current;
-    const waveAnim = useRef(new Animated.Value(0)).current;
-    const recordButtonScale = useRef(new Animated.Value(1)).current;
-
-    const recordingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-    useEffect(() => {
-        fetchChildData();
-        requestAudioPermission();
-
-        // Entrance animation
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 600,
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 500,
-                useNativeDriver: true,
-            }),
-        ]).start();
-
-        return () => {
-            if (recordingTimer.current) {
-                clearInterval(recordingTimer.current);
-            }
-            if (recording) {
-                recording.stopAndUnloadAsync();
-            }
-            if (playbackObject) {
-                playbackObject.unloadAsync();
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        if (isRecording) {
-            // Start waveform animation
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(waveAnim, {
-                        toValue: 1,
-                        duration: 300,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(waveAnim, {
-                        toValue: 0,
-                        duration: 300,
-                        useNativeDriver: true,
-                    }),
-                ])
-            ).start();
-
-            // Start pulse animation for record button
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(pulseAnim, {
-                        toValue: 1.1,
-                        duration: 800,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(pulseAnim, {
-                        toValue: 1,
-                        duration: 800,
-                        useNativeDriver: true,
-                    }),
-                ])
-            ).start();
-        } else {
-            waveAnim.stopAnimation();
-            pulseAnim.stopAnimation();
-            pulseAnim.setValue(1);
-        }
-    }, [isRecording]);
-
-    const fetchChildData = async () => {
-        try {
-            setIsLoading(true);
-
-            const { data, error } = await supabase
-                .from('actors')
-                .select('id, first_name, last_name, date_of_birth, username')
-                .eq('id', childId)
-                .single();
-
-            if (error) {
-                console.error('Error fetching child:', error);
-                Alert.alert('Error', 'Failed to load child data. Please try again.');
-                return;
-            }
-
-            setChild(data);
-        } catch (error) {
-            console.error('Unexpected error fetching child:', error);
-            Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
+    return () => {
+      if (recordingTimer.current) {
+        clearInterval(recordingTimer.current);
+      }
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
+      if (playbackObject) {
+        playbackObject.unloadAsync();
+      }
     };
+  }, []);
 
-    const calculateAge = (dateOfBirth: string): number => {
-        const today = new Date();
-        const birthDate = new Date(dateOfBirth);
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
+  useEffect(() => {
+    if (isRecording) {
+      // Start waveform animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(waveAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(waveAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
 
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
+      // Start pulse animation for record button
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      waveAnim.stopAnimation();
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+    }
+  }, [isRecording]);
+
+  const fetchChildData = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('actors')
+        .select('id, first_name, last_name, date_of_birth, username')
+        .eq('id', childId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching child:', error);
+        Alert.alert('Error', 'Failed to load child data. Please try again.');
+        return;
+      }
+
+      setChild(data);
+    } catch (error) {
+      console.error('Unexpected error fetching child:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const calculateAge = (dateOfBirth: string): number => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
+  const requestAudioPermission = async () => {
+    if (Platform.OS === 'web') {
+      setHasPermission(false);
+      return;
+    }
+
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      setHasPermission(status === 'granted');
+      
+      if (status === 'granted') {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error requesting audio permission:', error);
+      setHasPermission(false);
+    }
+  };
+
+  const startRecording = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Supported', 'Audio recording is not available on web platform');
+      return;
+    }
+
+    if (!hasPermission) {
+      Alert.alert('Permission Required', 'Please grant microphone permission to record audio');
+      return;
+    }
+
+    try {
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      
+      setRecording(newRecording);
+      setIsRecording(true);
+      setRecordDuration(0);
+      
+      // Start timer
+      recordingTimer.current = setInterval(() => {
+        setRecordDuration(prev => prev + 1);
+      }, 1000);
+
+      // Animate record button
+      Animated.spring(recordButtonScale, {
+        toValue: 1.2,
+        useNativeDriver: true,
+      }).start();
+      
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      Alert.alert('Error', 'Failed to start recording. Please try again.');
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+
+    try {
+      setIsRecording(false);
+      
+      if (recordingTimer.current) {
+        clearInterval(recordingTimer.current);
+        recordingTimer.current = null;
+      }
+
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecordedUri(uri);
+      setRecording(null);
+
+      // Reset record button animation
+      Animated.spring(recordButtonScale, {
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
+      
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+      Alert.alert('Error', 'Failed to stop recording. Please try again.');
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      await stopRecording();
+    } else if (recordedUri && !isRecording) {
+      // Resume recording (continue from where we left off)
+      await startRecording();
+    } else {
+      // Start new recording
+      await startRecording();
+    }
+  };
+
+  const playRecordedAudio = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Supported', 'Audio playback is not available on web platform');
+      return;
+    }
+
+    if (!recordedUri) return;
+
+    try {
+      if (playbackObject) {
+        await playbackObject.unloadAsync();
+      }
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: recordedUri },
+        { shouldPlay: true }
+      );
+      
+      setPlaybackObject(sound);
+      setIsPlaying(true);
+
+      sound.setOnPlaybackStatusUpdate((status: any) => {
+        if (status.didJustFinish) {
+          setIsPlaying(false);
         }
+      });
+      
+    } catch (error) {
+      console.error('Failed to play audio:', error);
+      Alert.alert('Error', 'Failed to play audio. Please try again.');
+    }
+  };
 
-        return age;
-    };
+  const stopPlayback = async () => {
+    if (playbackObject) {
+      await playbackObject.stopAsync();
+      setIsPlaying(false);
+    }
+  };
 
-    const requestAudioPermission = async () => {
-        if (Platform.OS === 'web') {
-            setHasPermission(false);
-            return;
-        }
+  const handleReRecord = () => {
+    setShowReRecordModal(true);
+  };
 
-        try {
-            const { status } = await Audio.requestPermissionsAsync();
-            setHasPermission(status === 'granted');
+  const confirmReRecord = async () => {
+    try {
+      if (recording && isRecording) {
+        await recording.stopAndUnloadAsync();
+      }
+      if (playbackObject) {
+        await playbackObject.unloadAsync();
+      }
+      
+      setRecording(null);
+      setRecordedUri(null);
+      setIsRecording(false);
+      setIsPlaying(false);
+      setRecordDuration(0);
+      setPlaybackObject(null);
+      
+      if (recordingTimer.current) {
+        clearInterval(recordingTimer.current);
+        recordingTimer.current = null;
+      }
+      
+      setShowReRecordModal(false);
+    } catch (error) {
+      console.error('Error during re-record:', error);
+      Alert.alert('Error', 'Failed to reset recording. Please try again.');
+    }
+  };
 
-            if (status === 'granted') {
-                await Audio.setAudioModeAsync({
-                    allowsRecordingIOS: true,
-                    playsInSilentModeIOS: true,
-                });
-            }
-        } catch (error) {
-            console.error('Error requesting audio permission:', error);
-            setHasPermission(false);
-        }
-    };
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
-    const startRecording = async () => {
-        if (Platform.OS === 'web') {
-            Alert.alert('Not Supported', 'Audio recording is not available on web platform');
-            return;
-        }
+  const handleMessageSettings = () => {
+    if (!recordedUri) {
+      Alert.alert('No Recording', 'Please record a message before proceeding to settings.');
+      return;
+    }
 
-        if (!hasPermission) {
-            Alert.alert('Permission Required', 'Please grant microphone permission to record audio');
-            return;
-        }
+    // Navigate to message settings with all necessary parameters
+    router.push({
+      pathname: '/message-settings',
+      params: {
+        childId: childId,
+        messageType: 'audio',
+        recordedUri: recordedUri,
+        promptText: promptText || '',
+        promptTags: promptTags || '',
+        promptId: promptId || '',
+      }
+    });
+  };
 
-        try {
-            const { recording: newRecording } = await Audio.Recording.createAsync(
-                Audio.RecordingOptionsPresets.HIGH_QUALITY
-            );
-
-            setRecording(newRecording);
-            setIsRecording(true);
-            setRecordDuration(0);
-
-            // Start timer
-            recordingTimer.current = setInterval(() => {
-                setRecordDuration(prev => prev + 1);
-            }, 1000);
-
-            // Animate record button
-            Animated.spring(recordButtonScale, {
-                toValue: 1.2,
-                useNativeDriver: true,
-            }).start();
-
-        } catch (error) {
-            console.error('Failed to start recording:', error);
-            Alert.alert('Error', 'Failed to start recording. Please try again.');
-        }
-    };
-
-    const stopRecording = async () => {
-        if (!recording) return;
-
-        try {
-            setIsRecording(false);
-
-            if (recordingTimer.current) {
-                clearInterval(recordingTimer.current);
-                recordingTimer.current = null;
-            }
-
-            await recording.stopAndUnloadAsync();
-            const uri = recording.getURI();
-            setRecordedUri(uri);
-            setRecording(null);
-
-            // Reset record button animation
-            Animated.spring(recordButtonScale, {
-                toValue: 1,
-                useNativeDriver: true,
-            }).start();
-
-        } catch (error) {
-            console.error('Failed to stop recording:', error);
-            Alert.alert('Error', 'Failed to stop recording. Please try again.');
-        }
-    };
-
-    const toggleRecording = async () => {
-        if (isRecording) {
-            await stopRecording();
-        } else if (recordedUri && !isRecording) {
-            // Resume recording (continue from where we left off)
-            await startRecording();
-        } else {
-            // Start new recording
-            await startRecording();
-        }
-    };
-
-    const playRecordedAudio = async () => {
-        if (Platform.OS === 'web') {
-            Alert.alert('Not Supported', 'Audio playback is not available on web platform');
-            return;
-        }
-
-        if (!recordedUri) return;
-
-        try {
-            if (playbackObject) {
-                await playbackObject.unloadAsync();
-            }
-
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: recordedUri },
-                { shouldPlay: true }
-            );
-
-            setPlaybackObject(sound);
-            setIsPlaying(true);
-
-            sound.setOnPlaybackStatusUpdate((status: any) => {
-                if (status.didJustFinish) {
-                    setIsPlaying(false);
-                }
-            });
-
-        } catch (error) {
-            console.error('Failed to play audio:', error);
-            Alert.alert('Error', 'Failed to play audio. Please try again.');
-        }
-    };
-
-    const stopPlayback = async () => {
-        if (playbackObject) {
-            await playbackObject.stopAsync();
-            setIsPlaying(false);
-        }
-    };
-
-    const handleReRecord = () => {
-        setShowReRecordModal(true);
-    };
-
-    const confirmReRecord = async () => {
-        try {
-            if (recording && isRecording) {
-                await recording.stopAndUnloadAsync();
-            }
-            if (playbackObject) {
-                await playbackObject.unloadAsync();
-            }
-
-            setRecording(null);
-            setRecordedUri(null);
-            setIsRecording(false);
-            setIsPlaying(false);
-            setRecordDuration(0);
-            setPlaybackObject(null);
-
-            if (recordingTimer.current) {
-                clearInterval(recordingTimer.current);
-                recordingTimer.current = null;
-            }
-
-            setShowReRecordModal(false);
-        } catch (error) {
-            console.error('Error during re-record:', error);
-            Alert.alert('Error', 'Failed to reset recording. Please try again.');
-        }
-    };
-
-    const formatTime = (seconds: number): string => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    const handleMessageSettings = () => {
-        Alert.alert('Coming Soon', 'Message settings feature is coming soon!');
-    };
-
-    const handleBack = () => {
-        router.back();
-    };
+  const handleBack = () => {
+    router.back();
+  };
 
     if (isLoading) {
         return (
