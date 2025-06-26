@@ -9,10 +9,18 @@ import {
   Animated,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
-import { ArrowLeft, Mail, Check, Mic, Video, MessageSquare, Edit3, ArrowRight, Home } from 'lucide-react-native';
+import { ArrowLeft, Mail, Check, Mic, Video as VideoIcon, MessageSquare, Edit3, ArrowRight, Home, Play, Pause } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Video } from 'expo-av';
 import { supabase } from '@/libs/superbase';
+
+// Platform-specific audio import
+let Audio: any;
+if (Platform.OS !== 'web') {
+  Audio = require('expo-av').Audio;
+}
 
 interface Child {
   id: string;
@@ -43,15 +51,17 @@ export default function FinalReviewScreen() {
   const [child, setChild] = useState<Child | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackObject, setPlaybackObject] = useState<any>(null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const videoPlayerRef = useRef<Video>(null);
 
   useEffect(() => {
     fetchChildData();
 
-    // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -69,6 +79,15 @@ export default function FinalReviewScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    return () => {
+      if (playbackObject) {
+        playbackObject.unloadAsync();
+      }
+      if (videoPlayerRef.current) {
+        videoPlayerRef.current.unloadAsync();
+      }
+    };
   }, []);
 
   const fetchChildData = async () => {
@@ -96,54 +115,9 @@ export default function FinalReviewScreen() {
     }
   };
 
-  const handleBack = () => {
-    router.back();
-  };
-
-  const handleEditMessage = () => {
-    router.push({
-      pathname: '/message-settings',
-      params: {
-        childId,
-        messageType,
-        recordedUri,
-        promptText,
-      },
-    });
-  };
-
-  const handleEditSchedule = () => {
-    router.push({
-      pathname: '/schedule-delivery',
-      params: {
-        childId,
-        messageType,
-        recordedUri,
-        messageTitle,
-        privacy,
-        tags,
-        promptText,
-      },
-    });
-  };
-
-  const handleCreateAnotherMessage = () => {
-    router.push('/create-message');
-  };
-
-  const handleViewScheduledMessages = () => {
-    router.push('/(tabs)/vault');
-  };
-
-  const handleGoHome = () => {
-    router.push('/(tabs)');
-  };
-
-  const formatDeliveryDate = (dateStr: string, timeStr: string): string => {
+  const formatScheduledDate = (scheduledAt: string): string => {
     try {
-      const [month, day, year] = dateStr.split('/');
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      
+      const date = new Date(scheduledAt);
       const monthNames = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
@@ -161,22 +135,13 @@ export default function FinalReviewScreen() {
       
       return `${monthNames[date.getMonth()]} ${dayWithSuffix(date.getDate())}, ${date.getFullYear()}`;
     } catch (error) {
-      return dateStr;
+      return 'Invalid date';
     }
-  };
-
-  const getMessageTypeDisplay = () => {
-    const typeMap = {
-      audio: { icon: Mic, label: 'Audio Message' },
-      video: { icon: Video, label: 'Video Message' },
-      text: { icon: MessageSquare, label: 'Text Message' },
-    };
-    return typeMap[messageType as keyof typeof typeMap] || { icon: MessageSquare, label: 'Message' };
   };
 
   const getDeliveryDisplay = () => {
     if (deliveryOption === 'specificDate' && scheduledDate && scheduledTime) {
-      const formattedDate = formatDeliveryDate(scheduledDate as string, scheduledTime as string);
+      const formattedDate = formatScheduledDate(scheduledDate as string);
       return `${formattedDate} at ${scheduledTime}${repeatAnnually === 'true' ? ' (Repeats Annually)' : ''}`;
     } else if (deliveryOption === 'lifeMoment' && lifeMomentDescription) {
       return `Triggered by: ${lifeMomentDescription}`;
@@ -184,6 +149,211 @@ export default function FinalReviewScreen() {
       return 'Will be sent manually later';
     }
     return 'Not scheduled';
+  };
+
+  const getMessageTypeDisplay = () => {
+    const typeMap = {
+      audio: { icon: Mic, label: 'Audio Message', color: '#8B5CF6' },
+      video: { icon: VideoIcon, label: 'Video Message', color: '#EF4444' },
+      text: { icon: MessageSquare, label: 'Text Message', color: '#3B82F6' },
+    };
+    return typeMap[messageType as keyof typeof typeMap] || { icon: MessageSquare, label: 'Message', color: '#6B7280' };
+  };
+
+  const toggleMediaPlayback = async () => {
+    if (messageType === 'video' && videoPlayerRef.current) {
+      try {
+        if (isPlaying) {
+          await videoPlayerRef.current.pauseAsync();
+          setIsPlaying(false);
+        } else {
+          await videoPlayerRef.current.playAsync();
+          setIsPlaying(true);
+        }
+      } catch (error) {
+        console.error('Error controlling video playback:', error);
+        Alert.alert('Error', 'Failed to control video playback.');
+      }
+    } else if (messageType === 'audio') {
+      if (Platform.OS === 'web') {
+        Alert.alert('Not Supported', 'Audio playback is not available on web platform');
+        return;
+      }
+
+      if (!recordedUri) return;
+
+      try {
+        if (isPlaying && playbackObject) {
+          await playbackObject.stopAsync();
+          setIsPlaying(false);
+        } else {
+          if (playbackObject) {
+            await playbackObject.unloadAsync();
+          }
+
+          const { sound } = await Audio.Sound.createAsync(
+            { uri: recordedUri as string },
+            { shouldPlay: true }
+          );
+
+          setPlaybackObject(sound);
+          setIsPlaying(true);
+
+          sound.setOnPlaybackStatusUpdate((status: any) => {
+            if (status.didJustFinish) {
+              setIsPlaying(false);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Failed to play audio:', error);
+        Alert.alert('Error', 'Failed to play audio. Please try again.');
+      }
+    }
+  };
+
+  const renderMessagePreview = () => {
+    const typeDisplay = getMessageTypeDisplay();
+    const IconComponent = typeDisplay.icon;
+
+    if (messageType === 'video' && recordedUri) {
+      return (
+        <View style={styles.videoPlayerCard}>
+          <Video
+            ref={videoPlayerRef}
+            style={styles.videoPlayer}
+            source={{ uri: recordedUri as string }}
+            useNativeControls={false}
+            resizeMode="cover"
+            isLooping={false}
+            onPlaybackStatusUpdate={(status) => {
+              if (status.isLoaded && status.didJustFinish) {
+                setIsPlaying(false);
+              }
+            }}
+          />
+
+          <TouchableOpacity
+            style={styles.videoPlayButton}
+            onPress={toggleMediaPlayback}
+            activeOpacity={0.8}
+          >
+            {isPlaying ? (
+              <Pause size={32} color="#ffffff" strokeWidth={2} />
+            ) : (
+              <Play size={32} color="#ffffff" strokeWidth={2} />
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.videoOverlay}>
+            <View style={styles.videoTypeIndicator}>
+              <VideoIcon size={16} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.videoTypeText}>Video Message</Text>
+            </View>
+          </View>
+        </View>
+      );
+    } else if (messageType === 'audio' && recordedUri) {
+      return (
+        <View style={styles.audioPlayerCard}>
+          <TouchableOpacity
+            style={styles.playButton}
+            onPress={toggleMediaPlayback}
+            activeOpacity={0.8}
+          >
+            {isPlaying ? (
+              <Pause size={24} color="#ffffff" strokeWidth={2} />
+            ) : (
+              <Play size={24} color="#ffffff" strokeWidth={2} />
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.waveformContainer}>
+            {[...Array(20)].map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.waveformBar,
+                  {
+                    height: Math.random() * 30 + 10,
+                    backgroundColor: isPlaying ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)'
+                  }
+                ]}
+              />
+            ))}
+          </View>
+
+          <Text style={styles.audioDuration}>00:10</Text>
+        </View>
+      );
+    } else if (messageType === 'text') {
+      return (
+        <View style={styles.textPreviewCard}>
+          <View style={styles.textPreviewHeader}>
+            <MessageSquare size={20} color="#3B82F6" strokeWidth={2} />
+            <Text style={styles.textPreviewTitle}>Text Message</Text>
+          </View>
+          <View style={styles.textPreviewContent}>
+            <Text style={styles.textPreviewText} numberOfLines={6}>
+              {promptText || 'Your message content will appear here...'}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    // Fallback for unknown message types
+    return (
+      <View style={styles.fallbackPreviewCard}>
+        <IconComponent size={32} color={typeDisplay.color} strokeWidth={2} />
+        <Text style={[styles.fallbackPreviewText, { color: typeDisplay.color }]}>
+          {typeDisplay.label}
+        </Text>
+      </View>
+    );
+  };
+
+  const handleBack = () => {
+    router.back();
+  };
+
+  const handleEditMessage = () => {
+    router.push({
+      pathname: '/message-settings',
+      params: {
+        childId,
+        messageType,
+        recordedUri,
+        promptText,
+      }
+    });
+  };
+
+  const handleEditSchedule = () => {
+    router.push({
+      pathname: '/schedule-delivery',
+      params: {
+        childId,
+        messageType,
+        recordedUri,
+        messageTitle,
+        privacy,
+        tags,
+        promptText,
+      }
+    });
+  };
+
+  const handleCreateAnotherMessage = () => {
+    router.push('/create-message');
+  };
+
+  const handleViewScheduledMessages = () => {
+    router.push('/(tabs)/vault');
+  };
+
+  const handleGoHome = () => {
+    router.push('/(tabs)');
   };
 
   const handleScheduleMessage = async () => {
@@ -264,6 +434,7 @@ export default function FinalReviewScreen() {
         message_type: messageType,
         content: messageType === 'text' ? (promptText as string) : null,
         scheduled_at: scheduledAt,
+        auth_user_id: authUserId,
       };
 
       console.log('📝 Final Review - Message data to insert:', messageData);
@@ -421,6 +592,12 @@ export default function FinalReviewScreen() {
           <Text style={styles.successSubtitle}>
             It's been saved and will be delivered at just the right moment.
           </Text>
+
+          {/* Message Preview Section */}
+          <View style={styles.messagePreviewSection}>
+            <Text style={styles.messagePreviewTitle}>Your Message</Text>
+            {renderMessagePreview()}
+          </View>
 
           {/* Message Details */}
           <View style={styles.detailsContainer}>
@@ -623,6 +800,176 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     paddingHorizontal: 16,
     fontFamily: 'Poppins-Regular',
+  },
+  messagePreviewSection: {
+    marginBottom: 32,
+  },
+  messagePreviewTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  // Video Player Styles
+  videoPlayerCard: {
+    backgroundColor: '#000000',
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    height: 200,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  videoPlayer: {
+    width: '100%',
+    height: '100%',
+  },
+  videoPlayButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -25 }, { translateY: -25 }],
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 12,
+  },
+  videoTypeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  videoTypeText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+  },
+  // Audio Player Styles
+  audioPlayerCard: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    shadowColor: '#8B5CF6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  playButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  waveformContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    height: 40,
+    gap: 2,
+  },
+  waveformBar: {
+    width: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 1.5,
+    opacity: 0.8,
+  },
+  audioDuration: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  // Text Preview Styles
+  textPreviewCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  textPreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  textPreviewTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#3B82F6',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  textPreviewContent: {
+    padding: 16,
+  },
+  textPreviewText: {
+    fontSize: 16,
+    color: '#374151',
+    lineHeight: 24,
+    fontFamily: 'Poppins-Regular',
+  },
+  // Fallback Preview Styles
+  fallbackPreviewCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  fallbackPreviewText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    fontFamily: 'Poppins-SemiBold',
   },
   detailsContainer: {
     backgroundColor: '#F9FAFB',

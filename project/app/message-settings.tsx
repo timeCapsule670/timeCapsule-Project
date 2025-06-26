@@ -11,6 +11,7 @@ import {
   ScrollView,
   Image,
   Alert,
+  Platform,
 } from 'react-native';
 import { 
   ArrowLeft, 
@@ -20,10 +21,13 @@ import {
   Lock, 
   Users, 
   ArrowRight,
-  Check
+  Check,
+  Mic,
+  Video as VideoIcon,
+  MessageSquare
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Audio } from 'expo-av';
+import { Video } from 'expo-av';
 import { supabase } from '@/libs/superbase';
 
 interface Child {
@@ -51,55 +55,14 @@ export default function MessageSettingsScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [duration, setDuration] = useState('00:00');
+  
+  // Video/Audio playback refs
+  const videoPlayerRef = useRef<Video>(null);
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
-  const sound = useRef<Audio.Sound | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (sound.current) {
-        sound.current.unloadAsync();
-      }
-    };
-  }, []);
-
-  const toggleAudioPlayback = async () => {
-    try {
-      if (isPlaying) {
-        await sound.current?.pauseAsync();
-        setIsPlaying(false);
-      } else {
-        if (!sound.current) {
-          const { sound: playbackObject } = await Audio.Sound.createAsync(
-            { uri: recordedUri as string },
-            { shouldPlay: true }
-          );
-          sound.current = playbackObject;
-          sound.current.setOnPlaybackStatusUpdate(status => {
-            if ('isLoaded' in status && status.isLoaded) {
-              if (status.didJustFinish) {
-                setIsPlaying(false);
-              }
-              if (status.durationMillis) {
-                const minutes = Math.floor(status.durationMillis / 60000);
-                const seconds = ((status.durationMillis % 60000) / 1000).toFixed(0);
-                setDuration(`${minutes}:${seconds.padStart(2, '0')}`);
-              }
-            }
-          });
-        } else {
-          await sound.current.playAsync();
-        }
-        setIsPlaying(true);
-      }
-    } catch (error) {
-      console.error('Audio playback error:', error);
-      Alert.alert('Error', 'Could not play the recording. Please try again.');
-    }
-  };
-
+  // Mapping function to get emoji for category names
   const getCategoryEmoji = (categoryName: string): string => {
     const emojiMap: Record<string, string> = {
       'Milestones': '🎓',
@@ -111,9 +74,20 @@ export default function MessageSettingsScreen() {
     return emojiMap[categoryName] || '💝';
   };
 
+  // Get message type display information
+  const getMessageTypeDisplay = () => {
+    const typeMap = {
+      audio: { icon: Mic, label: 'Audio Message', color: '#8B5CF6' },
+      video: { icon: VideoIcon, label: 'Video Message', color: '#EF4444' },
+      text: { icon: MessageSquare, label: 'Text Message', color: '#3B82F6' },
+    };
+    return typeMap[messageType as keyof typeof typeMap] || { icon: MessageSquare, label: 'Message', color: '#6B7280' };
+  };
+
   useEffect(() => {
     fetchData();
     
+    // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -132,6 +106,7 @@ export default function MessageSettingsScreen() {
     try {
       setIsLoading(true);
       
+      // Fetch child data
       const { data: childData, error: childError } = await supabase
         .from('actors')
         .select('id, first_name, last_name, date_of_birth, username')
@@ -146,6 +121,7 @@ export default function MessageSettingsScreen() {
 
       setChild(childData);
 
+      // Fetch categories for tags
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
         .select('id, name')
@@ -157,6 +133,7 @@ export default function MessageSettingsScreen() {
         return;
       }
 
+      // Transform categories with emojis
       const transformedCategories: Category[] = (categoriesData || []).map(category => ({
         id: category.id,
         name: category.name,
@@ -191,11 +168,48 @@ export default function MessageSettingsScreen() {
   };
 
   const handleEditRecipient = () => {
+    // Navigate back to recipient selection
     Alert.alert('Edit Recipient', 'Navigate back to recipient selection');
   };
 
   const handleEditMessage = () => {
-    Alert.alert('Edit Message', 'Navigate back to message recording');
+    // Navigate back to the appropriate message creation screen based on type
+    const navigationMap = {
+      audio: '/record-audio-message',
+      video: '/record-video-message',
+      text: '/create-message',
+    };
+    
+    const targetScreen = navigationMap[messageType as keyof typeof navigationMap] || '/create-message';
+    
+    router.push({
+      pathname: targetScreen,
+      params: {
+        childId,
+        promptText,
+      }
+    });
+  };
+
+  const toggleMediaPlayback = async () => {
+    if (messageType === 'video' && videoPlayerRef.current) {
+      try {
+        if (isPlaying) {
+          await videoPlayerRef.current.pauseAsync();
+          setIsPlaying(false);
+        } else {
+          await videoPlayerRef.current.playAsync();
+          setIsPlaying(true);
+        }
+      } catch (error) {
+        console.error('Error controlling video playback:', error);
+        Alert.alert('Error', 'Failed to control video playback.');
+      }
+    } else if (messageType === 'audio') {
+      // For audio, show placeholder functionality
+      setIsPlaying(!isPlaying);
+      Alert.alert('Audio Playback', isPlaying ? 'Paused audio' : 'Playing audio');
+    }
   };
 
   const handlePrivacySelect = (privacy: 'private' | 'family') => {
@@ -218,6 +232,7 @@ export default function MessageSettingsScreen() {
       return;
     }
 
+    // Navigate to schedule delivery screen with all necessary parameters
     router.push({
       pathname: '/schedule-delivery',
       params: {
@@ -230,6 +245,107 @@ export default function MessageSettingsScreen() {
         promptText: promptText || '',
       }
     });
+  };
+
+  const renderMessagePreview = () => {
+    const typeDisplay = getMessageTypeDisplay();
+    const IconComponent = typeDisplay.icon;
+
+    if (messageType === 'video' && recordedUri) {
+      return (
+        <View style={styles.videoPlayerCard}>
+          <Video
+            ref={videoPlayerRef}
+            style={styles.videoPlayer}
+            source={{ uri: recordedUri as string }}
+            useNativeControls={false}
+            resizeMode="cover"
+            isLooping={false}
+            onPlaybackStatusUpdate={(status) => {
+              if (status.isLoaded && status.didJustFinish) {
+                setIsPlaying(false);
+              }
+            }}
+          />
+          
+          <TouchableOpacity
+            style={styles.videoPlayButton}
+            onPress={toggleMediaPlayback}
+            activeOpacity={0.8}
+          >
+            {isPlaying ? (
+              <Pause size={32} color="#ffffff" strokeWidth={2} />
+            ) : (
+              <Play size={32} color="#ffffff" strokeWidth={2} />
+            )}
+          </TouchableOpacity>
+          
+          <View style={styles.videoOverlay}>
+            <View style={styles.videoTypeIndicator}>
+              <VideoIcon size={16} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.videoTypeText}>Video Message</Text>
+            </View>
+          </View>
+        </View>
+      );
+    } else if (messageType === 'audio' && recordedUri) {
+      return (
+        <View style={styles.audioPlayerCard}>
+          <TouchableOpacity
+            style={styles.playButton}
+            onPress={toggleMediaPlayback}
+            activeOpacity={0.8}
+          >
+            {isPlaying ? (
+              <Pause size={24} color="#ffffff" strokeWidth={2} />
+            ) : (
+              <Play size={24} color="#ffffff" strokeWidth={2} />
+            )}
+          </TouchableOpacity>
+          
+          <View style={styles.waveformContainer}>
+            {[...Array(20)].map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.waveformBar,
+                  { 
+                    height: Math.random() * 30 + 10,
+                    backgroundColor: isPlaying ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)'
+                  }
+                ]}
+              />
+            ))}
+          </View>
+          
+          <Text style={styles.audioDuration}>00:10</Text>
+        </View>
+      );
+    } else if (messageType === 'text') {
+      return (
+        <View style={styles.textPreviewCard}>
+          <View style={styles.textPreviewHeader}>
+            <MessageSquare size={20} color="#3B82F6" strokeWidth={2} />
+            <Text style={styles.textPreviewTitle}>Text Message</Text>
+          </View>
+          <View style={styles.textPreviewContent}>
+            <Text style={styles.textPreviewText} numberOfLines={6}>
+              {promptText || 'Your message content will appear here...'}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    // Fallback for unknown message types
+    return (
+      <View style={styles.fallbackPreviewCard}>
+        <IconComponent size={32} color={typeDisplay.color} strokeWidth={2} />
+        <Text style={[styles.fallbackPreviewText, { color: typeDisplay.color }]}>
+          {typeDisplay.label}
+        </Text>
+      </View>
+    );
   };
 
   if (isLoading) {
@@ -329,33 +445,7 @@ export default function MessageSettingsScreen() {
               </TouchableOpacity>
             </View>
             
-            <View style={styles.audioPlayerCard}>
-              <TouchableOpacity
-                style={styles.playButton}
-                onPress={toggleAudioPlayback}
-                activeOpacity={0.8}
-              >
-                {isPlaying ? (
-                  <Pause size={24} color="#ffffff" strokeWidth={2} />
-                ) : (
-                  <Play size={24} color="#ffffff" strokeWidth={2} />
-                )}
-              </TouchableOpacity>
-              
-              <View style={styles.waveformContainer}>
-                {[...Array(20)].map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.waveformBar,
-                      { height: Math.random() * 30 + 10 }
-                    ]}
-                  />
-                ))}
-              </View>
-              
-              <Text style={styles.audioDuration}>00:10</Text>
-            </View>
+            {renderMessagePreview()}
           </View>
 
           {/* Privacy Settings Section */}
@@ -575,19 +665,79 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontFamily: 'Poppins-Regular',
   },
+  // Video Player Styles
+  videoPlayerCard: {
+    backgroundColor: '#000000',
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    height: 200,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  videoPlayer: {
+    width: '100%',
+    height: '100%',
+  },
+  videoPlayButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -25 }, { translateY: -25 }],
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 12,
+  },
+  videoTypeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  videoTypeText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+  },
+  // Audio Player Styles
   audioPlayerCard: {
-    backgroundColor: '#8B9DC3',
+    backgroundColor: '#8B5CF6',
     borderRadius: 16,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    shadowColor: '#8B5CF6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   playButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -617,6 +767,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ffffff',
     fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  // Text Preview Styles
+  textPreviewCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  textPreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  textPreviewTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#3B82F6',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  textPreviewContent: {
+    padding: 16,
+  },
+  textPreviewText: {
+    fontSize: 16,
+    color: '#374151',
+    lineHeight: 24,
+    fontFamily: 'Poppins-Regular',
+  },
+  // Fallback Preview Styles
+  fallbackPreviewCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  fallbackPreviewText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
     fontFamily: 'Poppins-SemiBold',
   },
   privacyOptions: {

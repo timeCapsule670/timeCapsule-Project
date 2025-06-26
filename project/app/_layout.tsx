@@ -87,6 +87,8 @@ export default function RootLayout() {
         <Stack.Screen name="invite-child" />
         <Stack.Screen name="welcome" />
         <Stack.Screen name="message-settings" />
+        <Stack.Screen name="record-video-message" />
+        <Stack.Screen name="record-text-message" />
         <Stack.Screen name="create-message" />
         <Stack.Screen name="preview-message" />
         <Stack.Screen name="schedule-delivery" />

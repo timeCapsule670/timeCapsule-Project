@@ -12,11 +12,12 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { ArrowLeft, Calendar, MoreVertical, Play, Pause, ArrowRight } from 'lucide-react-native';
+import { ArrowLeft, Edit3, Play, Pause, ArrowRight, Mic, Video as VideoIcon, MessageSquare } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Video } from 'expo-av';
 import { supabase } from '@/libs/superbase';
 
-// Platform-specific imports for Audio
+// Platform-specific audio import
 let Audio: any;
 if (Platform.OS !== 'web') {
   Audio = require('expo-av').Audio;
@@ -30,14 +31,6 @@ interface Child {
   username: string;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  emoji: string;
-  color: string;
-  backgroundColor: string;
-}
-
 export default function PreviewMessageScreen() {
   const router = useRouter();
   const {
@@ -46,7 +39,7 @@ export default function PreviewMessageScreen() {
     recordedUri,
     messageTitle,
     privacy,
-    tags, // This will be a comma-separated string of category IDs
+    tags,
     promptText,
     deliveryOption,
     scheduledDate,
@@ -57,54 +50,18 @@ export default function PreviewMessageScreen() {
   } = useLocalSearchParams();
 
   const [child, setChild] = useState<Child | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackObject, setPlaybackObject] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
+  const videoPlayerRef = useRef<Video>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
-  // Mapping function to get visual properties for category names
-  const getCategoryVisuals = (categoryName: string) => {
-    const visuals: Record<string, { emoji: string; color: string; backgroundColor: string }> = {
-      'Emotional Support': {
-        emoji: '😊',
-        color: '#8B5CF6',
-        backgroundColor: '#F3E8FF',
-      },
-      'Milestones': {
-        emoji: '🎓',
-        color: '#F59E0B',
-        backgroundColor: '#FEF3C7',
-      },
-      'Celebrations and Encouragement': {
-        emoji: '🎉',
-        color: '#EC4899',
-        backgroundColor: '#FCE7F3',
-      },
-      'Life Advice': {
-        emoji: '💬',
-        color: '#3B82F6',
-        backgroundColor: '#DBEAFE',
-      },
-      'Just Because': {
-        emoji: '❤️',
-        color: '#EF4444',
-        backgroundColor: '#FEF2F2',
-      },
-    };
-    
-    return visuals[categoryName] || {
-      emoji: '💝',
-      color: '#6B7280',
-      backgroundColor: '#F3F4F6',
-    };
-  };
-
   useEffect(() => {
-    fetchData();
+    fetchChildData();
 
+    // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -125,52 +82,25 @@ export default function PreviewMessageScreen() {
     };
   }, []);
 
-  const fetchData = async () => {
+  const fetchChildData = async () => {
     try {
       setIsLoading(true);
 
-      // Fetch child data
-      const { data: childData, error: childError } = await supabase
+      const { data, error } = await supabase
         .from('actors')
         .select('id, first_name, last_name, date_of_birth, username')
         .eq('id', childId)
         .single();
 
-      if (childError) {
-        console.error('Error fetching child:', childError);
+      if (error) {
+        console.error('Error fetching child:', error);
         Alert.alert('Error', 'Failed to load child data. Please try again.');
         return;
       }
-      setChild(childData);
 
-      // Fetch categories for tags
-      const tagIds = typeof tags === 'string' ? tags.split(',').filter(id => id.trim()) : [];
-      if (tagIds.length > 0) {
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('categories')
-          .select('id, name')
-          .in('id', tagIds);
-
-        if (categoriesError) {
-          console.error('Error fetching categories:', categoriesError);
-          Alert.alert('Error', 'Failed to load categories. Please try again.');
-          return;
-        }
-
-        const transformedCategories: Category[] = (categoriesData || []).map(category => {
-          const visuals = getCategoryVisuals(category.name);
-          return {
-            id: category.id,
-            name: category.name,
-            emoji: visuals.emoji,
-            color: visuals.color,
-            backgroundColor: visuals.backgroundColor,
-          };
-        });
-        setCategories(transformedCategories);
-      }
+      setChild(data);
     } catch (error) {
-      console.error('Unexpected error fetching data:', error);
+      console.error('Unexpected error fetching child:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -186,58 +116,242 @@ export default function PreviewMessageScreen() {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
+
     return age;
   };
 
-  const handleBack = () => {
-    router.back();
-  };
-
-  const handleMoreOptions = () => {
-    Alert.alert('More Options', 'Additional options coming soon!');
-  };
-
-  const toggleAudioPlayback = async () => {
-    if (Platform.OS === 'web') {
-      Alert.alert('Not Supported', 'Audio playback is not available on web platform');
-      return;
-    }
-
-    if (!recordedUri) {
-      Alert.alert('No Audio', 'No recorded audio to play.');
-      return;
-    }
-
+  const formatDeliveryDate = (dateStr: string, timeStr: string): string => {
     try {
-      if (isPlaying) {
-        if (playbackObject) {
-          await playbackObject.pauseAsync();
+      const [month, day, year] = dateStr.split('/');
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+
+      const dayWithSuffix = (day: number) => {
+        if (day > 3 && day < 21) return day + 'th';
+        switch (day % 10) {
+          case 1: return day + 'st';
+          case 2: return day + 'nd';
+          case 3: return day + 'rd';
+          default: return day + 'th';
         }
-        setIsPlaying(false);
-      } else {
-        if (playbackObject) {
-          await playbackObject.playAsync();
+      };
+
+      return `${monthNames[date.getMonth()]} ${dayWithSuffix(date.getDate())}, ${date.getFullYear()}`;
+    } catch (error) {
+      return dateStr;
+    }
+  };
+
+  const getDeliveryDisplay = () => {
+    if (deliveryOption === 'specificDate' && scheduledDate && scheduledTime) {
+      const formattedDate = formatDeliveryDate(scheduledDate as string, scheduledTime as string);
+      return `${formattedDate} at ${scheduledTime}${repeatAnnually === 'true' ? ' (Repeats Annually)' : ''}`;
+    } else if (deliveryOption === 'lifeMoment' && lifeMomentDescription) {
+      return `Triggered by: ${lifeMomentDescription}`;
+    } else if (deliveryOption === 'manuallyLater') {
+      return 'Will be sent manually later';
+    }
+    return 'Not scheduled';
+  };
+
+  const getMessageTypeDisplay = () => {
+    const typeMap = {
+      audio: { icon: Mic, label: 'Audio Message', color: '#8B5CF6' },
+      video: { icon: VideoIcon, label: 'Video Message', color: '#EF4444' },
+      text: { icon: MessageSquare, label: 'Text Message', color: '#3B82F6' },
+    };
+    return typeMap[messageType as keyof typeof typeMap] || { icon: MessageSquare, label: 'Message', color: '#6B7280' };
+  };
+
+  const toggleMediaPlayback = async () => {
+    if (messageType === 'video' && videoPlayerRef.current) {
+      try {
+        if (isPlaying) {
+          await videoPlayerRef.current.pauseAsync();
+          setIsPlaying(false);
         } else {
+          await videoPlayerRef.current.playAsync();
+          setIsPlaying(true);
+        }
+      } catch (error) {
+        console.error('Error controlling video playback:', error);
+        Alert.alert('Error', 'Failed to control video playback.');
+      }
+    } else if (messageType === 'audio') {
+      if (Platform.OS === 'web') {
+        Alert.alert('Not Supported', 'Audio playback is not available on web platform');
+        return;
+      }
+
+      if (!recordedUri) return;
+
+      try {
+        if (isPlaying && playbackObject) {
+          await playbackObject.stopAsync();
+          setIsPlaying(false);
+        } else {
+          if (playbackObject) {
+            await playbackObject.unloadAsync();
+          }
+
           const { sound } = await Audio.Sound.createAsync(
             { uri: recordedUri as string },
             { shouldPlay: true }
           );
+
           setPlaybackObject(sound);
+          setIsPlaying(true);
+
           sound.setOnPlaybackStatusUpdate((status: any) => {
             if (status.didJustFinish) {
               setIsPlaying(false);
             }
           });
         }
-        setIsPlaying(true);
+      } catch (error) {
+        console.error('Failed to play audio:', error);
+        Alert.alert('Error', 'Failed to play audio. Please try again.');
       }
-    } catch (error) {
-      console.error('Failed to play audio:', error);
-      Alert.alert('Error', 'Failed to play audio. Please try again.');
     }
   };
 
-  const handleFinalReview = () => {
+  const renderMessagePreview = () => {
+    const typeDisplay = getMessageTypeDisplay();
+    const IconComponent = typeDisplay.icon;
+
+    if (messageType === 'video' && recordedUri) {
+      return (
+        <View style={styles.videoPlayerCard}>
+          <Video
+            ref={videoPlayerRef}
+            style={styles.videoPlayer}
+            source={{ uri: recordedUri as string }}
+            useNativeControls={false}
+            resizeMode="cover"
+            isLooping={false}
+            onPlaybackStatusUpdate={(status) => {
+              if (status.isLoaded && status.didJustFinish) {
+                setIsPlaying(false);
+              }
+            }}
+          />
+
+          <TouchableOpacity
+            style={styles.videoPlayButton}
+            onPress={toggleMediaPlayback}
+            activeOpacity={0.8}
+          >
+            {isPlaying ? (
+              <Pause size={32} color="#ffffff" strokeWidth={2} />
+            ) : (
+              <Play size={32} color="#ffffff" strokeWidth={2} />
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.videoOverlay}>
+            <View style={styles.videoTypeIndicator}>
+              <VideoIcon size={16} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.videoTypeText}>Video Message</Text>
+            </View>
+          </View>
+        </View>
+      );
+    } else if (messageType === 'audio' && recordedUri) {
+      return (
+        <View style={styles.audioPlayerCard}>
+          <TouchableOpacity
+            style={styles.playButton}
+            onPress={toggleMediaPlayback}
+            activeOpacity={0.8}
+          >
+            {isPlaying ? (
+              <Pause size={24} color="#ffffff" strokeWidth={2} />
+            ) : (
+              <Play size={24} color="#ffffff" strokeWidth={2} />
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.waveformContainer}>
+            {[...Array(20)].map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.waveformBar,
+                  {
+                    height: Math.random() * 30 + 10,
+                    backgroundColor: isPlaying ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)'
+                  }
+                ]}
+              />
+            ))}
+          </View>
+
+          <Text style={styles.audioDuration}>00:10</Text>
+        </View>
+      );
+    } else if (messageType === 'text') {
+      return (
+        <View style={styles.textPreviewCard}>
+          <View style={styles.textPreviewHeader}>
+            <MessageSquare size={20} color="#3B82F6" strokeWidth={2} />
+            <Text style={styles.textPreviewTitle}>Text Message</Text>
+          </View>
+          <View style={styles.textPreviewContent}>
+            <Text style={styles.textPreviewText} numberOfLines={6}>
+              {promptText || 'Your message content will appear here...'}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    // Fallback for unknown message types
+    return (
+      <View style={styles.fallbackPreviewCard}>
+        <IconComponent size={32} color={typeDisplay.color} strokeWidth={2} />
+        <Text style={[styles.fallbackPreviewText, { color: typeDisplay.color }]}>
+          {typeDisplay.label}
+        </Text>
+      </View>
+    );
+  };
+
+  const handleBack = () => {
+    router.back();
+  };
+
+  const handleEditMessage = () => {
+    router.push({
+      pathname: '/message-settings',
+      params: {
+        childId,
+        messageType,
+        recordedUri,
+        promptText,
+      },
+    });
+  };
+
+  const handleEditSchedule = () => {
+    router.push({
+      pathname: '/schedule-delivery',
+      params: {
+        childId,
+        messageType,
+        recordedUri,
+        messageTitle,
+        privacy,
+        tags,
+        promptText,
+      },
+    });
+  };
+
+  const handleConfirmAndSchedule = () => {
     router.push({
       pathname: '/final-review',
       params: {
@@ -258,70 +372,19 @@ export default function PreviewMessageScreen() {
     });
   };
 
-  const formatDeliveryDate = (dateStr: string, timeStr: string): string => {
-    try {
-      const [month, day, year] = dateStr.split('/');
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      
-      const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-      
-      const dayWithSuffix = (day: number) => {
-        if (day > 3 && day < 21) return day + 'th';
-        switch (day % 10) {
-          case 1: return day + 'st';
-          case 2: return day + 'nd';
-          case 3: return day + 'rd';
-          default: return day + 'th';
-        }
-      };
-      
-      return `${monthNames[date.getMonth()]} ${dayWithSuffix(date.getDate())}, ${date.getFullYear()}`;
-    } catch (error) {
-      return dateStr;
-    }
-  };
-
-  const renderDeliveryInfo = () => {
-    if (deliveryOption === 'specificDate' && scheduledDate && scheduledTime) {
-      const formattedDate = formatDeliveryDate(scheduledDate as string, scheduledTime as string);
-      return (
-        <View style={styles.deliveryInfoRow}>
-          <Calendar size={20} color="#6B7280" style={styles.deliveryIcon} />
-          <Text style={styles.deliveryInfoText}>
-            Scheduled for {formattedDate}, {scheduledTime}
-            {repeatAnnually === 'true' && ' (Repeats Annually)'}
-          </Text>
-        </View>
-      );
-    } else if (deliveryOption === 'lifeMoment' && lifeMomentDescription) {
-      return (
-        <View style={styles.deliveryInfoRow}>
-          <Text style={styles.deliveryInfoText}>Triggered by: {lifeMomentDescription}</Text>
-        </View>
-      );
-    } else if (deliveryOption === 'manuallyLater') {
-      return (
-        <View style={styles.deliveryInfoRow}>
-          <Text style={styles.deliveryInfoText}>Will be sent manually later</Text>
-        </View>
-      );
-    }
-    return null;
-  };
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading preview...</Text>
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
   }
+
+  const messageTypeDisplay = getMessageTypeDisplay();
+  const MessageTypeIcon = messageTypeDisplay.icon;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -342,9 +405,7 @@ export default function PreviewMessageScreen() {
             <ArrowLeft size={24} color="#374151" strokeWidth={2} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Preview Message</Text>
-          <TouchableOpacity style={styles.moreOptionsButton} onPress={handleMoreOptions} activeOpacity={0.7}>
-            <MoreVertical size={24} color="#374151" strokeWidth={2} />
-          </TouchableOpacity>
+          <View style={styles.headerSpacer} />
         </View>
 
         <ScrollView
@@ -352,88 +413,77 @@ export default function PreviewMessageScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Message Info Card */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{messageTitle || 'Untitled Message'}</Text>
-            <View style={styles.recipientInfo}>
-              <Image
-                source={{ uri: 'https://images.pexels.com/photos/1620760/pexels-photo-1620760.jpeg' }}
-                style={styles.recipientAvatar}
-                resizeMode="cover"
-              />
-              <View>
-                <Text style={styles.recipientName}>{child?.first_name || 'Child'}</Text>
-                <Text style={styles.recipientAge}>Age {child ? calculateAge(child.date_of_birth) : 0}</Text>
-              </View>
-            </View>
-            {renderDeliveryInfo()}
+          {/* Message Preview Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Your Message</Text>
+            {renderMessagePreview()}
           </View>
 
-          {/* Message Content Card */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Message Content</Text>
-            <View style={styles.audioPlayerContainer}>
-              <Text style={styles.audioDuration}>02:00</Text>
-              <View style={styles.waveformContainer}>
-                {[...Array(20)].map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.waveformBar,
-                      { height: Math.random() * 30 + 10 }
-                    ]}
-                  />
-                ))}
+          {/* Message Details */}
+          <View style={styles.detailsContainer}>
+            <Text style={styles.detailsTitle}>Message Details</Text>
+
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>To:</Text>
+              <Text style={styles.detailValue}>{child?.first_name || 'Child'}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Title:</Text>
+              <Text style={styles.detailValue}>{messageTitle || 'Untitled Message'}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Format:</Text>
+              <View style={styles.formatContainer}>
+                <MessageTypeIcon size={16} color="#374151" strokeWidth={2} />
+                <Text style={styles.detailValue}>{messageTypeDisplay.label}</Text>
               </View>
-              <TouchableOpacity
-                style={styles.playButton}
-                onPress={toggleAudioPlayback}
-                activeOpacity={0.8}
-              >
-                {isPlaying ? (
-                  <Pause size={24} color="#ffffff" strokeWidth={2} />
-                ) : (
-                  <Play size={24} color="#ffffff" strokeWidth={2} />
-                )}
-              </TouchableOpacity>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Delivery:</Text>
+              <Text style={styles.detailValue}>{getDeliveryDisplay()}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Privacy:</Text>
+              <Text style={styles.detailValue}>
+                {privacy === 'private' ? 'Private (Only Recipient)' : 'Share With Family Group'}
+              </Text>
             </View>
           </View>
 
-          {/* Message Category Card */}
-          {categories.length > 0 && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Message Category</Text>
-              <View style={styles.categoryContainer}>
-                {categories.map(category => (
-                  <View 
-                    key={category.id} 
-                    style={[
-                      styles.categoryTag,
-                      { 
-                        backgroundColor: category.backgroundColor,
-                        borderColor: category.color,
-                      }
-                    ]}
-                  >
-                    <Text style={styles.categoryEmoji}>{category.emoji}</Text>
-                    <Text style={[styles.categoryText, { color: category.color }]}>
-                      {category.name}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+          {/* Action Buttons */}
+          <View style={styles.actionButtonsContainer}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleEditMessage}
+              activeOpacity={0.7}
+            >
+              <Edit3 size={16} color="#374151" strokeWidth={2} />
+              <Text style={styles.actionButtonText}>Edit Message</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleEditSchedule}
+              activeOpacity={0.7}
+            >
+              <Edit3 size={16} color="#374151" strokeWidth={2} />
+              <Text style={styles.actionButtonText}>Edit Schedule</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
 
         {/* Footer */}
         <View style={styles.footer}>
           <TouchableOpacity
-            style={styles.finalReviewButton}
-            onPress={handleFinalReview}
+            style={styles.confirmButton}
+            onPress={handleConfirmAndSchedule}
             activeOpacity={0.9}
           >
-            <Text style={styles.finalReviewButtonText}>Final Review</Text>
+            <Text style={styles.confirmButtonText}>Confirm & Schedule</Text>
             <ArrowRight size={20} color="#ffffff" strokeWidth={2} />
           </TouchableOpacity>
         </View>
@@ -485,114 +535,99 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     fontFamily: 'Poppins-SemiBold',
   },
-  moreOptionsButton: {
+  headerSpacer: {
     width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    gap: 20,
+    paddingBottom: 20,
   },
-  card: {
-    backgroundColor: '#F9FAFB',
+  section: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 20,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  // Video Player Styles
+  videoPlayerCard: {
+    backgroundColor: '#000000',
     borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    position: 'relative',
+    height: 200,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 16,
-    fontFamily: 'Poppins-Bold',
+  videoPlayer: {
+    width: '100%',
+    height: '100%',
   },
-  recipientInfo: {
-    flexDirection: 'row',
+  videoPlayButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -25 }, { translateY: -25 }],
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  recipientAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 16,
-  },
-  recipientName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 4,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  recipientAge: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontFamily: 'Poppins-Regular',
-  },
-  deliveryInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  deliveryIcon: {
-    marginRight: 8,
-  },
-  deliveryInfoText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontFamily: 'Poppins-Regular',
-    flex: 1,
-  },
-  audioPlayerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#8B9DC3',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-  audioDuration: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#ffffff',
-    fontFamily: 'Poppins-Bold',
-  },
-  waveformContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
     justifyContent: 'center',
-    height: 40,
-    flex: 1,
-    marginHorizontal: 16,
-    gap: 2,
   },
-  waveformBar: {
-    width: 3,
-    backgroundColor: '#ffffff',
-    borderRadius: 1.5,
-    opacity: 0.8,
+  videoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 12,
+  },
+  videoTypeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  videoTypeText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+  },
+  // Audio Player Styles
+  audioPlayerCard: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    shadowColor: '#8B5CF6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   playButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#EF4444',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -604,27 +639,155 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  categoryContainer: {
+  waveformContainer: {
+    flex: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    height: 40,
+    gap: 2,
   },
-  categoryTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderWidth: 1,
+  waveformBar: {
+    width: 3,
+    backgroundColor: '#ffffff',
+    borderRadius: 1.5,
+    opacity: 0.8,
   },
-  categoryEmoji: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  categoryText: {
+  audioDuration: {
     fontSize: 14,
+    color: '#ffffff',
     fontWeight: '600',
     fontFamily: 'Poppins-SemiBold',
+  },
+  // Text Preview Styles
+  textPreviewCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  textPreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  textPreviewTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#3B82F6',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  textPreviewContent: {
+    padding: 16,
+  },
+  textPreviewText: {
+    fontSize: 16,
+    color: '#374151',
+    lineHeight: 24,
+    fontFamily: 'Poppins-Regular',
+  },
+  // Fallback Preview Styles
+  fallbackPreviewCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  fallbackPreviewText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  detailsContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 24,
+    marginHorizontal: 24,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  detailsTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 20,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  detailLabel: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+    flex: 1,
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    fontFamily: 'Poppins-SemiBold',
+    flex: 2,
+    textAlign: 'right',
+  },
+  formatContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flex: 2,
+    gap: 8,
+  },
+  actionButtonsContainer: {
+    paddingHorizontal: 24,
+    gap: 12,
+    marginBottom: 32,
+  },
+  actionButton: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#374151',
+    fontFamily: 'Poppins-Medium',
   },
   footer: {
     paddingHorizontal: 24,
@@ -633,7 +796,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },
-  finalReviewButton: {
+  confirmButton: {
     backgroundColor: '#3B4F75',
     borderRadius: 16,
     paddingVertical: 18,
@@ -651,7 +814,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  finalReviewButtonText: {
+  confirmButtonText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',

@@ -236,7 +236,7 @@ export default function CreateMessageScreen() {
 
     const selectedChildData = children.find(child => child.id === selectedChild);
     
-    if (selectedMessageType === 'audio') {
+     if (selectedMessageType === 'audio') {
       // Navigate to audio recording screen
       router.push({
         pathname: '/record-audio-message',
@@ -247,14 +247,28 @@ export default function CreateMessageScreen() {
           promptId: promptId || '',
         }
       });
-    } else {
-      // For other message types, show placeholder
-      const selectedTypeData = messageTypes.find(type => type.id === selectedMessageType);
-      Alert.alert(
-        'Coming Soon',
-        `${selectedTypeData?.label} creation feature is coming soon!`,
-        [{ text: 'OK' }]
-      );
+    } else if (selectedMessageType === 'video') {
+      // Navigate to video recording screen
+      router.push({
+        pathname: '/record-video-message',
+        params: {
+          childId: selectedChild,
+          promptText: promptText || '',
+          promptTags: promptTags || '',
+          promptId: promptId || '',
+        }
+      });
+    }else if (selectedMessageType === 'text') {
+      // Navigate to text message creation screen
+      router.push({
+        pathname: '/record-text-message',
+        params: {
+          childId: selectedChild,
+          promptText: promptText || '',
+          promptTags: promptTags || '',
+          promptId: promptId || '',
+        }
+      });
     }
   };
 
@@ -274,8 +288,8 @@ export default function CreateMessageScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      <Animated.View 
+
+      <Animated.View
         style={[
           styles.content,
           {
@@ -286,22 +300,27 @@ export default function CreateMessageScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={handleBack}
             activeOpacity={0.7}
           >
             <ArrowLeft size={24} color="#374151" strokeWidth={2} />
           </TouchableOpacity>
-          
+
           <Text style={styles.headerTitle}>Create Message</Text>
           <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView 
+        {/* Make everything below header scrollable */}
+        <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { flexGrow: 1 }
+          ]}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Selected Prompt Section */}
           {promptText && (
@@ -325,7 +344,7 @@ export default function CreateMessageScreen() {
           {/* Who is this message for? */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Who is this message for?</Text>
-            
+
             {children.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateTitle}>No Children Found</Text>
@@ -345,7 +364,7 @@ export default function CreateMessageScreen() {
                 {children.map((child) => {
                   const age = calculateAge(child.date_of_birth);
                   const isSelected = selectedChild === child.id;
-                  
+
                   return (
                     <TouchableOpacity
                       key={child.id}
@@ -368,7 +387,7 @@ export default function CreateMessageScreen() {
                           </View>
                         )}
                       </View>
-                      
+
                       <View style={styles.childInfo}>
                         <Text style={[
                           styles.childName,
@@ -394,12 +413,12 @@ export default function CreateMessageScreen() {
           {children.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>How would you like to share this message?</Text>
-              
+
               <View style={styles.messageTypesContainer}>
                 {messageTypes.map((type) => {
                   const isSelected = selectedMessageType === type.id;
                   const IconComponent = type.icon;
-                  
+
                   return (
                     <TouchableOpacity
                       key={type.id}
@@ -420,7 +439,7 @@ export default function CreateMessageScreen() {
                         ]}>
                           <Text style={styles.messageTypeEmoji}>{type.emoji}</Text>
                         </View>
-                        
+
                         <Text style={[
                           styles.messageTypeLabel,
                           isSelected && { color: type.color },
@@ -428,7 +447,7 @@ export default function CreateMessageScreen() {
                           {type.label}
                         </Text>
                       </View>
-                      
+
                       {isSelected && (
                         <View style={[styles.selectedIndicator, { backgroundColor: type.color }]}>
                           <Check size={16} color="#ffffff" strokeWidth={3} />
@@ -440,24 +459,24 @@ export default function CreateMessageScreen() {
               </View>
             </View>
           )}
-        </ScrollView>
 
-        {/* Record Message Button */}
-        {children.length > 0 && (
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[
-                styles.recordButton,
-                !isFormValid && styles.recordButtonDisabled,
-              ]}
-              onPress={handleRecordMessage}
-              disabled={!isFormValid}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.recordButtonText}>Record Message</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          {/* Record Message Button */}
+          {children.length > 0 && (
+            <View style={styles.footer}>
+              <TouchableOpacity
+                style={[
+                  styles.recordButton,
+                  !isFormValid && styles.recordButtonDisabled,
+                ]}
+                onPress={handleRecordMessage}
+                disabled={!isFormValid}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.recordButtonText}>Record Message</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </ScrollView>
       </Animated.View>
     </SafeAreaView>
   );
