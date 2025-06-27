@@ -48,7 +48,7 @@ export default function VaultScreen() {
   });
 
   // Listen to playing state changes
-  const { isPlaying: isAudioPlaying } = useEvent(audioPlayer, 'playingChange', { isPlaying: audioPlayer.playing });
+   const isAudioPlaying = audioPlayer.playing;  
   const { isPlaying: isVideoPlaying } = useEvent(videoPlayer, 'playingChange', { isPlaying: videoPlayer.playing });
 
   useEffect(() => {
@@ -243,8 +243,8 @@ export default function VaultScreen() {
       { text: 'Edit Message', onPress: () => handleEditMessage(messageId) },
       { text: 'Duplicate Message', onPress: () => handleDuplicateMessage(messageId) },
       { text: 'Share Message', onPress: () => handleShareMessage(messageId) },
-      { text: 'Delete Message', onPress: () => handleDeleteMessage(messageId), style: 'destructive' },
-      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete Message', onPress: () => handleDeleteMessage(messageId), style: 'destructive' as const },
+      { text: 'Cancel', style: 'cancel' as const },
     ];
 
     Alert.alert(

@@ -51,7 +51,7 @@ export default function RecordVideoMessageScreen() {
   
   // Refs
   const cameraRef = useRef<CameraView>(null);
-  const recordingTimer = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimer = useRef<NodeJS.Timeout | number | null>(null);
   
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;

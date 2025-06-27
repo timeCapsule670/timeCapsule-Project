@@ -66,7 +66,7 @@ export default function MessageSettingsScreen() {
   });
 
   // Listen to playing state changes
-  const { playing: isAudioPlaying } = useEvent(audioPlayer, 'playingChange', { playing: audioPlayer.playing });
+  const isAudioPlaying = audioPlayer.playing;  
   const { isPlaying: isVideoPlaying } = useEvent(videoPlayer, 'playingChange', { isPlaying: videoPlayer.playing });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -211,7 +211,7 @@ export default function MessageSettingsScreen() {
     const targetScreen = navigationMap[messageType as keyof typeof navigationMap] || '/create-message';
 
     router.push({
-      pathname: targetScreen,
+      pathname: targetScreen as typeof router.push extends (args: { pathname: infer P }) => any ? P : never,
       params: {
         childId,
         promptText,
@@ -631,6 +631,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    marginTop: 30
   },
   backButton: {
     width: 40,
@@ -680,9 +681,9 @@ const styles = StyleSheet.create({
   },
   titleInput: {
     backgroundColor: '#ffffff',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#000000',
+    borderRadius: 7,
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 16,

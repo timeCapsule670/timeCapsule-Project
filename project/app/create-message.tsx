@@ -506,6 +506,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 24,
+    marginTop: 30,
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -579,7 +580,7 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 24,
-    marginBottom: 32,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
@@ -632,7 +633,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
   },
   childrenContainer: {
-    flexDirection: 'row',
+    flexDirection: 'row', // changed from 'row' to 'column'
     flexWrap: 'wrap',
     gap: 16,
   },
@@ -643,7 +644,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
-    minWidth: 120,
+    minWidth: 180,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

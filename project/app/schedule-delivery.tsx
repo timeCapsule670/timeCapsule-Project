@@ -358,6 +358,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    marginTop: 30
   },
   backButton: {
     width: 40,

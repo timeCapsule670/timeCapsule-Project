@@ -57,7 +57,7 @@ export default function PreviewMessageScreen() {
   });
 
   // Listen to playing state changes
-  const { isPlaying: isAudioPlaying } = useEvent(audioPlayer, 'playingChange', { isPlaying: audioPlayer.playing });
+  const isAudioPlaying = audioPlayer.playing;  
   const { isPlaying: isVideoPlaying } = useEvent(videoPlayer, 'playingChange', { isPlaying: videoPlayer.playing });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;

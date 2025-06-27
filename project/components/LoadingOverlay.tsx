@@ -52,7 +52,24 @@ export default function LoadingOverlay({ visible }: LoadingOverlayProps) {
     }
   }, [visible, pulseAnim, fadeAnim]);
 
-  if (!visible && fadeAnim._value === 0) {
+  // Prevent rendering when overlay is fully faded out and not visible
+  const [isFadedOut, setIsFadedOut] = React.useState(false);
+
+  useEffect(() => {
+    if (!visible) {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setIsFadedOut(true));
+    } else {
+      setIsFadedOut(false);
+      fadeAnim.setValue(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  if (!visible && isFadedOut) {
     return null;
   }
 

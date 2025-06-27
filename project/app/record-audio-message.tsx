@@ -48,7 +48,7 @@ export default function RecordAudioMessageScreen() {
   const waveAnim = useRef(new Animated.Value(0)).current;
   const recordButtonScale = useRef(new Animated.Value(1)).current;
   
-  const recordingTimer = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetchChildData();
@@ -518,25 +518,6 @@ export default function RecordAudioMessageScreen() {
                 <TouchableOpacity
                   style={[
                     styles.actionButton,
-                    styles.reRecordButton,
-                    !recordedUri && styles.actionButtonDisabled,
-                  ]}
-                  onPress={handleReRecord}
-                  disabled={!recordedUri}
-                  activeOpacity={0.7}
-                >
-                  <RotateCcw size={20} color={!recordedUri ? "#9CA3AF" : "#6B7280"} strokeWidth={2} />
-                  <Text style={[
-                    styles.actionButtonText,
-                    !recordedUri && styles.actionButtonTextDisabled,
-                  ]}>
-                    Re-record
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
                     styles.previewButton,
                     !recordedUri && styles.actionButtonDisabled,
                   ]}
@@ -682,6 +663,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    marginTop: 30
   },
   headerBackButton: {
     width: 40,
@@ -821,7 +803,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#EF4444',
+    backgroundColor: '#FF6B6B',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#EF4444',

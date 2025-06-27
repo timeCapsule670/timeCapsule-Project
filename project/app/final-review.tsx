@@ -58,6 +58,7 @@ export default function FinalReviewScreen() {
   });
 
   // Listen to playing state changes
+    // @ts-ignore
   const { isPlaying: isAudioPlaying } = useEvent(audioPlayer, 'playingChange', { isPlaying: audioPlayer.playing });
   const { isPlaying: isVideoPlaying } = useEvent(videoPlayer, 'playingChange', { isPlaying: videoPlayer.playing });
 
