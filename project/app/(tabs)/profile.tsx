@@ -23,6 +23,8 @@ import {
   Calendar,
   Send,
   Lightbulb,
+  Users,
+  UserPlus,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/libs/superbase';
@@ -33,6 +35,7 @@ interface Director {
   last_name: string;
   email: string;
   director_type?: string;
+  profile_picture_url?: string;
 }
 
 interface Child {
@@ -102,7 +105,7 @@ export default function ProfileScreen() {
       // Fetch director profile
       const { data: directorData, error: directorError } = await supabase
         .from('directors')
-        .select('id, first_name, last_name, email, director_type')
+        .select('id, first_name, last_name, email, director_type, profile_picture_url')
         .eq('auth_user_id', authUserId)
         .single();
 
@@ -124,14 +127,7 @@ export default function ProfileScreen() {
         await fetchActivityStats(directorData.id);
         
         // Fetch family members (placeholder for now)
-        setFamilyMembers([
-          {
-            id: '1',
-            first_name: 'John',
-            last_name: 'Johnson',
-            role: 'Father',
-          },
-        ]);
+        setFamilyMembers([]);
       }
     } catch (error) {
       console.error('Unexpected error fetching profile data:', error);
@@ -293,7 +289,7 @@ export default function ProfileScreen() {
   };
 
   const handleAccountSettings = () => {
-    Alert.alert('Account Settings', 'Account settings feature coming soon!');
+    router.push('/account-settings');
   };
 
   const handleNotifications = () => {
@@ -339,6 +335,38 @@ export default function ProfileScreen() {
         return <MessageSquare size={16} color="#3B82F6" strokeWidth={2} />;
       default:
         return <MessageSquare size={16} color="#6B7280" strokeWidth={2} />;
+    }
+  };
+
+  const renderProfileImage = () => {
+    if (director?.profile_picture_url) {
+      // Check if it's an avatar emoji
+      if (director.profile_picture_url.startsWith('avatar:')) {
+        const emoji = director.profile_picture_url.replace('avatar:', '');
+        return (
+          <View style={styles.profileAvatarContainer}>
+            <Text style={styles.profileAvatarEmoji}>{emoji}</Text>
+          </View>
+        );
+      } else {
+        // It's a regular image URL
+        return (
+          <Image
+            source={{ uri: director.profile_picture_url }}
+            style={styles.profileAvatar}
+            resizeMode="cover"
+          />
+        );
+      }
+    } else {
+      // Default placeholder
+      return (
+        <Image
+          source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }}
+          style={styles.profileAvatar}
+          resizeMode="cover"
+        />
+      );
     }
   };
 
@@ -460,11 +488,7 @@ export default function ProfileScreen() {
         {/* User Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.profileInfo}>
-            <Image
-              source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }}
-              style={styles.profileAvatar}
-              resizeMode="cover"
-            />
+            {renderProfileImage()}
             <View style={styles.profileDetails}>
               <Text style={styles.profileName}>
                 {director ? `${director.first_name} ${director.last_name}` : 'User Name'}
@@ -547,8 +571,12 @@ export default function ProfileScreen() {
           
           {children.length === 0 ? (
             <View style={styles.emptyState}>
+              <View style={styles.emptyStateIconContainer}>
+                <Users size={32} color="#9CA3AF" strokeWidth={2} />
+              </View>
+              <Text style={styles.emptyStateTitle}>No children added yet</Text>
               <Text style={styles.emptyStateText}>
-                No children added yet. Tap the + button to add your first child.
+                Tap the + button to add your first child.
               </Text>
             </View>
           ) : (
@@ -604,21 +632,37 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
           
-          <View style={styles.familyContainer}>
-            {familyMembers.map((member) => (
-              <View key={member.id} style={styles.familyMemberCard}>
-                <Image
-                  source={{ uri: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg' }}
-                  style={styles.familyAvatar}
-                  resizeMode="cover"
-                />
-                <View style={styles.familyInfo}>
-                  <Text style={styles.familyName}>{member.first_name} {member.last_name}</Text>
-                  <Text style={styles.familyRole}>{member.role}</Text>
-                </View>
+          <Text style={styles.familyGroupDescription}>
+            Let's invite someone special to your family group! They can join in on all the fun and help make awesome memories together.
+          </Text>
+          
+          {familyMembers.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyStateIconContainer}>
+                <UserPlus size={32} color="#9CA3AF" strokeWidth={2} />
               </View>
-            ))}
-          </View>
+              <Text style={styles.emptyStateTitle}>No family members added yet</Text>
+              <Text style={styles.emptyStateText}>
+                Tap the + button to invite family members.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.familyContainer}>
+              {familyMembers.map((member) => (
+                <View key={member.id} style={styles.familyMemberCard}>
+                  <Image
+                    source={{ uri: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg' }}
+                    style={styles.familyAvatar}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.familyInfo}>
+                    <Text style={styles.familyName}>{member.first_name} {member.last_name}</Text>
+                    <Text style={styles.familyRole}>{member.role}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Upcoming Messages Section */}
@@ -627,8 +671,12 @@ export default function ProfileScreen() {
           
           {upcomingMessages.length === 0 ? (
             <View style={styles.emptyState}>
+              <View style={styles.emptyStateIconContainer}>
+                <MessageSquare size={32} color="#9CA3AF" strokeWidth={2} />
+              </View>
+              <Text style={styles.emptyStateTitle}>You haven't scheduled any messages yet</Text>
               <Text style={styles.emptyStateText}>
-                No upcoming messages scheduled. Create your first message to see it here.
+                Once you do, they'll appear here with their delivery dates.
               </Text>
             </View>
           ) : (
@@ -636,6 +684,20 @@ export default function ProfileScreen() {
               {upcomingMessages.map((message, index) => renderUpcomingMessage(message, index))}
             </View>
           )}
+        </View>
+
+        {/* Recent Activity Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <View style={styles.emptyState}>
+            <View style={styles.emptyStateIconContainer}>
+              <Calendar size={32} color="#9CA3AF" strokeWidth={2} />
+            </View>
+            <Text style={styles.emptyStateTitle}>No activity yet</Text>
+            <Text style={styles.emptyStateText}>
+              But once you share your first message, it'll show up here.
+            </Text>
+          </View>
         </View>
 
         {/* Suggested Actions Section */}
@@ -648,12 +710,15 @@ export default function ProfileScreen() {
             activeOpacity={0.8}
           >
             <View style={styles.suggestedActionIcon}>
-              <Lightbulb size={20} color="#F59E0B" strokeWidth={2} />
+              <Text style={styles.suggestedActionEmoji}>🎂</Text>
             </View>
             <View style={styles.suggestedActionContent}>
               <Text style={styles.suggestedActionTitle}>Ava's birthday is in 2 weeks!</Text>
               <Text style={styles.suggestedActionSubtitle}>Create a special birthday message</Text>
             </View>
+            <TouchableOpacity style={styles.recordNowButton} activeOpacity={0.8}>
+              <Text style={styles.recordNowText}>Record Now →</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -705,6 +770,20 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     marginRight: 16,
+  },
+  profileAvatarContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  profileAvatarEmoji: {
+    fontSize: 32,
   },
   profileDetails: {
     flex: 1,
@@ -808,6 +887,45 @@ const styles = StyleSheet.create({
   activityLabel: {
     fontSize: 14,
     color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+  },
+  familyGroupDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+    marginBottom: 16,
+    fontFamily: 'Poppins-Regular',
+  },
+  emptyState: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  emptyStateIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+    textAlign: 'center',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
     fontFamily: 'Poppins-Regular',
   },
   childrenContainer: {
@@ -1044,15 +1162,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#FDE68A',
+    gap: 16,
   },
   suggestedActionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+  },
+  suggestedActionEmoji: {
+    fontSize: 24,
   },
   suggestedActionContent: {
     flex: 1,
@@ -1069,19 +1190,16 @@ const styles = StyleSheet.create({
     color: '#B45309',
     fontFamily: 'Poppins-Regular',
   },
-  emptyState: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  recordNowButton: {
+    backgroundColor: '#F59E0B',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  emptyStateText: {
+  recordNowText: {
+    color: '#ffffff',
     fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 20,
-    fontFamily: 'Poppins-Regular',
+    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
 });

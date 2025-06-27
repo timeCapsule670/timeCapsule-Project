@@ -9,13 +9,14 @@ import {
   Animated,
   Image,
   Alert,
-  Modal,
   Platform,
+  Modal,
 } from 'react-native';
 import { ArrowLeft, Edit3, Video as VideoIcon, ArrowRight, RotateCcw, Play, Pause, X } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Video } from 'expo-av';
+import { useEvent } from 'expo';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { supabase } from '@/libs/superbase';
 
 interface Child {
@@ -29,25 +30,29 @@ interface Child {
 export default function RecordVideoMessageScreen() {
   const router = useRouter();
   const { childId, promptText, promptTags, promptId } = useLocalSearchParams();
-
-  const [showOverlayText, setShowOverlayText] = useState(true);
-
+  
   const [child, setChild] = useState<Child | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [permission, requestPermission] = useCameraPermissions();
-
+  
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
   const [recordDuration, setRecordDuration] = useState(0);
-  const [isPlayingPlayback, setIsPlayingPlayback] = useState(false);
   const [showReRecordModal, setShowReRecordModal] = useState(false);
-
+  
+  // Video player setup
+  const player = useVideoPlayer(recordedUri || '', player => {
+    player.loop = false;
+  });
+  
+  // Listen to playing state changes
+  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
+  
   // Refs
   const cameraRef = useRef<CameraView>(null);
-  const videoPlayerRef = useRef<Video>(null);
   const recordingTimer = useRef<NodeJS.Timeout | null>(null);
-
+  
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -57,7 +62,7 @@ export default function RecordVideoMessageScreen() {
 
   useEffect(() => {
     fetchChildData();
-
+    
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -107,10 +112,17 @@ export default function RecordVideoMessageScreen() {
     }
   }, [isRecording]);
 
+  // Update player source when recordedUri changes
+  useEffect(() => {
+    if (recordedUri) {
+      player.replaceAsync(recordedUri);
+    }
+  }, [recordedUri, player]);
+
   const fetchChildData = async () => {
     try {
       setIsLoading(true);
-
+      
       const { data, error } = await supabase
         .from('actors')
         .select('id, first_name, last_name, date_of_birth, username')
@@ -137,11 +149,11 @@ export default function RecordVideoMessageScreen() {
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-
+    
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-
+    
     return age;
   };
 
@@ -156,9 +168,8 @@ export default function RecordVideoMessageScreen() {
 
     try {
       setIsRecording(true);
-      setShowOverlayText(false);
       setRecordDuration(0);
-
+      
       // Start timer
       recordingTimer.current = setInterval(() => {
         setRecordDuration(prev => prev + 1);
@@ -175,7 +186,7 @@ export default function RecordVideoMessageScreen() {
       if (video) {
         setRecordedUri(video.uri);
       }
-
+      
     } catch (error) {
       console.error('Failed to start recording:', error);
       Alert.alert('Error', 'Failed to start recording. Please try again.');
@@ -188,8 +199,7 @@ export default function RecordVideoMessageScreen() {
 
     try {
       setIsRecording(false);
-      setShowOverlayText(true);
-
+      
       if (recordingTimer.current) {
         clearInterval(recordingTimer.current);
         recordingTimer.current = null;
@@ -203,7 +213,7 @@ export default function RecordVideoMessageScreen() {
 
       // Stop recording
       cameraRef.current.stopRecording();
-
+      
     } catch (error) {
       console.error('Failed to stop recording:', error);
       Alert.alert('Error', 'Failed to stop recording. Please try again.');
@@ -219,11 +229,10 @@ export default function RecordVideoMessageScreen() {
   };
 
   const playRecordedVideo = async () => {
-    if (!videoPlayerRef.current || !recordedUri) return;
+    if (!recordedUri) return;
 
     try {
-      setIsPlayingPlayback(true);
-      await videoPlayerRef.current.playAsync();
+      player.play();
     } catch (error) {
       console.error('Failed to play video:', error);
       Alert.alert('Error', 'Failed to play video. Please try again.');
@@ -231,11 +240,8 @@ export default function RecordVideoMessageScreen() {
   };
 
   const stopPlayback = async () => {
-    if (!videoPlayerRef.current) return;
-
     try {
-      await videoPlayerRef.current.pauseAsync();
-      setIsPlayingPlayback(false);
+      player.pause();
     } catch (error) {
       console.error('Failed to stop video:', error);
     }
@@ -247,20 +253,20 @@ export default function RecordVideoMessageScreen() {
 
   const confirmReRecord = async () => {
     try {
-      if (videoPlayerRef.current) {
-        await videoPlayerRef.current.unloadAsync();
+      // Pause the player if it's playing
+      if (isPlaying) {
+        player.pause();
       }
-
+      
       setRecordedUri(null);
       setIsRecording(false);
-      setIsPlayingPlayback(false);
       setRecordDuration(0);
-
+      
       if (recordingTimer.current) {
         clearInterval(recordingTimer.current);
         recordingTimer.current = null;
       }
-
+      
       setShowReRecordModal(false);
     } catch (error) {
       console.error('Error during re-record:', error);
@@ -311,8 +317,8 @@ export default function RecordVideoMessageScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
-        <Animated.View
+        
+        <Animated.View 
           style={[
             styles.content,
             {
@@ -323,14 +329,14 @@ export default function RecordVideoMessageScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
+            <TouchableOpacity 
+              style={styles.backButton} 
               onPress={handleBack}
               activeOpacity={0.7}
             >
               <ArrowLeft size={24} color="#374151" strokeWidth={2} />
             </TouchableOpacity>
-
+            
             <Text style={styles.headerTitle}>Record Video Message</Text>
             <View style={styles.headerSpacer} />
           </View>
@@ -346,12 +352,12 @@ export default function RecordVideoMessageScreen() {
             >
               <VideoIcon size={48} color="#EF4444" strokeWidth={2} />
             </Animated.View>
-
+            
             <Text style={styles.webNotSupportedTitle}>Video Recording Not Available</Text>
             <Text style={styles.webNotSupportedText}>
               Video recording with camera access is only available on mobile devices. Please use the mobile app to record video messages for the best experience.
             </Text>
-
+            
             <TouchableOpacity style={styles.backToHomeButton} onPress={handleBack}>
               <Text style={styles.backToHomeButtonText}>Go Back</Text>
             </TouchableOpacity>
@@ -376,8 +382,8 @@ export default function RecordVideoMessageScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
-        <Animated.View
+        
+        <Animated.View 
           style={[
             styles.content,
             {
@@ -388,14 +394,14 @@ export default function RecordVideoMessageScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
+            <TouchableOpacity 
+              style={styles.backButton} 
               onPress={handleBack}
               activeOpacity={0.7}
             >
               <ArrowLeft size={24} color="#374151" strokeWidth={2} />
             </TouchableOpacity>
-
+            
             <Text style={styles.headerTitle}>Record Video Message</Text>
             <View style={styles.headerSpacer} />
           </View>
@@ -406,7 +412,7 @@ export default function RecordVideoMessageScreen() {
             <Text style={styles.permissionDescription}>
               To record video messages, we need access to your camera and microphone.
             </Text>
-
+            
             <TouchableOpacity
               style={styles.enablePermissionsButton}
               onPress={requestPermission}
@@ -426,8 +432,8 @@ export default function RecordVideoMessageScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
-
-      <Animated.View
+      
+      <Animated.View 
         style={[
           styles.content,
           {
@@ -439,18 +445,11 @@ export default function RecordVideoMessageScreen() {
         <View style={styles.cameraContainer}>
           {recordedUri ? (
             // Video Playback View
-            <Video
-              ref={videoPlayerRef}
+            <VideoView
               style={styles.videoPlayer}
-              source={{ uri: recordedUri }}
-              useNativeControls={false}
-              resizeMode="cover"
-              isLooping={false}
-              onPlaybackStatusUpdate={(status) => {
-                if (status.isLoaded && status.didJustFinish) {
-                  setIsPlayingPlayback(false);
-                }
-              }}
+              player={player}
+              allowsFullscreen={false}
+              allowsPictureInPicture={false}
             />
           ) : (
             // Live Camera View
@@ -465,56 +464,51 @@ export default function RecordVideoMessageScreen() {
           {/* Overlay Controls */}
           <View style={styles.overlayContainer}>
             {/* Header Overlay */}
-            {showOverlayText && !isRecording && (
-              <>
-                {/* Header Overlay */}
-                <View style={styles.headerOverlay}>
-                  <TouchableOpacity
-                    style={styles.overlayBackButton}
-                    onPress={handleBack}
-                    activeOpacity={0.7}
-                  >
-                    <ArrowLeft size={24} color="#ffffff" strokeWidth={2} />
-                  </TouchableOpacity>
+            <View style={styles.headerOverlay}>
+              <TouchableOpacity 
+                style={styles.overlayBackButton} 
+                onPress={handleBack}
+                activeOpacity={0.7}
+              >
+                <ArrowLeft size={24} color="#ffffff" strokeWidth={2} />
+              </TouchableOpacity>
+              
+              <Text style={styles.overlayTitle}>Record Video Message</Text>
+              <View style={styles.headerSpacer} />
+            </View>
 
-                  <Text style={styles.overlayTitle}>Record Video Message</Text>
-                  <View style={styles.headerSpacer} />
+            {/* Description */}
+            <View style={styles.descriptionOverlay}>
+              <Text style={styles.overlayDescription}>
+                It doesn't have to be perfect — just real. Your child will treasure hearing from you.
+              </Text>
+            </View>
+
+            {/* Sending To Section */}
+            <View style={styles.sendingToOverlay}>
+              <View style={styles.sendingToHeader}>
+                <Text style={styles.sendingToTitle}>Sending To</Text>
+                <TouchableOpacity 
+                  style={styles.editOverlayButton}
+                  onPress={handleEditRecipient}
+                  activeOpacity={0.7}
+                >
+                  <Edit3 size={16} color="#ffffff" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.childOverlayCard}>
+                <Image
+                  source={{ uri: 'https://images.pexels.com/photos/1620760/pexels-photo-1620760.jpeg' }}
+                  style={styles.childOverlayAvatar}
+                  resizeMode="cover"
+                />
+                <View style={styles.childOverlayInfo}>
+                  <Text style={styles.childOverlayName}>{child?.first_name}</Text>
+                  <Text style={styles.childOverlayAge}>Age {child ? calculateAge(child.date_of_birth) : 0}</Text>
                 </View>
-
-                {/* Description */}
-                <View style={styles.descriptionOverlay}>
-                  <Text style={styles.overlayDescription}>
-                    It doesn't have to be perfect — just real. Your child will treasure hearing from you.
-                  </Text>
-                </View>
-
-                {/* Sending To Section */}
-                <View style={styles.sendingToOverlay}>
-                  <View style={styles.sendingToHeader}>
-                    <Text style={styles.sendingToTitle}>Sending To</Text>
-                    <TouchableOpacity
-                      style={styles.editOverlayButton}
-                      onPress={handleEditRecipient}
-                      activeOpacity={0.7}
-                    >
-                      <Edit3 size={16} color="#ffffff" strokeWidth={2} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.childOverlayCard}>
-                    <Image
-                      source={{ uri: 'https://images.pexels.com/photos/1620760/pexels-photo-1620760.jpeg' }}
-                      style={styles.childOverlayAvatar}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.childOverlayInfo}>
-                      <Text style={styles.childOverlayName}>{child?.first_name}</Text>
-                      <Text style={styles.childOverlayAge}>Age {child ? calculateAge(child.date_of_birth) : 0}</Text>
-                    </View>
-                  </View>
-                </View>
-              </>
-            )}
+              </View>
+            </View>
 
             {/* Bottom Controls */}
             <View style={styles.bottomControls}>
@@ -537,16 +531,16 @@ export default function RecordVideoMessageScreen() {
 
                     <TouchableOpacity
                       style={styles.controlButton}
-                      onPress={isPlayingPlayback ? stopPlayback : playRecordedVideo}
+                      onPress={isPlaying ? stopPlayback : playRecordedVideo}
                       activeOpacity={0.7}
                     >
-                      {isPlayingPlayback ? (
+                      {isPlaying ? (
                         <Pause size={24} color="#ffffff" strokeWidth={2} />
                       ) : (
                         <Play size={24} color="#ffffff" strokeWidth={2} />
                       )}
                       <Text style={styles.controlButtonText}>
-                        {isPlayingPlayback ? 'Pause' : 'Preview'}
+                        {isPlaying ? 'Pause' : 'Preview'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -571,9 +565,9 @@ export default function RecordVideoMessageScreen() {
                       onPress={toggleRecording}
                       activeOpacity={0.8}
                     >
-                      <VideoIcon
-                        size={32}
-                        color="#ffffff"
+                      <VideoIcon 
+                        size={32} 
+                        color="#ffffff" 
                         strokeWidth={2}
                       />
                     </TouchableOpacity>
@@ -583,7 +577,7 @@ export default function RecordVideoMessageScreen() {
 
               <Text style={styles.recordButtonLabel}>
                 {recordedUri ? 'Video recorded successfully' :
-                  isRecording ? 'Tap to stop recording' : 'Tap to start recording'}
+                 isRecording ? 'Tap to stop recording' : 'Tap to start recording'}
               </Text>
             </View>
           </View>
@@ -624,7 +618,7 @@ export default function RecordVideoMessageScreen() {
             <Text style={styles.modalDescription}>
               This will delete your current recording and you'll need to start over. Are you sure you want to continue?
             </Text>
-
+            
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancelButton}
@@ -633,7 +627,7 @@ export default function RecordVideoMessageScreen() {
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
-
+              
               <TouchableOpacity
                 style={styles.modalConfirmButton}
                 onPress={confirmReRecord}

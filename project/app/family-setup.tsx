@@ -23,6 +23,11 @@ export default function FamilySetupScreen() {
   const progressAnim = useRef(new Animated.Value(0.2)).current;
 
   useEffect(() => {
+    // Log the actorIds parameter to debug
+    console.log('🔍 Family Setup - actorIds received:', actorIds);
+    console.log('🔍 Family Setup - actorIds type:', typeof actorIds);
+    console.log('🔍 Family Setup - actorIds is array:', Array.isArray(actorIds));
+    
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -49,6 +54,7 @@ export default function FamilySetupScreen() {
 
   const handleRoleSelect = (role: string) => {
     setSelectedRole(role);
+    console.log('👤 Family Setup - Role selected:', role);
     
     // Animate selection
     Animated.sequence([
@@ -67,16 +73,33 @@ export default function FamilySetupScreen() {
 
   const handleNext = async () => {
     if (!selectedRole) {
+      console.log('❌ Family Setup - No role selected');
       return;
     }
+
+    console.log('🚀 Family Setup - Starting handleNext process');
+    console.log('📝 Family Setup - Selected role:', selectedRole);
+    console.log('👥 Family Setup - Actor IDs to process:', actorIds);
 
     setIsSaving(true);
 
     try {
       // Get the current authenticated user
+      console.log('🔐 Family Setup - Getting authenticated user session...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session?.user) {
+      if (sessionError) {
+        console.error('❌ Family Setup - Session error:', sessionError);
+        Alert.alert(
+          'Authentication Error',
+          'Please sign in again to continue.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      if (!session?.user) {
+        console.error('❌ Family Setup - No authenticated user found');
         Alert.alert(
           'Authentication Error',
           'Please sign in again to continue.',
@@ -86,16 +109,34 @@ export default function FamilySetupScreen() {
       }
 
       const authUserId = session.user.id;
+      console.log('✅ Family Setup - Authenticated user ID:', authUserId);
 
       // Get the director record for the current user
+      console.log('👤 Family Setup - Fetching director profile...');
       const { data: directorData, error: directorError } = await supabase
         .from('directors')
         .select('id')
         .eq('auth_user_id', authUserId)
         .single();
 
-      if (directorError || !directorData) {
-        console.error('Error fetching director:', directorError);
+      if (directorError) {
+        console.error('❌ Family Setup - Director fetch error:', directorError);
+        console.error('❌ Family Setup - Director error details:', {
+          message: directorError.message,
+          details: directorError.details,
+          hint: directorError.hint,
+          code: directorError.code
+        });
+        Alert.alert(
+          'Error',
+          'Could not find your profile. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      if (!directorData) {
+        console.error('❌ Family Setup - No director data returned');
         Alert.alert(
           'Error',
           'Could not find your profile. Please try again.',
@@ -105,15 +146,23 @@ export default function FamilySetupScreen() {
       }
 
       const directorId = directorData.id;
+      console.log('✅ Family Setup - Director ID found:', directorId);
 
       // Update the director's role/type
+      console.log('📝 Family Setup - Updating director role to:', selectedRole);
       const { error: updateError } = await supabase
         .from('directors')
         .update({ director_type: selectedRole })
         .eq('id', directorId);
 
       if (updateError) {
-        console.error('Error updating director:', updateError);
+        console.error('❌ Family Setup - Director update error:', updateError);
+        console.error('❌ Family Setup - Update error details:', {
+          message: updateError.message,
+          details: updateError.details,
+          hint: updateError.hint,
+          code: updateError.code
+        });
         Alert.alert(
           'Error',
           'Failed to update your profile. Please try again.',
@@ -122,51 +171,105 @@ export default function FamilySetupScreen() {
         return;
       }
 
+      console.log('✅ Family Setup - Director role updated successfully');
+
       // Parse actor IDs from the route parameters
       let actorIdsList: string[] = [];
+      console.log('🔄 Family Setup - Processing actor IDs...');
+      
       if (actorIds) {
         try {
           // Handle both string and array formats
           if (typeof actorIds === 'string') {
             actorIdsList = actorIds.split(',').filter(id => id.trim());
+            console.log('📋 Family Setup - Parsed actor IDs from string:', actorIdsList);
           } else if (Array.isArray(actorIds)) {
             actorIdsList = actorIds.filter(id => typeof id === 'string' && id.trim());
+            console.log('📋 Family Setup - Parsed actor IDs from array:', actorIdsList);
+          } else {
+            console.log('⚠️ Family Setup - Unexpected actorIds format:', typeof actorIds, actorIds);
           }
         } catch (parseError) {
-          console.error('Error parsing actor IDs:', parseError);
+          console.error('❌ Family Setup - Error parsing actor IDs:', parseError);
         }
+      } else {
+        console.log('⚠️ Family Setup - No actorIds parameter received');
       }
+
+      console.log('📊 Family Setup - Final actor IDs list:', actorIdsList);
+      console.log('📊 Family Setup - Actor IDs count:', actorIdsList.length);
 
       // Create director-actor relationships if we have actor IDs
       if (actorIdsList.length > 0) {
-        const relationshipsToInsert = actorIdsList.map(actorId => ({
-          director_id: directorId,
-          actor_id: actorId.trim(),
-          relationship: selectedRole,
-        }));
-
-        const { error: relationshipError } = await supabase
+        console.log('🔗 Family Setup - Creating director-actor relationships...');
+        
+        // First check if any relationships already exist
+        const { data: existingRelationships, error: checkError } = await supabase
           .from('director_actor')
-          .insert(relationshipsToInsert);
+          .select('actor_id')
+          .eq('director_id', directorId)
+          .in('actor_id', actorIdsList);
 
-        if (relationshipError) {
-          console.error('Error creating relationships:', relationshipError);
-          Alert.alert(
-            'Warning',
-            'Your profile was updated, but there was an issue linking to child profiles. You can set this up later.',
-            [{ text: 'Continue', onPress: () => router.push('/moments-selection') }]
-          );
-          return;
+        if (checkError) {
+          console.error('❌ Family Setup - Error checking existing relationships:', checkError);
+          // Continue anyway, we'll handle duplicates in the insert
         }
 
-        console.log('Successfully created director-actor relationships');
+        const existingActorIds = existingRelationships?.map(rel => rel.actor_id) || [];
+        console.log('📊 Family Setup - Existing relationships:', existingActorIds);
+
+        // Filter out actors that already have relationships
+        const newActorIds = actorIdsList.filter(actorId => !existingActorIds.includes(actorId));
+        console.log('📊 Family Setup - New relationships to create:', newActorIds);
+
+        if (newActorIds.length > 0) {
+          const relationshipsToInsert = newActorIds.map(actorId => ({
+            director_id: directorId,
+            actor_id: actorId.trim(),
+            relationship: selectedRole,
+          }));
+
+          console.log('📝 Family Setup - Relationships to insert:', relationshipsToInsert);
+
+          const { data: insertedData, error: relationshipError } = await supabase
+            .from('director_actor')
+            .insert(relationshipsToInsert)
+            .select();
+
+          if (relationshipError) {
+            console.error('❌ Family Setup - Relationship insertion error:', relationshipError);
+            console.error('❌ Family Setup - Relationship error details:', {
+              message: relationshipError.message,
+              details: relationshipError.details,
+              hint: relationshipError.hint,
+              code: relationshipError.code
+            });
+            console.error('❌ Family Setup - Failed relationships data:', relationshipsToInsert);
+            
+            Alert.alert(
+              'Warning',
+              'Your profile was updated, but there was an issue linking to child profiles. You can set this up later.',
+              [{ text: 'Continue', onPress: () => router.push('/upload-profile-picture') }]
+            );
+            return;
+          }
+
+          console.log('✅ Family Setup - Successfully created director-actor relationships');
+          console.log('📊 Family Setup - Inserted relationships data:', insertedData);
+        } else {
+          console.log('ℹ️ Family Setup - All relationships already exist, skipping insert');
+        }
+      } else {
+        console.log('⚠️ Family Setup - No actor IDs to process, skipping relationship creation');
       }
 
-      // Navigate to moments selection screen on success
-      router.push('/moments-selection');
+      console.log('🎉 Family Setup - Process completed successfully, navigating to profile picture upload');
+      // Navigate to profile picture upload screen
+      router.push('/upload-profile-picture');
       
     } catch (error) {
-      console.error('Unexpected error during save:', error);
+      console.error('💥 Family Setup - Unexpected error during save:', error);
+      console.error('💥 Family Setup - Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       Alert.alert(
         'Error',
         'An unexpected error occurred. Please try again.',
@@ -174,6 +277,7 @@ export default function FamilySetupScreen() {
       );
     } finally {
       setIsSaving(false);
+      console.log('🏁 Family Setup - handleNext process finished');
     }
   };
 

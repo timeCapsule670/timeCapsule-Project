@@ -8,19 +8,16 @@ import {
   StatusBar,
   Animated,
   ScrollView,
+  Image,
   Alert,
   Platform,
 } from 'react-native';
 import { ArrowLeft, Mail, Check, Mic, Video as VideoIcon, MessageSquare, Edit3, ArrowRight, Home, Play, Pause } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Video } from 'expo-av';
+import { useEvent } from 'expo';
+import { useAudioPlayer } from 'expo-audio';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { supabase } from '@/libs/superbase';
-
-// Platform-specific audio import
-let Audio: any;
-if (Platform.OS !== 'web') {
-  Audio = require('expo-av').Audio;
-}
 
 interface Child {
   id: string;
@@ -51,13 +48,22 @@ export default function FinalReviewScreen() {
   const [child, setChild] = useState<Child | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackObject, setPlaybackObject] = useState<any>(null);
+
+  // Audio player setup
+  const audioPlayer = useAudioPlayer(recordedUri && messageType === 'audio' ? recordedUri as string : '');
+  
+  // Video player setup
+  const videoPlayer = useVideoPlayer(recordedUri && messageType === 'video' ? recordedUri as string : '', player => {
+    player.loop = false;
+  });
+
+  // Listen to playing state changes
+  const { isPlaying: isAudioPlaying } = useEvent(audioPlayer, 'playingChange', { isPlaying: audioPlayer.playing });
+  const { isPlaying: isVideoPlaying } = useEvent(videoPlayer, 'playingChange', { isPlaying: videoPlayer.playing });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const videoPlayerRef = useRef<Video>(null);
 
   useEffect(() => {
     fetchChildData();
@@ -80,15 +86,24 @@ export default function FinalReviewScreen() {
       }),
     ]).start();
 
-    return () => {
-      if (playbackObject) {
-        playbackObject.unloadAsync();
-      }
-      if (videoPlayerRef.current) {
-        videoPlayerRef.current.unloadAsync();
+   return () => {
+      // Cleanup: pause audio if needed, but don't call remove()
+      if (audioPlayer && audioPlayer.pause && !audioPlayer.release) {
+        audioPlayer.pause();
       }
     };
   }, []);
+
+  // Update player sources when recordedUri changes
+  useEffect(() => {
+    if (recordedUri) {
+      if (messageType === 'audio') {
+        audioPlayer.replace(recordedUri as string);
+      } else if (messageType === 'video') {
+        videoPlayer.replace(recordedUri as string);
+      }
+    }
+  }, [recordedUri, messageType]);
 
   const fetchChildData = async () => {
     try {
@@ -161,14 +176,12 @@ export default function FinalReviewScreen() {
   };
 
   const toggleMediaPlayback = async () => {
-    if (messageType === 'video' && videoPlayerRef.current) {
+    if (messageType === 'video') {
       try {
-        if (isPlaying) {
-          await videoPlayerRef.current.pauseAsync();
-          setIsPlaying(false);
+        if (isVideoPlaying) {
+          videoPlayer.pause();
         } else {
-          await videoPlayerRef.current.playAsync();
-          setIsPlaying(true);
+          videoPlayer.play();
         }
       } catch (error) {
         console.error('Error controlling video playback:', error);
@@ -183,27 +196,10 @@ export default function FinalReviewScreen() {
       if (!recordedUri) return;
 
       try {
-        if (isPlaying && playbackObject) {
-          await playbackObject.stopAsync();
-          setIsPlaying(false);
+        if (isAudioPlaying) {
+          audioPlayer.pause();
         } else {
-          if (playbackObject) {
-            await playbackObject.unloadAsync();
-          }
-
-          const { sound } = await Audio.Sound.createAsync(
-            { uri: recordedUri as string },
-            { shouldPlay: true }
-          );
-
-          setPlaybackObject(sound);
-          setIsPlaying(true);
-
-          sound.setOnPlaybackStatusUpdate((status: any) => {
-            if (status.didJustFinish) {
-              setIsPlaying(false);
-            }
-          });
+          audioPlayer.play();
         }
       } catch (error) {
         console.error('Failed to play audio:', error);
@@ -219,18 +215,11 @@ export default function FinalReviewScreen() {
     if (messageType === 'video' && recordedUri) {
       return (
         <View style={styles.videoPlayerCard}>
-          <Video
-            ref={videoPlayerRef}
+          <VideoView
             style={styles.videoPlayer}
-            source={{ uri: recordedUri as string }}
-            useNativeControls={false}
-            resizeMode="cover"
-            isLooping={false}
-            onPlaybackStatusUpdate={(status) => {
-              if (status.isLoaded && status.didJustFinish) {
-                setIsPlaying(false);
-              }
-            }}
+            player={videoPlayer}
+            allowsFullscreen={false}
+            allowsPictureInPicture={false}
           />
 
           <TouchableOpacity
@@ -238,7 +227,7 @@ export default function FinalReviewScreen() {
             onPress={toggleMediaPlayback}
             activeOpacity={0.8}
           >
-            {isPlaying ? (
+            {isVideoPlaying ? (
               <Pause size={32} color="#ffffff" strokeWidth={2} />
             ) : (
               <Play size={32} color="#ffffff" strokeWidth={2} />
@@ -261,7 +250,7 @@ export default function FinalReviewScreen() {
             onPress={toggleMediaPlayback}
             activeOpacity={0.8}
           >
-            {isPlaying ? (
+            {isAudioPlaying ? (
               <Pause size={24} color="#ffffff" strokeWidth={2} />
             ) : (
               <Play size={24} color="#ffffff" strokeWidth={2} />
@@ -276,7 +265,7 @@ export default function FinalReviewScreen() {
                   styles.waveformBar,
                   {
                     height: Math.random() * 30 + 10,
-                    backgroundColor: isPlaying ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)'
+                    backgroundColor: isAudioPlaying ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)'
                   }
                 ]}
               />

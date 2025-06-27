@@ -13,13 +13,13 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { 
-  ArrowLeft, 
-  Edit3, 
-  Play, 
-  Pause, 
-  Lock, 
-  Users, 
+import {
+  ArrowLeft,
+  Edit3,
+  Play,
+  Pause,
+  Lock,
+  Users,
   ArrowRight,
   Check,
   Mic,
@@ -27,7 +27,9 @@ import {
   MessageSquare
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Video } from 'expo-av';
+import { useEvent } from 'expo';
+import { useAudioPlayer } from 'expo-audio';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { supabase } from '@/libs/superbase';
 
 interface Child {
@@ -47,18 +49,26 @@ interface Category {
 export default function MessageSettingsScreen() {
   const router = useRouter();
   const { childId, messageType, recordedUri, promptText } = useLocalSearchParams();
-  
+
   const [child, setChild] = useState<Child | null>(null);
   const [messageTitle, setMessageTitle] = useState('');
   const [selectedPrivacy, setSelectedPrivacy] = useState<'private' | 'family'>('private');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Video/Audio playback refs
-  const videoPlayerRef = useRef<Video>(null);
-  
+
+  // Audio player setup
+  const audioPlayer = useAudioPlayer(recordedUri && messageType === 'audio' ? recordedUri as string : '');
+
+  // Video player setup
+  const videoPlayer = useVideoPlayer(recordedUri && messageType === 'video' ? recordedUri as string : '', player => {
+    player.loop = false;
+  });
+
+  // Listen to playing state changes
+  const { playing: isAudioPlaying } = useEvent(audioPlayer, 'playingChange', { playing: audioPlayer.playing });
+  const { isPlaying: isVideoPlaying } = useEvent(videoPlayer, 'playingChange', { isPlaying: videoPlayer.playing });
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -86,7 +96,7 @@ export default function MessageSettingsScreen() {
 
   useEffect(() => {
     fetchData();
-    
+
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -100,12 +110,30 @@ export default function MessageSettingsScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    return () => {
+      // Cleanup: pause audio if needed, but don't call remove()
+      if (audioPlayer && audioPlayer.pause && !audioPlayer.release) {
+        audioPlayer.pause();
+      }
+    };
   }, []);
+
+  // Update player sources when recordedUri changes
+  useEffect(() => {
+    if (recordedUri) {
+      if (messageType === 'audio') {
+        audioPlayer.replace(recordedUri as string);
+      } else if (messageType === 'video') {
+        videoPlayer.replaceAsync(recordedUri as string);
+      }
+    }
+  }, [recordedUri, messageType]);
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Fetch child data
       const { data: childData, error: childError } = await supabase
         .from('actors')
@@ -141,7 +169,7 @@ export default function MessageSettingsScreen() {
       }));
 
       setCategories(transformedCategories);
-      
+
     } catch (error) {
       console.error('Unexpected error fetching data:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
@@ -155,11 +183,11 @@ export default function MessageSettingsScreen() {
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    
+
     return age;
   };
 
@@ -177,11 +205,11 @@ export default function MessageSettingsScreen() {
     const navigationMap = {
       audio: '/record-audio-message',
       video: '/record-video-message',
-      text: '/create-message',
+      text: '/record-text-message',
     };
-    
+
     const targetScreen = navigationMap[messageType as keyof typeof navigationMap] || '/create-message';
-    
+
     router.push({
       pathname: targetScreen,
       params: {
@@ -192,23 +220,40 @@ export default function MessageSettingsScreen() {
   };
 
   const toggleMediaPlayback = async () => {
-    if (messageType === 'video' && videoPlayerRef.current) {
+    if (messageType === 'video') {
       try {
-        if (isPlaying) {
-          await videoPlayerRef.current.pauseAsync();
-          setIsPlaying(false);
+        if (isVideoPlaying) {
+          videoPlayer.pause();
         } else {
-          await videoPlayerRef.current.playAsync();
-          setIsPlaying(true);
+          videoPlayer.play();
         }
       } catch (error) {
         console.error('Error controlling video playback:', error);
         Alert.alert('Error', 'Failed to control video playback.');
       }
     } else if (messageType === 'audio') {
-      // For audio, show placeholder functionality
-      setIsPlaying(!isPlaying);
-      Alert.alert('Audio Playback', isPlaying ? 'Paused audio' : 'Playing audio');
+      if (Platform.OS === 'web') {
+        Alert.alert('Not Supported', 'Audio playback is not available on web platform');
+        return;
+      }
+
+      if (!recordedUri) return;
+
+      try {
+        // Only attempt to play/pause if the player is loaded and not released
+        if (audioPlayer && audioPlayer.isLoaded) {
+          if (isAudioPlaying) {
+            audioPlayer.pause();
+          } else {
+            audioPlayer.play();
+          }
+        } else {
+          Alert.alert('Audio Error', 'Audio player is not ready. Please try again.');
+        }
+      } catch (error) {
+        console.error('Failed to play audio:', error);
+        Alert.alert('Error', 'Failed to play audio. Please try again.');
+      }
     }
   };
 
@@ -254,32 +299,25 @@ export default function MessageSettingsScreen() {
     if (messageType === 'video' && recordedUri) {
       return (
         <View style={styles.videoPlayerCard}>
-          <Video
-            ref={videoPlayerRef}
+          <VideoView
             style={styles.videoPlayer}
-            source={{ uri: recordedUri as string }}
-            useNativeControls={false}
-            resizeMode="cover"
-            isLooping={false}
-            onPlaybackStatusUpdate={(status) => {
-              if (status.isLoaded && status.didJustFinish) {
-                setIsPlaying(false);
-              }
-            }}
+            player={videoPlayer}
+            allowsFullscreen={false}
+            allowsPictureInPicture={false}
           />
-          
+
           <TouchableOpacity
             style={styles.videoPlayButton}
             onPress={toggleMediaPlayback}
             activeOpacity={0.8}
           >
-            {isPlaying ? (
+            {isVideoPlaying ? (
               <Pause size={32} color="#ffffff" strokeWidth={2} />
             ) : (
               <Play size={32} color="#ffffff" strokeWidth={2} />
             )}
           </TouchableOpacity>
-          
+
           <View style={styles.videoOverlay}>
             <View style={styles.videoTypeIndicator}>
               <VideoIcon size={16} color="#ffffff" strokeWidth={2} />
@@ -296,28 +334,28 @@ export default function MessageSettingsScreen() {
             onPress={toggleMediaPlayback}
             activeOpacity={0.8}
           >
-            {isPlaying ? (
+            {isAudioPlaying ? (
               <Pause size={24} color="#ffffff" strokeWidth={2} />
             ) : (
               <Play size={24} color="#ffffff" strokeWidth={2} />
             )}
           </TouchableOpacity>
-          
+
           <View style={styles.waveformContainer}>
             {[...Array(20)].map((_, index) => (
               <View
                 key={index}
                 style={[
                   styles.waveformBar,
-                  { 
+                  {
                     height: Math.random() * 30 + 10,
-                    backgroundColor: isPlaying ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)'
+                    backgroundColor: isAudioPlaying ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)'
                   }
                 ]}
               />
             ))}
           </View>
-          
+
           <Text style={styles.audioDuration}>00:10</Text>
         </View>
       );
@@ -362,8 +400,8 @@ export default function MessageSettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      <Animated.View 
+
+      <Animated.View
         style={[
           styles.content,
           {
@@ -374,19 +412,19 @@ export default function MessageSettingsScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={handleBack}
             activeOpacity={0.7}
           >
             <ArrowLeft size={24} color="#374151" strokeWidth={2} />
           </TouchableOpacity>
-          
+
           <Text style={styles.headerTitle}>Message Settings</Text>
           <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -394,7 +432,7 @@ export default function MessageSettingsScreen() {
           {/* Message Title Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Let's give this message a title.</Text>
-            
+
             <TextInput
               style={styles.titleInput}
               placeholder="Message Title"
@@ -410,7 +448,7 @@ export default function MessageSettingsScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Sending to</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.editButton}
                 onPress={handleEditRecipient}
                 activeOpacity={0.7}
@@ -418,7 +456,7 @@ export default function MessageSettingsScreen() {
                 <Edit3 size={20} color="#6B7280" strokeWidth={2} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.recipientCard}>
               <Image
                 source={{ uri: 'https://images.pexels.com/photos/1620760/pexels-photo-1620760.jpeg' }}
@@ -432,11 +470,35 @@ export default function MessageSettingsScreen() {
             </View>
           </View>
 
+          {/* Image Section - Only show for text messages with image */}
+          {messageType === 'text' && recordedUri && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Image</Text>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={handleEditMessage}
+                  activeOpacity={0.7}
+                >
+                  <Edit3 size={20} color="#6B7280" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.imagePreviewCard}>
+                <Image
+                  source={{ uri: recordedUri as string }}
+                  style={styles.imagePreview}
+                  resizeMode="cover"
+                />
+              </View>
+            </View>
+          )}
+
           {/* Message Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Message</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.editButton}
                 onPress={handleEditMessage}
                 activeOpacity={0.7}
@@ -444,14 +506,14 @@ export default function MessageSettingsScreen() {
                 <Edit3 size={20} color="#6B7280" strokeWidth={2} />
               </TouchableOpacity>
             </View>
-            
+
             {renderMessagePreview()}
           </View>
 
           {/* Privacy Settings Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Privacy Settings</Text>
-            
+
             <View style={styles.privacyOptions}>
               <TouchableOpacity
                 style={[
@@ -492,11 +554,11 @@ export default function MessageSettingsScreen() {
           {/* Tags Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Let's add some tags</Text>
-            
+
             <View style={styles.tagsContainer}>
               {categories.map((category) => {
                 const isSelected = selectedTags.includes(category.id);
-                
+
                 return (
                   <TouchableOpacity
                     key={category.id}
@@ -893,6 +955,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B4F75',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  imagePreviewCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+    padding: 8,
+  },
+  imagePreview: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    resizeMode: 'cover',
   },
   footer: {
     paddingHorizontal: 24,

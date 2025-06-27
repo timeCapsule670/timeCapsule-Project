@@ -129,7 +129,7 @@ export default function CreateAccountScreen() {
         console.log('Account created successfully:', data.user);
         
         // Navigate to onboarding
-        router.push('/onboarding');
+        router.push('/onboarding-1');
       } else {
         setErrors(prev => ({
           ...prev,
