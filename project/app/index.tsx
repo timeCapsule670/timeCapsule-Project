@@ -1,116 +1,342 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  Dimensions,
   Image,
+  Alert,
+  ScrollView,
 } from 'react-native';
-import { Heart, Users } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/libs/superbase';
 
-const { width } = Dimensions.get('window');
-
-export default function LandingScreen() {
+export default function IndexScreen() {
   const router = useRouter();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [errors, setErrors] = useState({
+    email: '',
+    password: '',
+    general: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
- const handleSignIn = () => {
-    router.push('/sign-in');
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      email: '',
+      password: '',
+      general: '',
+    };
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+
+    setErrors(newErrors);
+    return !Object.values(newErrors).some(error => error !== '');
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear errors when user starts typing
+    if (errors[field as keyof typeof errors] || errors.general) {
+      setErrors(prev => ({ ...prev, [field]: '', general: '' }));
+    }
+  };
+
+  const handleSignIn = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Attempt to sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) {
+        console.error('Supabase sign-in error:', error);
+        
+        // Check if the error is due to user not found
+        if (error.message.includes('Invalid login credentials') || 
+            error.message.includes('Email not confirmed') ||
+            error.message.includes('User not found')) {
+          
+          // Navigate to create account with pre-filled data
+          router.push({
+            pathname: '/create-account',
+            params: {
+              email: formData.email,
+              password: formData.password,
+            }
+          });
+          return;
+        }
+        
+        setErrors(prev => ({
+          ...prev,
+          general: error.message || 'Invalid email or password. Please try again.',
+        }));
+        return;
+      }
+
+      if (data.user) {
+        // Get the director profile for this user
+        const { data: directorData, error: directorError } = await supabase
+          .from('directors')
+          .select('first_name')
+          .eq('auth_user_id', data.user.id)
+          .single();
+
+        if (directorError) {
+          console.error('Error fetching director profile:', directorError);
+          // Still proceed to home, but without the first name
+          router.push({
+            pathname: '/(tabs)',
+            params: { firstName: 'there' }
+          });
+          return;
+        }
+
+        // Extract the user's first name from the director profile
+        const firstName = directorData?.first_name || 'there';
+        
+        // Navigate to home tab with the user's name as a parameter
+        router.push({
+          pathname: '/(tabs)',
+          params: { firstName }
+        });
+      } else {
+        setErrors(prev => ({
+          ...prev,
+          general: 'Login failed. Please try again.',
+        }));
+      }
+
+    } catch (error) {
+      console.error('Unexpected error during sign-in:', error);
+      setErrors(prev => ({
+        ...prev,
+        general: 'Network error. Please check your connection and try again.',
+      }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignUp = () => {
-   
     router.push('/create-account');
   };
 
-  const handleSocialLogin = (provider: string) => {
-    console.log(`${provider} login pressed`);
+  const handleIHaveACode = () => {
+    // Navigate to teen interface or code entry screen
+    Alert.alert('Teen Interface', 'Teen interface feature coming soon!');
+  };
+
+  const handleForgotPassword = () => {
+    if (!formData.email.trim()) {
+      Alert.alert('Email Required', 'Please enter your email address first to reset your password.');
+      return;
+    }
+
+    if (!validateEmail(formData.email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address to reset your password.');
+      return;
+    }
+
+    // Trigger password reset
+    supabase.auth.resetPasswordForEmail(formData.email)
+      .then(({ error }) => {
+        if (error) {
+          Alert.alert('Error', 'Failed to send password reset email. Please try again.');
+        } else {
+          Alert.alert(
+            'Password Reset Sent',
+            'Check your email for password reset instructions.',
+            [{ text: 'OK' }]
+          );
+        }
+      })
+      .catch(() => {
+        Alert.alert('Error', 'Failed to send password reset email. Please try again.');
+      });
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
-      <View style={styles.content}>
-        {/* Logo Section */}
-        <View style={styles.logoSection}>
-          <View style={styles.logoContainer}>
-            <Image 
-              source={require('../assets/images/time-capsule.png')}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-          </View>
-          
-          <Text style={styles.tagline}>Messages that grow with your child</Text>
-        </View>
-
-        {/* Main Action Buttons */}
-        <View style={styles.buttonSection}>
-          <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
-            <Text style={styles.signInText}>Sign In</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-            <Text style={styles.signUpText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Social Login Section */}
-        <View style={styles.socialSection}>
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
-            <View style={styles.dividerLine} />
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.content}>
+          {/* Logo Section */}
+          <View style={styles.logoSection}>
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('../assets/images/time-capsule.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+            
+            <Text style={styles.tagline}>Messages that grow with your child</Text>
           </View>
 
-          <View style={styles.socialButtons}>
-            <TouchableOpacity 
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('Google')}
+          {/* Welcome Section */}
+          <View style={styles.welcomeSection}>
+            <Text style={styles.welcomeTitle}>Welcome</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Sign in to access your capsules and stay connected
+            </Text>
+          </View>
+
+          {/* Form Section */}
+          <View style={styles.formSection}>
+            {/* General Error Message */}
+            {errors.general ? (
+              <View style={styles.generalErrorContainer}>
+                <Text style={styles.generalErrorText}>{errors.general}</Text>
+              </View>
+            ) : null}
+
+            {/* Email Input */}
+            <View style={styles.inputContainer}>
+              <View style={[styles.inputWrapper, errors.email ? styles.inputError : null]}>
+                <Mail size={20} color="#64748B" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Email Address"
+                  placeholderTextColor="#94A3B8"
+                  value={formData.email}
+                  onChangeText={(value) => handleInputChange('email', value)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+              {errors.email ? (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              ) : null}
+            </View>
+
+            {/* Password Input */}
+            <View style={styles.inputContainer}>
+              <View style={[styles.inputWrapper, errors.password ? styles.inputError : null]}>
+                <Lock size={20} color="#64748B" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Password"
+                  placeholderTextColor="#94A3B8"
+                  value={formData.password}
+                  onChangeText={(value) => handleInputChange('password', value)}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  activeOpacity={0.7}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="#64748B" />
+                  ) : (
+                    <Eye size={20} color="#64748B" />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {errors.password ? (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              ) : null}
+            </View>
+
+            {/* Sign In Button */}
+            <TouchableOpacity
+              style={[styles.signInButton, isLoading && styles.signInButtonDisabled]}
+              onPress={handleSignIn}
+              disabled={isLoading}
+              activeOpacity={0.8}
             >
-              <Text style={styles.socialButtonText}> <Image 
-              source={require('../assets/images/google.png')}
-              style={styles.scoialImage}
-              resizeMode="contain"
-            /></Text>
+              <Text style={styles.signInButtonText}>
+                {isLoading ? 'Signing In...' : 'Sign In'}
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('Apple')}
+            {/* OR Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* I Have a Code Button */}
+            <TouchableOpacity
+              style={styles.codeButton}
+              onPress={handleIHaveACode}
+              activeOpacity={0.8}
             >
-              <Text style={styles.socialButtonText}><Image 
-              source={require('../assets/images/apple.png')}
-              style={styles.scoialImage}
-              resizeMode="contain"
-            /></Text>
+              <Text style={styles.codeButtonText}>I Have a Code</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('Facebook')}
+            {/* Sign Up Link */}
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={handleSignUp} activeOpacity={0.7}>
+                <Text style={styles.signUpLink}>Sign up</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Forgot Password Link */}
+            <TouchableOpacity
+              style={styles.forgotPasswordContainer}
+              onPress={handleForgotPassword}
+              activeOpacity={0.7}
             >
-              <Text style={styles.socialButtonText}>f</Text>
+              <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            By continuing, you agree to our{' '}
-            <Text style={styles.linkText}>Terms of Service</Text>
-            {' '}and{' '}
-            <Text style={styles.linkText}>Privacy Policy</Text>
-          </Text>
-          
-          <Text style={styles.versionText}>Version 1.0.0</Text>
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              By continuing, you agree to our{' '}
+              <Text style={styles.linkText}>Terms of Service</Text>
+              {' '}and{' '}
+              <Text style={styles.linkText}>Privacy Policy</Text>
+            </Text>
+            
+            <Text style={styles.versionText}>Version 1.0.0</Text>
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -120,6 +346,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+  },
   content: {
     flex: 1,
     paddingHorizontal: 32,
@@ -127,87 +360,124 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     alignItems: 'center',
-    paddingTop: 3,
-    flex: 1,
-    justifyContent: 'center',
+    paddingTop: 60,
   },
   logoContainer: {
-    marginBottom: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoImage: {
-    width: 300,
+    width: 150,
     height: 100,
   },
-    scoialImage: {
-    width: 30,
-    height: 50,
-  
-  },
-  appName: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#334155',
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
   tagline: {
-    fontSize: 13,
+    fontSize: 7,
     color: '#64748B',
     textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 10,
-    marginTop: -40
+    lineHeight: 22,
+    fontFamily: 'Poppins-Regular',
+    marginTop: -30,
   },
-  buttonSection: {
+  welcomeSection: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  welcomeTitle: {
+    fontSize: 32,
+    color: '#1C2333',
+    lineHeight: 40,
+    verticalAlign: 'middle',
+    marginBottom: 16,
+    fontFamily: 'Poppins-Bold',
+    letterSpacing: -0.5,
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 21,
+    fontWeight: '400',
+    paddingHorizontal: 20,
+    verticalAlign: 'middle',
+    fontFamily: 'Poppins-Regular',
+  },
+  formSection: {
     width: '100%',
-    gap: 16,
-    paddingBottom: 32,
+    paddingBottom: 20,
+  },
+  generalErrorContainer: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  generalErrorText: {
+    fontSize: 14,
+    color: '#DC2626',
+    textAlign: 'center',
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#79747E',
+    borderRadius: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    minHeight: 56,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#334155',
+    paddingVertical: 16,
+    fontFamily: 'Poppins-Regular',
+  },
+  eyeButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#EF4444',
+    marginTop: 8,
+    marginLeft: 4,
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
   },
   signInButton: {
-    backgroundColor: '#334155',
+    backgroundColor: '#2F3A56',
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
-    shadowColor: '#334155',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    marginBottom: 32,
   },
-  signInText: {
+  signInButtonDisabled: {
+    backgroundColor: '#94A3B8',
+    shadowOpacity: 0.1,
+  },
+  signInButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.5,
-  },
-  signUpButton: {
-    backgroundColor: '#F59E0B',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: '#F59E0B',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  signUpText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  socialSection: {
-    width: '100%',
-    paddingBottom: 32,
+    fontFamily: 'Poppins-Regular',
+    lineHeight: 20,
   },
   dividerContainer: {
     flexDirection: 'row',
@@ -224,34 +494,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
     fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
   },
-  socialButtons: {
+  codeButton: {
+    backgroundColor: '#FCB32B',
+    borderRadius: 8,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  codeButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    fontFamily: 'Poppins-Regular',
+    lineHeight: 20,
+  },
+  signUpContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 24,
-  },
-  socialButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: 20,
   },
-  socialButtonText: {
-    fontSize: 20,
+  signUpText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+  },
+  signUpLink: {
+    fontSize: 16,
+    color: '#6099EA',
     fontWeight: '600',
-    color: '#334155',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  forgotPasswordContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    fontSize: 16,
+    color: '#6099EA',
+    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
   footer: {
     alignItems: 'center',
@@ -264,14 +549,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: 16,
+    fontFamily: 'Poppins-Regular',
   },
   linkText: {
     color: '#334155',
     fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
   versionText: {
     fontSize: 12,
     color: '#94A3B8',
     fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
   },
 });

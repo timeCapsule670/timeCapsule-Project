@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import HeaderButtons from '@/components/HeaderButtons';
+import NextButton from '@/components/NextButton';
 
 const { width, height } = Dimensions.get('window');
 
@@ -51,14 +53,14 @@ export default function OnboardingScreen() {
   };
 
   const handleGetStarted = () => {
-    router.push('/child-profile-setup');
+    router.push('/personalize-profile');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      <Animated.View 
+
+      <Animated.View
         style={[
           styles.content,
           {
@@ -68,29 +70,18 @@ export default function OnboardingScreen() {
         ]}
       >
         {/* Header with Back and Skip buttons */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={handleBack}
-            activeOpacity={0.7}
-          >
-            <ArrowLeft size={20} color="#64748B" strokeWidth={2} />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.skipButton}
-            onPress={handleSkip}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.skipText}>Skip</Text>
-          </TouchableOpacity>
-        </View>
+        <HeaderButtons
+          onBack={handleBack}
+          onSkip={handleSkip}
+          backText="Back"
+          skipText="Skip"
+        />
+        
 
         {/* Main Content */}
         <View style={styles.mainContent}>
           {/* Illustration Container */}
-          <Animated.View 
+          <Animated.View
             style={[
               styles.illustrationContainer,
               {
@@ -98,72 +89,15 @@ export default function OnboardingScreen() {
               }
             ]}
           >
-            <View style={styles.imageWrapper}>
+            <View>
               <Image
-                source={{ uri: 'https://images.pexels.com/photos/3990349/pexels-photo-3990349.jpeg' }}
+                source={require('../assets/images/onboarding-3.png')}
                 style={styles.illustrationImage}
-                resizeMode="cover"
+                resizeMode="contain"
               />
-              
+
               {/* Floating hearts overlay */}
-              <View style={styles.heartsOverlay}>
-                <Animated.View 
-                  style={[
-                    styles.floatingHeart, 
-                    styles.heart1,
-                    {
-                      opacity: fadeAnim,
-                      transform: [
-                        { scale: scaleAnim },
-                        { translateY: slideAnim.interpolate({
-                          inputRange: [0, 50],
-                          outputRange: [0, 10],
-                        })}
-                      ]
-                    }
-                  ]}
-                >
-                  <Text style={styles.heartEmoji}>💝</Text>
-                </Animated.View>
-                
-                <Animated.View 
-                  style={[
-                    styles.floatingHeart, 
-                    styles.heart2,
-                    {
-                      opacity: fadeAnim,
-                      transform: [
-                        { scale: scaleAnim },
-                        { translateY: slideAnim.interpolate({
-                          inputRange: [0, 50],
-                          outputRange: [0, -5],
-                        })}
-                      ]
-                    }
-                  ]}
-                >
-                  <Text style={styles.heartEmoji}>💕</Text>
-                </Animated.View>
-                
-                <Animated.View 
-                  style={[
-                    styles.floatingHeart, 
-                    styles.heart3,
-                    {
-                      opacity: fadeAnim,
-                      transform: [
-                        { scale: scaleAnim },
-                        { translateY: slideAnim.interpolate({
-                          inputRange: [0, 50],
-                          outputRange: [0, 8],
-                        })}
-                      ]
-                    }
-                  ]}
-                >
-                  <Text style={styles.heartEmoji}>✨</Text>
-                </Animated.View>
-              </View>
+
             </View>
           </Animated.View>
 
@@ -184,13 +118,11 @@ export default function OnboardingScreen() {
         </View>
 
         {/* Get Started Button */}
-        <TouchableOpacity
-          style={styles.getStartedButton}
+        <NextButton
           onPress={handleGetStarted}
-          activeOpacity={0.9}
-        >
-          <Text style={styles.getStartedText}>Get Started</Text>
-        </TouchableOpacity>
+          text="Get Started"
+          variant="secondary"
+        />
       </Animated.View>
     </SafeAreaView>
   );
@@ -244,20 +176,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     position: 'relative',
   },
-  imageWrapper: {
-    flex: 1,
-    borderRadius: 24,
-    overflow: 'hidden',
-    elevation: 12,
-    shadowColor: '#F59E0B',
-    shadowOffset: {
-      width: 0,
-      height: 12,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    position: 'relative',
-  },
+
   illustrationImage: {
     width: '100%',
     height: '100%',
@@ -299,12 +218,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#1F2937',
+    color: '#1C2333',
     textAlign: 'center',
     lineHeight: 40,
     marginBottom: 16,
     letterSpacing: -0.5,
+    fontFamily: 'Poppins-Bold',
   },
   description: {
     fontSize: 16,
@@ -312,6 +231,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 10,
+    fontFamily: 'Poppins-Regular',
   },
   pagination: {
     flexDirection: 'row',

@@ -11,10 +11,13 @@ import {
 } from 'react-native';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/libs/superbase';
+import { apiService } from '@/libs/api';
+import { useAuth } from '@/contexts/AuthContext';
+import Toast from 'react-native-toast-message';
 
 export default function SignInScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -72,47 +75,34 @@ export default function SignInScreen() {
     setIsLoading(true);
     
     try {
-      // Sign in with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Sign in with the API
+      const apiResponse = await apiService.signIn({
         email: formData.email,
         password: formData.password,
       });
 
-      if (error) {
-        console.error('Supabase sign-in error:', error);
-        setErrors(prev => ({
-          ...prev,
-          general: error.message || 'Invalid email or password. Please try again.',
-        }));
-        return;
-      }
-
-      if (data.user) {
-        // Get the director profile for this user
-        const { data: directorData, error: directorError } = await supabase
-          .from('directors')
-          .select('first_name')
-          .eq('auth_user_id', data.user.id)
-          .single();
-
-        if (directorError) {
-          console.error('Error fetching director profile:', directorError);
-          // Still proceed to home, but without the first name
+      if (apiResponse.success) {
+        // Store the token and user data using auth context
+        await signIn(apiResponse.data.user, apiResponse.data.token);
+        
+        console.log('Sign in successful:', apiResponse.data.user);
+        
+        // Show success toast
+        Toast.show({
+          type: 'success',
+          text1: 'Welcome Back!',
+          text2: `Hello ${apiResponse.data.user.username || 'there'}! Redirecting to home...`,
+          position: 'top',
+          visibilityTime: 3000,
+        });
+        
+        // Wait for toast to be visible before navigating
+        setTimeout(() => {
           router.push({
             pathname: '/(tabs)',
-            params: { firstName: 'there' }
+            params: { firstName: apiResponse.data.user.username || 'there' }
           });
-          return;
-        }
-
-        // Extract the user's first name from the director profile
-        const firstName = directorData?.first_name || 'there';
-        
-        // Navigate to home tab with the user's name as a parameter
-        router.push({
-          pathname: '/(tabs)',
-          params: { firstName }
-        });
+        }, 1500);
       } else {
         setErrors(prev => ({
           ...prev,
@@ -121,11 +111,20 @@ export default function SignInScreen() {
       }
 
     } catch (error) {
-      console.error('Unexpected error during sign-in:', error);
-      setErrors(prev => ({
-        ...prev,
-        general: 'Network error. Please check your connection and try again.',
-      }));
+      console.error('Error during sign-in:', error);
+      
+      // Show appropriate error message
+      if (error instanceof Error) {
+        setErrors(prev => ({
+          ...prev,
+          general: error.message || 'Network error. Please check your connection and try again.',
+        }));
+      } else {
+        setErrors(prev => ({
+          ...prev,
+          general: 'Network error. Please check your connection and try again.',
+        }));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -270,6 +269,7 @@ export default function SignInScreen() {
                     <Text style={styles.versionText}>Version 1.0.0</Text>
                 </View>
             </View>
+            <Toast />
         </SafeAreaView>
     );
 }
