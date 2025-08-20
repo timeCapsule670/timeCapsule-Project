@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import HeaderButtons from '@/components/HeaderButtons';
+import NextButton from '@/components/NextButton';
 
 const { width, height } = Dimensions.get('window');
 
@@ -68,24 +70,13 @@ export default function OnboardingTwoScreen() {
         ]}
       >
         {/* Header with Back and Skip buttons */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBack}
-            activeOpacity={0.7}
-          >
-            <ArrowLeft size={20} color="#64748B" strokeWidth={2} />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={handleSkip}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.skipText}>Skip</Text>
-          </TouchableOpacity>
-        </View>
+        <HeaderButtons
+          onBack={handleBack}
+          onSkip={handleSkip}
+          backText="Back"
+          skipText="Skip"
+        />
+        
 
         {/* Main Content */}
         <View style={styles.mainContent}>
@@ -129,19 +120,10 @@ export default function OnboardingTwoScreen() {
         </View>
 
         {/* Next Button */}
-        <TouchableOpacity
-          style={styles.nextButton}
+        <NextButton
           onPress={handleNext}
-          activeOpacity={0.9}
-        >
-          <Text style={styles.nextText}>Next</Text>
-          <ArrowLeft
-            size={20}
-            color="#ffffff"
-            strokeWidth={2}
-            style={styles.nextArrow}
-          />
-        </TouchableOpacity>
+          text="Next"
+        />
       </Animated.View>
     </SafeAreaView>
   );
@@ -271,6 +253,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 40,
     marginBottom: 16,
+    marginTop: 5,
     letterSpacing: -0.5,
     fontFamily: 'Poppins-Bold'
   },

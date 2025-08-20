@@ -11,16 +11,21 @@ import {
     Image,
     ToastAndroid
 } from 'react-native';
-import { ArrowLeft, User, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { supabase } from "@/libs/superbase"
+import { ArrowLeft, User, Mail, Lock, Eye, EyeOff, CircleUserRound, LockKeyhole } from 'lucide-react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { apiService } from '@/libs/api';
+import { validatePassword } from '@/utils/passwordValidation';
+import { useAuth } from '@/contexts/AuthContext';
+import Toast from 'react-native-toast-message';
 
 export default function CreateAccountScreen() {
     const router = useRouter();
+    const { signIn } = useAuth();
+  const { email: prefilledEmail, password: prefilledPassword } = useLocalSearchParams();
   const [formData, setFormData] = useState({
     fullName: '',
-    email: '',
-    password: '',
+    email: (prefilledEmail as string) || '',
+    password: (prefilledPassword as string) || '',
   });
   const [errors, setErrors] = useState({
     fullName: '',
@@ -36,8 +41,9 @@ export default function CreateAccountScreen() {
     return emailRegex.test(email);
   };
 
-  const validatePassword = (password: string) => {
-    return password.length >= 8;
+  const validatePasswordField = (password: string) => {
+    const validation = validatePassword(password);
+    return validation.isValid;
   };
 
   const validateForm = () => {
@@ -62,8 +68,9 @@ export default function CreateAccountScreen() {
 
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (!validatePassword(formData.password)) {
-      newErrors.password = 'Password must be at least 8 characters';
+    } else if (!validatePasswordField(formData.password)) {
+      const validation = validatePassword(formData.password);
+      newErrors.password = validation.errors[0] || 'Password is invalid';
     }
 
     setErrors(newErrors);
@@ -87,49 +94,32 @@ export default function CreateAccountScreen() {
     setIsLoading(true);
     
     try {
-      // Parse the full name into first and last name
-      const nameParts = formData.fullName.trim().split(' ');
-      const firstName = nameParts[0];
-      const lastName = nameParts.slice(1).join(' ') || '';
-
-      // Generate a username from the first name
-      const generateUsername = (name: string): string => {
-        const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const timestamp = Date.now().toString().slice(-6);
-        return `${cleanName}${timestamp}`;
-      };
-
-      const username = generateUsername(firstName);
-
-      // Sign up with Supabase
-      const { data, error } = await supabase.auth.signUp({
+      // Create account with the API
+      const apiResponse = await apiService.signUp({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            username: username,
-            email: formData.email,
-          }
-        }
+        name: formData.fullName.trim(),
       });
 
-      if (error) {
-        console.error('Supabase sign-up error:', error);
-        setErrors(prev => ({
-          ...prev,
-          general: error.message || 'Failed to create account. Please try again.',
-        }));
-        return;
-      }
-
-      if (data.user) {
-        // Account created successfully
-        console.log('Account created successfully:', data.user);
+      if (apiResponse.success) {
+        // Store the token and user data using auth context
+        await signIn(apiResponse.data.user, apiResponse.data.token);
         
-        // Navigate to onboarding
-        router.push('/onboarding-1');
+        console.log('Account created successfully:', apiResponse.data.user);
+        
+        // Show success toast
+        Toast.show({
+          type: 'success',
+          text1: 'Account Created!',
+          text2: 'Welcome to TimeCapsule! Redirecting to onboarding...',
+          position: 'top',
+          visibilityTime: 3000,
+        });
+        
+        // Wait for toast to be visible before navigating
+        setTimeout(() => {
+          router.push('/onboarding-1');
+        }, 1500);
       } else {
         setErrors(prev => ({
           ...prev,
@@ -138,11 +128,20 @@ export default function CreateAccountScreen() {
       }
 
     } catch (error) {
-      console.error('Unexpected error during account creation:', error);
-      setErrors(prev => ({
-        ...prev,
-        general: 'Network error. Please check your connection and try again.',
-      }));
+      console.error('Error during account creation:', error);
+      
+      // Show appropriate error message
+      if (error instanceof Error) {
+        setErrors(prev => ({
+          ...prev,
+          general: error.message || 'Network error. Please check your connection and try again.',
+        }));
+      } else {
+        setErrors(prev => ({
+          ...prev,
+          general: 'Network error. Please check your connection and try again.',
+        }));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -187,7 +186,7 @@ export default function CreateAccountScreen() {
                     {/* Full Name Input */}
                     <View style={styles.inputContainer}>
                         <View style={[styles.inputWrapper, errors.fullName ? styles.inputError : null]}>
-                            <User size={20} color="#64748B" style={styles.inputIcon} />
+                            <CircleUserRound size={20} color="#64748B" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.textInput}
                                 placeholder="Full Name"
@@ -226,7 +225,7 @@ export default function CreateAccountScreen() {
                     {/* Password Input */}
                     <View style={styles.inputContainer}>
                         <View style={[styles.inputWrapper, errors.password ? styles.inputError : null]}>
-                            <Lock size={20} color="#64748B" style={styles.inputIcon} />
+                            <LockKeyhole size={20} color="#64748B" style={styles.inputIcon} />
                             <TextInput
                                 style={styles.textInput}
                                 placeholder="Password"
@@ -277,6 +276,7 @@ export default function CreateAccountScreen() {
                     </Text>
                 </View>
             </View>
+            <Toast />
         </SafeAreaView>
     );
 }
@@ -340,10 +340,9 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F8FAFC',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
-        borderRadius: 12,
+        borderColor: '#79747E',
+        borderRadius: 4,
         paddingHorizontal: 16,
         paddingVertical: 4,
         minHeight: 56,
@@ -373,19 +372,12 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     createButton: {
-        backgroundColor: '#334155',
+        backgroundColor: '#2F3A56',
         borderRadius: 12,
         paddingVertical: 18,
         alignItems: 'center',
-        marginTop: 16,
-        shadowColor: '#334155',
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        marginTop: 30,
+        
     },
     createButtonDisabled: {
         backgroundColor: '#94A3B8',
@@ -436,18 +428,21 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 200
+        paddingTop: 200,
+        marginLeft: -50,
     },
     logoImage: {
-        width: 300,
+        width: 350,
         height: 100,
     },
     tagline: {
-        fontSize: 13,
+        fontSize: 18,
         color: '#64748B',
         textAlign: 'center',
         lineHeight: 20,
         paddingHorizontal: 10,
-        marginTop: -30
+        marginTop: -10,
+        marginLeft: -50,
+        fontFamily: 'Poppins-SemiBold',
     },
 });

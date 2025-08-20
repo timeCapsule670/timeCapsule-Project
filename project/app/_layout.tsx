@@ -17,15 +17,13 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import LoadingOverlay from '@/components/LoadingOverlay';
-import { supabase } from '@/libs/superbase';
-import type { Session } from '@supabase/supabase-js';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
- const [isLoading, setIsLoading] = useState(true);
-  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useFrameworkReady();
@@ -54,53 +52,11 @@ export default function RootLayout() {
           return;
         }
 
-        console.log('🔍 App - Checking for existing session...');
+        console.log('🔍 App - Initializing...');
         
-        // Get the current Supabase session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('❌ App - Session error:', sessionError);
-          // Navigate to landing page on session error
-          router.replace('/');
-          return;
-        }
-
-        setSession(session);
-
-        if (session?.user) {
-          console.log('✅ App - Session found, user authenticated:', session.user.id);
-          
-          // Check if user has completed onboarding by looking for director profile
-          try {
-            const { data: directorData, error: directorError } = await supabase
-              .from('directors')
-              .select('id, first_name')
-              .eq('auth_user_id', session.user.id)
-              .single();
-
-            if (directorError || !directorData) {
-              console.log('⚠️ App - No director profile found, redirecting to onboarding');
-              router.replace('/onboarding');
-              return;
-            }
-
-            console.log('✅ App - Director profile found, redirecting to main app');
-            // Navigate to main app with user's first name
-            router.replace({
-              pathname: '/(tabs)',
-              params: { firstName: directorData.first_name || 'there' }
-            });
-          } catch (error) {
-            console.error('❌ App - Error checking director profile:', error);
-            // If there's an error checking the profile, still go to main app
-            router.replace('/(tabs)');
-          }
-        } else {
-          console.log('ℹ️ App - No session found, redirecting to landing page');
-          // No session found, navigate to landing page
-          router.replace('/');
-        }
+        // For now, just navigate to landing page
+        // The AuthContext will handle authentication state
+        router.replace('/');
         
       } catch (error) {
         console.error('💥 App - Unexpected error during initialization:', error);
@@ -114,48 +70,12 @@ export default function RootLayout() {
     initializeApp();
   }, [fontsLoaded, fontError, router]);
 
-  // Set up auth state listener for real-time session changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 App - Auth state changed:', event, session?.user?.id);
-        setSession(session);
-
-        if (event === 'SIGNED_OUT') {
-          console.log('👋 App - User signed out, redirecting to landing page');
-          router.replace('/');
-        } else if (event === 'SIGNED_IN' && session) {
-          console.log('👋 App - User signed in, redirecting to main app');
-          
-          // Get user's first name for personalization
-          try {
-            const { data: directorData } = await supabase
-              .from('directors')
-              .select('first_name')
-              .eq('auth_user_id', session.user.id)
-              .single();
-
-            router.replace({
-              pathname: '/(tabs)',
-              params: { firstName: directorData?.first_name || 'there' }
-            });
-          } catch (error) {
-            // If there's an error, still navigate to main app
-            router.replace('/(tabs)');
-          }
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [router]);
-
   if (!fontsLoaded && !fontError) {
     return null;
   }
 
   return (
-    <>
+    <AuthProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="sign-in" />
@@ -175,12 +95,14 @@ export default function RootLayout() {
         <Stack.Screen name="create-message" />
         <Stack.Screen name="upload-profile-picture" />
         <Stack.Screen name="preview-message" />
+        <Stack.Screen name="personalize-profile" /> 
+        <Stack.Screen name="link-account" />
         <Stack.Screen name="schedule-delivery" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
       <LoadingOverlay visible={isLoading} />
-    </>
+    </AuthProvider>
   );
 }
