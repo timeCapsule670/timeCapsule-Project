@@ -8,15 +8,19 @@ import {
   StatusBar,
   Animated,
   ScrollView,
-} from 'react-native';
-import { ArrowLeft, Link, Calendar, MessageSquare, Heart } from 'lucide-react-native';
+  Alert,
+  Platform,
+} from 'react-nativ\e';
+import { ArrowLeft, Bell, Check, MessageSquare, Heart, Star } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 
-export default function LinkAccountScreen() {
+export default function PushNotificationsScreen() {
   const router = useRouter();
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
-  const progressAnim = useRef(new Animated.Value(0.2)).current;
+  const progressAnim = useRef(new Animated.Value(0.5)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
@@ -38,7 +42,7 @@ export default function LinkAccountScreen() {
         useNativeDriver: true,
       }),
       Animated.timing(progressAnim, {
-        toValue: 0.4, // 40% progress
+        toValue: 0.5, // 50% progress
         duration: 800,
         useNativeDriver: false,
       }),
@@ -46,16 +50,91 @@ export default function LinkAccountScreen() {
   }, []);
 
   const handleBack = () => {
-    router.push('/personalize-profile');
+    router.push('/link-account');
   };
 
-  const handleYesLink = () => {
-    router.push('/child-profile-setup');
+  const handleTurnOnNotifications = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Notifications',
+        'Push notifications are not available on web platform. You can still use the app without notifications.',
+        [
+          { text: 'Continue', onPress: () => router.push('/moments-selection') }
+        ]
+      );
+      return;
+    }
+
+    setIsRequestingPermission(true);
+
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      
+      if (status === 'granted') {
+        Alert.alert(
+          'Notifications Enabled!',
+          'You\'ll now receive gentle reminders and updates about your messages.',
+          [
+            { text: 'Continue', onPress: () => router.push('/moments-selection') }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Permissions Needed',
+          'To receive reminders, please enable notifications in your device settings. You can still use the app without notifications.',
+          [
+            { text: 'Continue', onPress: () => router.push('/welcome') }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error requesting notification permissions:', error);
+      Alert.alert(
+        'Error',
+        'Failed to setup notifications. You can enable them later in settings.',
+        [
+          { text: 'Continue', onPress: () => router.push('/welcome') }
+        ]
+      );
+    } finally {
+      setIsRequestingPermission(false);
+    }
   };
 
-  const handleNoLater = () => {
-    router.push('/push-notification');
+  const handleSkipForNow = () => {  
+    router.push('/welcome');
   };
+
+  const notificationFeatures = [
+    {
+      id: '1',
+      icon: Check,
+      iconColor: '#3B82F6',
+      iconBackground: '#DBEAFE',
+      text: 'Delivery confirmations',
+    },
+    {
+      id: '2',
+      icon: MessageSquare,
+      iconColor: '#F59E0B',
+      iconBackground: '#FEF3C7',
+      text: 'Message reminders',
+    },
+    {
+      id: '3',
+      icon: Heart,
+      iconColor: '#EF4444',
+      iconBackground: '#FEF2F2',
+      text: 'Custom nudges from your child',
+    },
+    {
+      id: '4',
+      icon: Star,
+      iconColor: '#8B5CF6',
+      iconBackground: '#F3E8FF',
+      text: 'Never miss a moment',
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -80,7 +159,7 @@ export default function LinkAccountScreen() {
             <ArrowLeft size={24} color="#374151" strokeWidth={2} />
           </TouchableOpacity>
           
-          <Text style={styles.headerTitle}>Link An Account</Text>
+          <Text style={styles.headerTitle}>Push Notifications</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -108,7 +187,7 @@ export default function LinkAccountScreen() {
         >
           {/* Main Content */}
           <View style={styles.mainContent}>
-            {/* Link Icon */}
+            {/* Bell Icon */}
             <Animated.View
               style={[
                 styles.iconContainer,
@@ -117,47 +196,60 @@ export default function LinkAccountScreen() {
                 }
               ]}
             >
-              <View style={styles.linkIcon}>
-                <Link size={32} color="#ffffff" strokeWidth={2} />
+              <View style={styles.bellIcon}>
+                <Bell size={32} color="#ffffff" strokeWidth={2} />
               </View>
             </Animated.View>
 
-            {/* Main Question */}
-            <Text style={styles.mainQuestion}>
-              Would you like to link your account to a loved one now?
+            {/* Main Title */}
+            <Text style={styles.mainTitle}>
+              Stay in the loop with gentle reminders
             </Text>
 
-            {/* What Linking Allows Section */}
-            <View style={styles.benefitsSection}>
-              <Text style={styles.benefitsTitle}>What linking allows:</Text>
+            {/* Description */}
+            <Text style={styles.description}>
+              Get notified when your messages are delivered, when you receive a response or when it's time to schedule a new capsule.
+            </Text>
+
+            {/* What Notifications Allow Section */}
+            <View style={styles.featuresSection}>
+              <Text style={styles.featuresTitle}>What linking allows:</Text>
               
-              <View style={styles.benefitsList}>
-                <View style={styles.benefitItem}>
-                  <View style={[styles.benefitIcon, { backgroundColor: '#DBEAFE' }]}>
-                    <Calendar size={20} color="#3B82F6" strokeWidth={2} />
-                  </View>
-                  <Text style={styles.benefitText}>
-                    Schedule messages for special moments.
-                  </Text>
-                </View>
-
-                <View style={styles.benefitItem}>
-                  <View style={[styles.benefitIcon, { backgroundColor: '#FEF2F2' }]}>
-                    <MessageSquare size={20} color="#EF4444" strokeWidth={2} />
-                  </View>
-                  <Text style={styles.benefitText}>
-                    Send voice, video, and text messages
-                  </Text>
-                </View>
-
-                <View style={styles.benefitItem}>
-                  <View style={[styles.benefitIcon, { backgroundColor: '#F3E8FF' }]}>
-                    <Heart size={20} color="#8B5CF6" strokeWidth={2} />
-                  </View>
-                  <Text style={styles.benefitText}>
-                    Receive reactions and replies
-                  </Text>
-                </View>
+              <View style={styles.featuresList}>
+                {notificationFeatures.map((feature, index) => {
+                  const IconComponent = feature.icon;
+                  return (
+                    <Animated.View
+                      key={feature.id}
+                      style={[
+                        styles.featureItem,
+                        {
+                          opacity: fadeAnim,
+                          transform: [
+                            { 
+                              translateY: slideAnim.interpolate({
+                                inputRange: [0, 30],
+                                outputRange: [0, 10 + (index * 3)],
+                              })
+                            }
+                          ],
+                        }
+                      ]}
+                    >
+                      <View style={[
+                        styles.featureIcon, 
+                        { backgroundColor: feature.iconBackground }
+                      ]}>
+                        <IconComponent 
+                          size={20} 
+                          color={feature.iconColor} 
+                          strokeWidth={2} 
+                        />
+                      </View>
+                      <Text style={styles.featureText}>{feature.text}</Text>
+                    </Animated.View>
+                  );
+                })}
               </View>
             </View>
           </View>
@@ -166,23 +258,29 @@ export default function LinkAccountScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <TouchableOpacity
-            style={styles.yesButton}
-            onPress={handleYesLink}
+            style={[
+              styles.turnOnButton,
+              isRequestingPermission && styles.turnOnButtonDisabled,
+            ]}
+            onPress={handleTurnOnNotifications}
+            disabled={isRequestingPermission}
             activeOpacity={0.9}
           >
-            <Text style={styles.yesButtonText}>Yes, Let's Link</Text>
+            <Text style={styles.turnOnButtonText}>
+              {isRequestingPermission ? 'Setting up...' : 'Turn On Notifications'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.noButton}
-            onPress={handleNoLater}
+            style={styles.skipButton}
+            onPress={handleSkipForNow}
             activeOpacity={0.9}
           >
-            <Text style={styles.noButtonText}>No, I'll Do This Later</Text>
+            <Text style={styles.skipButtonText}>No, I'll Do This Later</Text>
           </TouchableOpacity>
 
           <Text style={styles.footerNote}>
-            You can always add a recipient later from your account settings or vault.
+            You control what we send. Change preferences anytime in Settings.
           </Text>
         </View>
       </Animated.View>
@@ -255,7 +353,7 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginBottom: 40,
   },
-  linkIcon: {
+  bellIcon: {
     width: 80,
     height: 80,
     borderRadius: 40,
@@ -271,36 +369,45 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  mainQuestion: {
+  mainTitle: {
     fontSize: 24,
     fontWeight: '600',
     color: '#1F2937',
     textAlign: 'center',
     lineHeight: 32,
-    marginBottom: 40,
+    marginBottom: 20,
     paddingHorizontal: 16,
     fontFamily: 'Poppins-SemiBold',
   },
-  benefitsSection: {
+  description: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 40,
+    paddingHorizontal: 16,
+    fontFamily: 'Poppins-Regular',
+  },
+  featuresSection: {
     width: '100%',
     marginBottom: 40,
   },
-  benefitsTitle: {
+  featuresTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 24,
     fontFamily: 'Poppins-SemiBold',
   },
-  benefitsList: {
+  featuresList: {
     gap: 20,
   },
-  benefitItem: {
+  featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
   },
-  benefitIcon: {
+  featureIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -315,7 +422,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  benefitText: {
+  featureText: {
     fontSize: 16,
     color: '#374151',
     lineHeight: 24,
@@ -328,7 +435,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     gap: 16,
   },
-  yesButton: {
+  turnOnButton: {
     backgroundColor: '#334155',
     borderRadius: 16,
     paddingVertical: 18,
@@ -343,13 +450,17 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  yesButtonText: {
+  turnOnButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    shadowOpacity: 0.1,
+  },
+  turnOnButtonText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
     fontFamily: 'Poppins-SemiBold',
   },
-  noButton: {
+  skipButton: {
     backgroundColor: '#F59E0B',
     borderRadius: 16,
     paddingVertical: 18,
@@ -364,7 +475,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  noButtonText: {
+  skipButtonText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
