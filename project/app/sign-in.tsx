@@ -99,7 +99,8 @@ export default function SignInScreen() {
         // Wait for toast to be visible before navigating
         setTimeout(() => {
           router.push({
-            pathname: '/(tabs)',
+            // pathname: '/(tabs)',
+            pathname: '/onboarding',
             params: { firstName: apiResponse.data.user.username || 'there' }
           });
         }, 1500);
