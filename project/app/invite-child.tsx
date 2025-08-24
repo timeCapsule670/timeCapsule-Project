@@ -10,24 +10,21 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { ArrowLeft, Copy, Mail, MessageSquare, RotateCcw, ArrowRight } from 'lucide-react-native';
+import { ArrowLeft, Copy, Mail, MessageSquare } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
-import { supabase } from '@/libs/superbase';
 
 export default function InviteChildScreen() {
   const router = useRouter();
   const [inviteCode, setInviteCode] = useState<string>('');
-  const [expirationDate, setExpirationDate] = useState<string>('');
   const [isCodeCopied, setIsCodeCopied] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const progressAnim = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
-    // Generate initial invite code on component mount
+    // Generate unique invite code on component mount
     generateInviteCode();
     
     // Entrance animation
@@ -43,91 +40,29 @@ export default function InviteChildScreen() {
         useNativeDriver: true,
       }),
       Animated.timing(progressAnim, {
-        toValue: 1.0, // 100% progress (final step)
+        toValue: 1, // 100% progress (final step)
         duration: 800,
         useNativeDriver: false,
       }),
     ]).start();
   }, []);
 
-  const generateInviteCode = async () => {
-    setIsGenerating(true);
-    
-    try {
-      // Get the current authenticated user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session?.user) {
-        console.error('Authentication error:', sessionError);
-        // Fallback to generic code
-        generateFallbackCode();
-        return;
+  const generateInviteCode = () => {
+    // Generate a unique 8-character alphanumeric code
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      if (i === 4) {
+        result += '-'; // Add dash in the middle for readability
+      } else {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
       }
-
-      // Get the director's first name
-      const { data: directorData, error: directorError } = await supabase
-        .from('directors')
-        .select('first_name')
-        .eq('auth_user_id', session.user.id)
-        .single();
-
-      let firstName = 'Your';
-      if (!directorError && directorData?.first_name) {
-        firstName = directorData.first_name;
-      }
-
-      // Generate code with first name and random 3-digit number
-      const randomNumber = Math.floor(Math.random() * 900) + 100; // 100-999
-      const code = `${firstName}-${randomNumber}`;
-      setInviteCode(code);
-
-      // Set expiration date (24 hours from now)
-      const expirationDateTime = new Date();
-      expirationDateTime.setHours(expirationDateTime.getHours() + 24);
-      const formattedExpiration = expirationDateTime.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      });
-      setExpirationDate(formattedExpiration);
-
-    } catch (error) {
-      console.error('Error generating invite code:', error);
-      generateFallbackCode();
-    } finally {
-      setIsGenerating(false);
     }
-  };
-
-  const generateFallbackCode = () => {
-    // Fallback code generation if user data fetch fails
-    const randomNumber = Math.floor(Math.random() * 900) + 100;
-    const code = `User-${randomNumber}`;
-    setInviteCode(code);
-
-    // Set expiration date (24 hours from now)
-    const expirationDateTime = new Date();
-    expirationDateTime.setHours(expirationDateTime.getHours() + 24);
-    const formattedExpiration = expirationDateTime.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-    setExpirationDate(formattedExpiration);
+    setInviteCode(result);
   };
 
   const handleBack = () => {
     router.back();
-  };
-
-  const handleGenerateNewCode = () => {
-    generateInviteCode();
-    
-    // Reset copied state
-    setIsCodeCopied(false);
-    
-    // Show feedback
-    Alert.alert('New Code Generated', 'A new invite code has been created for you.');
   };
 
   const handleCopyCode = async () => {
@@ -159,8 +94,6 @@ To join and connect your account to mine, use this invite code when you sign up:
 
 ${inviteCode}
 
-This code expires on ${expirationDate}.
-
 Download the TimeCapsule app and enter this code during sign-up to get started.
 
 Looking forward to sharing this journey with you!
@@ -176,7 +109,7 @@ Love,
   };
 
   const handleSendViaText = () => {
-    const message = `Hi! I've set up a TimeCapsule account to share special messages with you. Use invite code ${inviteCode} when you sign up to connect with me. Code expires ${expirationDate}. Download the app and enter this code during sign-up!`;
+    const message = `Hi! I've set up a TimeCapsule account to share special messages with you. Use invite code ${inviteCode} when you sign up to connect with me. Download the app and enter this code during sign-up!`;
     
     const smsUrl = Platform.select({
       ios: `sms:&body=${encodeURIComponent(message)}`,
@@ -189,7 +122,12 @@ Love,
     });
   };
 
-  const handleNext = () => {
+  const handleContinue = () => {
+    // Navigate to welcome screen
+    router.push('/welcome');
+  };
+
+  const handleSkipForNow = () => {
     // Navigate to welcome screen
     router.push('/welcome');
   };
@@ -248,36 +186,18 @@ Love,
             This will also be stored in your profile for future use.
           </Text>
 
-          {/* Your Link Code Section */}
-          <View style={styles.linkCodeSection}>
-            <Text style={styles.linkCodeTitle}>Your Link Code</Text>
+          {/* Invite Code Section */}
+          <View style={styles.inviteSection}>
+            <Text style={styles.inviteSectionTitle}>Invite with a code</Text>
             
-            <View style={styles.codeCard}>
+            <View style={styles.codeContainer}>
               <Text style={styles.inviteCode}>{inviteCode}</Text>
-              <Text style={styles.expirationText}>Expires: {expirationDate}</Text>
             </View>
 
-            {/* Generate New Code Button */}
-            <TouchableOpacity
-              style={styles.generateNewCodeButton}
-              onPress={handleGenerateNewCode}
-              disabled={isGenerating}
-              activeOpacity={0.7}
-            >
-              <RotateCcw size={20} color="#3B82F6" strokeWidth={2} />
-              <Text style={styles.generateNewCodeText}>
-                {isGenerating ? 'Generating...' : 'Generate New Code'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Share Your Code Section */}
-          <View style={styles.shareSection}>
-            <Text style={styles.shareSectionTitle}>Share Your Code</Text>
-            
-            <View style={styles.shareButtons}>
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
               <TouchableOpacity
-                style={[styles.shareButton, styles.copyButton]}
+                style={[styles.actionButton, styles.copyButton]}
                 onPress={handleCopyCode}
                 activeOpacity={0.8}
               >
@@ -288,7 +208,7 @@ Love,
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.shareButton, styles.emailButton]}
+                style={[styles.actionButton, styles.emailButton]}
                 onPress={handleSendViaEmail}
                 activeOpacity={0.8}
               >
@@ -297,7 +217,7 @@ Love,
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.shareButton, styles.textButton]}
+                style={[styles.actionButton, styles.textButton]}
                 onPress={handleSendViaText}
                 activeOpacity={0.8}
               >
@@ -305,22 +225,29 @@ Love,
                 <Text style={styles.textButtonText}>Send Via Text</Text>
               </TouchableOpacity>
             </View>
-          </View>
 
-          <Text style={styles.footerNote}>
-            You can always find this code in your account settings.
-          </Text>
+            <Text style={styles.codeInstructions}>
+              Your child will enter this code during sign-up
+            </Text>
+          </View>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
           <TouchableOpacity
-            style={styles.nextButton}
-            onPress={handleNext}
+            style={styles.continueButton}
+            onPress={handleContinue}
             activeOpacity={0.9}
           >
-            <Text style={styles.nextButtonText}>Next</Text>
-            <ArrowRight size={20} color="#ffffff" strokeWidth={2} />
+            <Text style={styles.continueButtonText}>Continue</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={handleSkipForNow}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.skipButtonText}>Skip For Now</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -357,7 +284,6 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 16,
-    fontFamily: 'Poppins-SemiBold',
   },
   headerSpacer: {
     width: 40,
@@ -385,83 +311,50 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 24,
     marginBottom: 12,
-    fontFamily: 'Poppins-Regular',
   },
   subDescription: {
     fontSize: 14,
     color: '#9CA3AF',
     lineHeight: 20,
     marginBottom: 40,
-    fontFamily: 'Poppins-Regular',
   },
-  linkCodeSection: {
-    marginBottom: 40,
-  },
-  linkCodeTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginBottom: 16,
-    fontFamily: 'Poppins-Medium',
-  },
-  codeCard: {
+  inviteSection: {
     backgroundColor: '#F9FAFB',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
-    alignItems: 'center',
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+  },
+  inviteSectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 20,
+  },
+  codeContainer: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    marginBottom: 24,
   },
   inviteCode: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '700',
     color: '#1F2937',
-    letterSpacing: 1,
-    marginBottom: 8,
-    fontFamily: 'Poppins-Bold',
+    letterSpacing: 2,
+    fontFamily: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+      default: 'monospace',
+    }),
   },
-  expirationText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontFamily: 'Poppins-Regular',
-  },
-  generateNewCodeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  generateNewCodeText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#3B82F6',
-    fontFamily: 'Poppins-Medium',
-  },
-  shareSection: {
-    marginBottom: 40,
-  },
-  shareSectionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1F2937',
-    marginBottom: 16,
-    fontFamily: 'Poppins-Medium',
-  },
-  shareButtons: {
+  actionButtons: {
     gap: 12,
+    marginBottom: 20,
   },
-  shareButton: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -469,65 +362,75 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     gap: 12,
+  },
+  copyButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  copyButton: {
-    backgroundColor: '#E5E7EB',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    shadowRadius: 2,
+    elevation: 1,
   },
   copyButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#374151',
-    fontFamily: 'Poppins-SemiBold',
   },
   emailButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#3B4F75',
+    shadowColor: '#3B4F75',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   emailButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
-    fontFamily: 'Poppins-SemiBold',
   },
   textButton: {
-    backgroundColor: '#A855F7',
+    backgroundColor: '#3B4F75',
+    shadowColor: '#3B4F75',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   textButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
-    fontFamily: 'Poppins-SemiBold',
   },
-  footerNote: {
+  codeInstructions: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
-    fontFamily: 'Poppins-Regular',
   },
   footer: {
     paddingTop: 24,
     paddingBottom: 32,
+    gap: 16,
   },
-  nextButton: {
-    backgroundColor: '#3B4F75',
+  continueButton: {
+    backgroundColor: '#F59E0B',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 32,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    shadowColor: '#3B4F75',
+    shadowColor: '#F59E0B',
     shadowOffset: {
       width: 0,
       height: 8,
@@ -536,10 +439,21 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  nextButtonText: {
+  continueButtonText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
-    fontFamily: 'Poppins-SemiBold',
+  },
+  skipButton: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

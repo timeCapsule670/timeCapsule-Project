@@ -54,7 +54,7 @@ export default function LinkAccountScreen() {
   };
 
   const handleNoLater = () => {
-    router.push('/push-notification');
+    router.push('/moments-selection');
   };
 
   return (

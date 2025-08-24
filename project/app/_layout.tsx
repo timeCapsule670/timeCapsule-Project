@@ -97,7 +97,6 @@ export default function RootLayout() {
         <Stack.Screen name="preview-message" />
         <Stack.Screen name="personalize-profile" /> 
         <Stack.Screen name="link-account" />
-        <Stack.Screen name="push-notification" />
         <Stack.Screen name="schedule-delivery" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" />

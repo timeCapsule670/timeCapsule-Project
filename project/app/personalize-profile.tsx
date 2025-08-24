@@ -16,7 +16,8 @@ import {
 import { ArrowLeft, Camera, Upload, X, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { apiService } from '@/libs/api';
+import * as FileSystem from 'expo-file-system';
+import { supabase } from '@/libs/superbase';
 
 // Avatar options for users who skip photo upload
 const avatarOptions = [
@@ -25,7 +26,7 @@ const avatarOptions = [
   { id: '3', imageUrl: require('../assets/images/avatar3.png'), label: 'Avatar 3' },
   { id: '4', imageUrl: require('../assets/images/avatar4.png'), label: 'Avatar 4' },
   { id: '5', imageUrl: require('../assets/images/teenage-girl.png'), label: 'Teenage Girl' },
- 
+  { id: '6', imageUrl: require('../assets/images/profile.png'), label: 'Profile' },
 ];
 
 export default function PersonalizeProfileScreen() {
@@ -36,7 +37,6 @@ export default function PersonalizeProfileScreen() {
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState<boolean | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -146,8 +146,6 @@ export default function PersonalizeProfileScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
-        console.log('Image selected from library:', result.assets[0]);
-        console.log('Image URI:', result.assets[0].uri);
         setSelectedImage(result.assets[0].uri);
       }
     } catch (error) {
@@ -182,8 +180,6 @@ export default function PersonalizeProfileScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
-        console.log('Image selected from camera:', result.assets[0]);
-        console.log('Image URI:', result.assets[0].uri);
         setSelectedImage(result.assets[0].uri);
       }
     } catch (error) {
@@ -192,32 +188,69 @@ export default function PersonalizeProfileScreen() {
     }
   };
 
-  const uploadImageToAPI = async (imageUri: string): Promise<string | null> => {
+  const uploadImageToSupabase = async (imageUri: string): Promise<string | null> => {
     try {
-      console.log('Starting image upload with URI:', imageUri);
-      
-      // Validate the URI
-      if (!imageUri || typeof imageUri !== 'string') {
-        console.error('Invalid image URI:', imageUri);
-        return null;
+      // Read the image file as base64
+      const base64 = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Convert base64 to Uint8Array
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
-      
-      // Pass the image URI directly to the API service
-      // The API service will handle both File objects (web) and URIs (React Native)
-      const uploadResponse = await apiService.uploadProfilePicture(imageUri);
-      console.log('Upload successful:', uploadResponse);
-      return uploadResponse.data.image_url;
+      const byteArray = new Uint8Array(byteNumbers);
+
+      // Generate unique filename using timestamp
+      const fileExt = 'jpg';
+      const fileName = `profile-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, byteArray, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      return urlData.publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
       return null;
     }
   };
 
-  const saveProfilePictureToAPI = async (type: 'upload' | 'avatar', data: string) => {
+  const saveProfilePicture = async (imageUrl: string) => {
     try {
-      console.log('Saving profile picture:', { type, data });
-      const response = await apiService.saveProfilePicture({ type, data });
-      console.log('Profile picture saved successfully:', response.message);
+      // Get current user
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Update director profile with image URL
+      const { error: updateError } = await supabase
+        .from('directors')
+        .update({ profile_picture_url: imageUrl })
+        .eq('auth_user_id', session.user.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      console.log('Profile picture saved successfully');
     } catch (error) {
       console.error('Error saving profile picture:', error);
       throw error;
@@ -228,10 +261,10 @@ export default function PersonalizeProfileScreen() {
     if (selectedImage) {
       setIsUploading(true);
       try {
-        const imageUrl = await uploadImageToAPI(selectedImage);
+        const imageUrl = await uploadImageToSupabase(selectedImage);
         if (imageUrl) {
-          await saveProfilePictureToAPI('upload', imageUrl);
-          router.push('/moments-selection');
+          await saveProfilePicture(imageUrl);
+          router.push('/link-account');
         } else {
           Alert.alert('Upload Failed', 'Failed to upload image. Please try again.');
         }
@@ -244,15 +277,15 @@ export default function PersonalizeProfileScreen() {
       try {
         const selectedAvatarData = avatarOptions.find(avatar => avatar.id === selectedAvatar);
         if (selectedAvatarData) {
-          await saveProfilePictureToAPI('avatar', selectedAvatarData.id);
-          router.push('/moments-selection');
+          await saveProfilePicture(selectedAvatarData.imageUrl);
+          router.push('/link-account');
         }
       } catch (error) {
         Alert.alert('Error', 'Failed to save avatar. Please try again.');
       }
     } else {
       // No image or avatar selected, proceed to next step
-      router.push('/moments-selection');
+      router.push('/link-account');
     }
   };
 
@@ -268,8 +301,6 @@ export default function PersonalizeProfileScreen() {
   const handleAvatarConfirm = () => {
     setShowAvatarModal(false);
   };
-
-
 
   const renderProfileImage = () => {
     if (selectedImage) {
@@ -422,34 +453,34 @@ export default function PersonalizeProfileScreen() {
             <View style={styles.avatarSection}>
               <Text style={styles.avatarSectionTitle}>or choose an Avatar</Text>
               
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.avatarPreviewRow}
-              >
-                {avatarOptions.map((avatar) => (
-                  <TouchableOpacity
-                    key={avatar.id}
-                    style={[
-                      styles.avatarPreviewOption,
-                      selectedAvatar === avatar.id && styles.avatarPreviewOptionSelected,
-                    ]}
-                    onPress={() => handleAvatarSelect(avatar.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Image
-                      source={avatar.imageUrl}
-                      style={styles.avatarPreviewImage}
-                      resizeMode="cover"
-                    />
-                    {selectedAvatar === avatar.id && (
-                      <View style={styles.avatarCheckmark}>
-                        <Check size={16} color="#ffffff" strokeWidth={3} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                             <ScrollView
+                 horizontal
+                 showsHorizontalScrollIndicator={false}
+                 contentContainerStyle={styles.avatarPreviewRow}
+               >
+                 {avatarOptions.map((avatar) => (
+                   <TouchableOpacity
+                     key={avatar.id}
+                     style={[
+                       styles.avatarPreviewOption,
+                       selectedAvatar === avatar.id && styles.avatarPreviewOptionSelected,
+                     ]}
+                     onPress={() => handleAvatarSelect(avatar.id)}
+                     activeOpacity={0.7}
+                   >
+                     <Image
+                       source={avatar.imageUrl}
+                       style={styles.avatarPreviewImage}
+                       resizeMode="cover"
+                     />
+                     {selectedAvatar === avatar.id && (
+                       <View style={styles.avatarCheckmark}>
+                         <Check size={16} color="#ffffff" strokeWidth={3} />
+                       </View>
+                     )}
+                   </TouchableOpacity>
+                 ))}
+               </ScrollView>
 
               <TouchableOpacity
                 style={styles.moreAvatarsButton}
@@ -511,34 +542,34 @@ export default function PersonalizeProfileScreen() {
             </Text>
             
                          <ScrollView 
-                           horizontal 
-                           style={styles.avatarGrid} 
-                           showsHorizontalScrollIndicator={false}
-                           contentContainerStyle={styles.avatarOptions}
-                         >
-                           {avatarOptions.map((avatar) => (
-                             <TouchableOpacity
-                               key={avatar.id}
-                               style={[
-                                 styles.avatarOption,
-                                 selectedAvatar === avatar.id && styles.avatarOptionSelected,
-                               ]}
-                               onPress={() => handleAvatarSelect(avatar.id)}
-                               activeOpacity={0.7}
-                             >
-                               <Image
-                                 source={avatar.imageUrl}
-                                 style={styles.avatarOptionImage}
-                                 resizeMode="cover"
-                               />
-                               {selectedAvatar === avatar.id && (
-                                 <View style={styles.avatarCheckmark}>
-                                   <Check size={16} color="#ffffff" strokeWidth={3} />
-                                 </View>
-                               )}
-                             </TouchableOpacity>
-                           ))}
-                         </ScrollView>
+               horizontal 
+               style={styles.avatarGrid} 
+               showsHorizontalScrollIndicator={false}
+               contentContainerStyle={styles.avatarOptions}
+             >
+               {avatarOptions.map((avatar) => (
+                 <TouchableOpacity
+                   key={avatar.id}
+                   style={[
+                     styles.avatarOption,
+                     selectedAvatar === avatar.id && styles.avatarOptionSelected,
+                   ]}
+                   onPress={() => handleAvatarSelect(avatar.id)}
+                   activeOpacity={0.7}
+                 >
+                   <Image
+                     source={avatar.imageUrl}
+                     style={styles.avatarOptionImage}
+                     resizeMode="cover"
+                   />
+                   {selectedAvatar === avatar.id && (
+                     <View style={styles.avatarCheckmark}>
+                       <Check size={16} color="#ffffff" strokeWidth={3} />
+                     </View>
+                   )}
+                 </TouchableOpacity>
+               ))}
+             </ScrollView>
             
             <TouchableOpacity
               style={[
