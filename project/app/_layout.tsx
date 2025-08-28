@@ -96,7 +96,12 @@ export default function RootLayout() {
         <Stack.Screen name="upload-profile-picture" />
         <Stack.Screen name="preview-message" />
         <Stack.Screen name="personalize-profile" /> 
+        <Stack.Screen name= "push-notification" />
+        <Stack.Screen name="forgot-password" />
+        <Stack.Screen name="verify-code" />
         <Stack.Screen name="link-account" />
+        <Stack.Screen name="reset-password" />
+        <Stack.Screen name="reset-password-success" />
         <Stack.Screen name="schedule-delivery" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" />

@@ -9,8 +9,9 @@ import {
   Animated,
   ScrollView,
 } from 'react-native';
-import { ArrowLeft, Link, Calendar, MessageSquare, Heart } from 'lucide-react-native';
+import { ArrowLeft, Link, Heart, CalendarDays, Mic, MessageSquare } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import NextButton from '@/components/NextButton';
 
 export default function LinkAccountScreen() {
   const router = useRouter();
@@ -54,7 +55,7 @@ export default function LinkAccountScreen() {
   };
 
   const handleNoLater = () => {
-    router.push('/moments-selection');
+    router.push('/push-notification');
   };
 
   return (
@@ -70,42 +71,43 @@ export default function LinkAccountScreen() {
           }
         ]}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={handleBack}
-            activeOpacity={0.7}
-          >
-            <ArrowLeft size={24} color="#374151" strokeWidth={2} />
-          </TouchableOpacity>
-          
-          <Text style={styles.headerTitle}>Link An Account</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressTrack}>
-            <Animated.View 
-              style={[
-                styles.progressFill,
-                {
-                  width: progressAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0%', '100%'],
-                  }),
-                }
-              ]}
-            />
-          </View>
-        </View>
-
         <ScrollView 
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          bounces={true}
         >
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={handleBack}
+              activeOpacity={0.7}
+            >
+              <ArrowLeft size={24} color="#374151" strokeWidth={2} />
+            </TouchableOpacity>
+            
+            <Text style={styles.headerTitle}>Link An Account</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressTrack}>
+              <Animated.View 
+                style={[
+                  styles.progressFill,
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  }
+                ]}
+              />
+            </View>
+          </View>
+
           {/* Main Content */}
           <View style={styles.mainContent}>
             {/* Link Icon */}
@@ -133,8 +135,8 @@ export default function LinkAccountScreen() {
               
               <View style={styles.benefitsList}>
                 <View style={styles.benefitItem}>
-                  <View style={[styles.benefitIcon, { backgroundColor: '#DBEAFE' }]}>
-                    <Calendar size={20} color="#3B82F6" strokeWidth={2} />
+                  <View style={[styles.benefitIcon, { backgroundColor: '#6099EA' }]}>
+                    <CalendarDays size={20} color="#ffffff" strokeWidth={2} />
                   </View>
                   <Text style={styles.benefitText}>
                     Schedule messages for special moments.
@@ -142,8 +144,8 @@ export default function LinkAccountScreen() {
                 </View>
 
                 <View style={styles.benefitItem}>
-                  <View style={[styles.benefitIcon, { backgroundColor: '#FEF2F2' }]}>
-                    <MessageSquare size={20} color="#EF4444" strokeWidth={2} />
+                  <View style={[styles.benefitIcon, { backgroundColor: '#FF2828' }]}>
+                    <Mic size={20} color="#ffffff" strokeWidth={2} />
                   </View>
                   <Text style={styles.benefitText}>
                     Send voice, video, and text messages
@@ -151,8 +153,8 @@ export default function LinkAccountScreen() {
                 </View>
 
                 <View style={styles.benefitItem}>
-                  <View style={[styles.benefitIcon, { backgroundColor: '#F3E8FF' }]}>
-                    <Heart size={20} color="#8B5CF6" strokeWidth={2} />
+                  <View style={[styles.benefitIcon, { backgroundColor: '#8A5FCC' }]}>
+                    <MessageSquare size={20} color="#ffffff" strokeWidth={2} />
                   </View>
                   <Text style={styles.benefitText}>
                     Receive reactions and replies
@@ -160,31 +162,29 @@ export default function LinkAccountScreen() {
                 </View>
               </View>
             </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <NextButton
+                text="Yes, Let's Link"
+                onPress={handleYesLink}
+                variant="primary"
+                style={styles.yesButton}
+              />
+
+              <NextButton
+                text="No, I'll Do This Later"
+                onPress={handleNoLater}
+                variant="secondary"
+                style={styles.noButton}
+              />
+
+              <Text style={styles.footerNote}>
+                You can always add a recipient later from your account settings or vault.
+              </Text>
+            </View>
           </View>
         </ScrollView>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.yesButton}
-            onPress={handleYesLink}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.yesButtonText}>Yes, Let's Link</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.noButton}
-            onPress={handleNoLater}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.noButtonText}>No, I'll Do This Later</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.footerNote}>
-            You can always add a recipient later from your account settings or vault.
-          </Text>
-        </View>
       </Animated.View>
     </SafeAreaView>
   );
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 58,
     paddingBottom: 24,
     justifyContent: 'space-between',
   },
@@ -243,14 +243,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
+    paddingBottom: 40, // Add bottom padding for better scrolling
   },
   mainContent: {
     paddingHorizontal: 24,
     paddingTop: 20,
     alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
   },
   iconContainer: {
     marginBottom: 40,
@@ -272,14 +270,14 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   mainQuestion: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '600',
     color: '#1F2937',
     textAlign: 'center',
-    lineHeight: 32,
+    lineHeight: 33,
     marginBottom: 40,
     paddingHorizontal: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Bold',
   },
   benefitsSection: {
     width: '100%',
@@ -288,9 +286,11 @@ const styles = StyleSheet.create({
   benefitsTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#000000',
     marginBottom: 24,
     fontFamily: 'Poppins-SemiBold',
+    textAlign: 'center',
+    lineHeight: 27
   },
   benefitsList: {
     gap: 20,
@@ -322,53 +322,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'Poppins-Regular',
   },
+
   footer: {
     paddingHorizontal: 24,
     paddingBottom: 32,
     paddingTop: 16,
-    gap: 16,
   },
   yesButton: {
-    backgroundColor: '#334155',
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    shadowColor: '#334155',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  yesButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: 'Poppins-SemiBold',
+    marginBottom: 16,
   },
   noButton: {
-    backgroundColor: '#F59E0B',
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    shadowColor: '#F59E0B',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  noButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: 'Poppins-SemiBold',
+    marginBottom: 16,
   },
   footerNote: {
     fontSize: 14,
