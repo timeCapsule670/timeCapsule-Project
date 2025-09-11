@@ -10,6 +10,7 @@ import {
   Animated,
   Image,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import HeaderButtons from '@/components/HeaderButtons';
@@ -22,6 +23,7 @@ export default function OnboardingTwoScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const swipeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Entrance animation
@@ -53,78 +55,122 @@ export default function OnboardingTwoScreen() {
   };
 
   const handleNext = () => {
-    router.push('/onboarding');
+    // Trigger swipe left animation
+    Animated.timing(swipeAnim, {
+      toValue: -width,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      router.push('/onboarding');
+    });
   };
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      swipeAnim.setValue(event.translationX);
+    })
+    .onEnd((event) => {
+      if (event.translationX < -100) {
+        // Swipe left - go to next screen
+        Animated.timing(swipeAnim, {
+          toValue: -width,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          handleNext();
+        });
+      } else if (event.translationX > 100) {
+        // Swipe right - go to previous screen
+        Animated.timing(swipeAnim, {
+          toValue: width,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          handleBack();
+        });
+      } else {
+        // Reset position
+        Animated.spring(swipeAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      }
+    });
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          }
-        ]}
-      >
-        {/* Header with Back and Skip buttons */}
-        <HeaderButtons
-          onBack={handleBack}
-          onSkip={handleSkip}
-          backText="Back"
-          skipText="Skip"
-        />
-        
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [
+                { translateY: slideAnim },
+                { translateX: swipeAnim }
+              ],
+            }
+          ]}
+        >
+          {/* Header with Back and Skip buttons */}
+          <HeaderButtons
+            onBack={handleBack}
+            onSkip={handleSkip}
+            backText="Back"
+            skipText="Skip"
+          />
+          
 
-        {/* Main Content */}
-        <View style={styles.mainContent}>
-          {/* Illustration Container */}
-          <Animated.View
-            style={[
-              styles.illustrationContainer,
-              {
-                transform: [{ scale: scaleAnim }],
-              }
-            ]}
-          >
-            <View style={styles.imageWrapper}>
+          {/* Main Content */}
+          <View style={styles.mainContent}>
+            {/* Illustration Container */}
+            <Animated.View
+              style={[
+                styles.illustrationContainer,
+                {
+                  transform: [{ scale: scaleAnim }],
+                }
+              ]}
+            >
+              <View style={styles.imageWrapper}>
 
 
-              {/* Phone mockup overlay */}
-              <View style={styles.phoneOverlay}>
-                <Image
-                  source={require('../assets/images/Frame 20.png')}
-                  style={styles.phoneScreen}
-                  resizeMode="contain"
-                />
+                {/* Phone mockup overlay */}
+                <View style={styles.phoneOverlay}>
+                  <Image
+                    source={require('../assets/images/Frame 20.png')}
+                    style={styles.phoneScreen}
+                    resizeMode="contain"
+                  />
+                </View>
               </View>
+            </Animated.View>
+
+            {/* Text Content */}
+            <View style={styles.textContent}>
+              <Text style={styles.title}>Delivered When It{'\n'}Matters Most</Text>
+              <Text style={styles.description}>
+                Schedule or trigger messages for life's big moments—or quiet ones that call for comfort.
+              </Text>
             </View>
-          </Animated.View>
 
-          {/* Text Content */}
-          <View style={styles.textContent}>
-            <Text style={styles.title}>Delivered When It{'\n'}Matters Most</Text>
-            <Text style={styles.description}>
-              Schedule or trigger messages for life's big moments—or quiet ones that call for comfort.
-            </Text>
+            {/* Pagination Dots */}
+            <View style={styles.pagination}>
+              <View style={styles.dot} />
+              <View style={[styles.dot, styles.activeDot]} />
+              <View style={styles.dot} />
+            </View>
           </View>
 
-          {/* Pagination Dots */}
-          <View style={styles.pagination}>
-            <View style={styles.dot} />
-            <View style={[styles.dot, styles.activeDot]} />
-            <View style={styles.dot} />
-          </View>
-        </View>
-
-        {/* Next Button */}
-        <NextButton
-          onPress={handleNext}
-          text="Next"
-        />
-      </Animated.View>
+          {/* Next Button */}
+          <NextButton
+            onPress={handleNext}
+            text="Next"
+          />
+        </Animated.View>
+      </GestureDetector>
     </SafeAreaView>
   );
 }

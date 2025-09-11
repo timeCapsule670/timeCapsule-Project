@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { supabase } from '@/libs/superbase';
+import { apiService } from '@/libs/api';
 
 export default function FamilySetupScreen() {
   const router = useRouter();
@@ -84,95 +84,6 @@ export default function FamilySetupScreen() {
     setIsSaving(true);
 
     try {
-      // Get the current authenticated user
-      console.log('🔐 Family Setup - Getting authenticated user session...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('❌ Family Setup - Session error:', sessionError);
-        Alert.alert(
-          'Authentication Error',
-          'Please sign in again to continue.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      if (!session?.user) {
-        console.error('❌ Family Setup - No authenticated user found');
-        Alert.alert(
-          'Authentication Error',
-          'Please sign in again to continue.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const authUserId = session.user.id;
-      console.log('✅ Family Setup - Authenticated user ID:', authUserId);
-
-      // Get the director record for the current user
-      console.log('👤 Family Setup - Fetching director profile...');
-      const { data: directorData, error: directorError } = await supabase
-        .from('directors')
-        .select('id')
-        .eq('auth_user_id', authUserId)
-        .single();
-
-      if (directorError) {
-        console.error('❌ Family Setup - Director fetch error:', directorError);
-        console.error('❌ Family Setup - Director error details:', {
-          message: directorError.message,
-          details: directorError.details,
-          hint: directorError.hint,
-          code: directorError.code
-        });
-        Alert.alert(
-          'Error',
-          'Could not find your profile. Please try again.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      if (!directorData) {
-        console.error('❌ Family Setup - No director data returned');
-        Alert.alert(
-          'Error',
-          'Could not find your profile. Please try again.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const directorId = directorData.id;
-      console.log('✅ Family Setup - Director ID found:', directorId);
-
-      // Update the director's role/type
-      console.log('📝 Family Setup - Updating director role to:', selectedRole);
-      const { error: updateError } = await supabase
-        .from('directors')
-        .update({ director_type: selectedRole })
-        .eq('id', directorId);
-
-      if (updateError) {
-        console.error('❌ Family Setup - Director update error:', updateError);
-        console.error('❌ Family Setup - Update error details:', {
-          message: updateError.message,
-          details: updateError.details,
-          hint: updateError.hint,
-          code: updateError.code
-        });
-        Alert.alert(
-          'Error',
-          'Failed to update your profile. Please try again.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      console.log('✅ Family Setup - Director role updated successfully');
-
       // Parse actor IDs from the route parameters
       let actorIdsList: string[] = [];
       console.log('🔄 Family Setup - Processing actor IDs...');
@@ -199,80 +110,44 @@ export default function FamilySetupScreen() {
       console.log('📊 Family Setup - Final actor IDs list:', actorIdsList);
       console.log('📊 Family Setup - Actor IDs count:', actorIdsList.length);
 
-      // Create director-actor relationships if we have actor IDs
-      if (actorIdsList.length > 0) {
-        console.log('🔗 Family Setup - Creating director-actor relationships...');
+      // Use the new API endpoint for complete family setup
+      console.log('🌐 Family Setup - Calling family setup API...');
+      const response = await apiService.familySetup({
+        selectedRole,
+        actorIds: actorIdsList,
+      });
+
+      console.log('✅ Family Setup - API response:', response);
+
+      if (response.success) {
+        console.log('🎉 Family Setup - Process completed successfully');
+        console.log(`📊 Family Setup - Director role updated: ${response.data.director_role_updated}`);
+        console.log(`📊 Family Setup - Relationships created: ${response.data.relationships_created}`);
         
-        // First check if any relationships already exist
-        const { data: existingRelationships, error: checkError } = await supabase
-          .from('director_actor')
-          .select('actor_id')
-          .eq('director_id', directorId)
-          .in('actor_id', actorIdsList);
-
-        if (checkError) {
-          console.error('❌ Family Setup - Error checking existing relationships:', checkError);
-          // Continue anyway, we'll handle duplicates in the insert
-        }
-
-        const existingActorIds = existingRelationships?.map(rel => rel.actor_id) || [];
-        console.log('📊 Family Setup - Existing relationships:', existingActorIds);
-
-        // Filter out actors that already have relationships
-        const newActorIds = actorIdsList.filter(actorId => !existingActorIds.includes(actorId));
-        console.log('📊 Family Setup - New relationships to create:', newActorIds);
-
-        if (newActorIds.length > 0) {
-          const relationshipsToInsert = newActorIds.map(actorId => ({
-            director_id: directorId,
-            actor_id: actorId.trim(),
-            relationship: selectedRole,
-          }));
-
-          console.log('📝 Family Setup - Relationships to insert:', relationshipsToInsert);
-
-          const { data: insertedData, error: relationshipError } = await supabase
-            .from('director_actor')
-            .insert(relationshipsToInsert)
-            .select();
-
-          if (relationshipError) {
-            console.error('❌ Family Setup - Relationship insertion error:', relationshipError);
-            console.error('❌ Family Setup - Relationship error details:', {
-              message: relationshipError.message,
-              details: relationshipError.details,
-              hint: relationshipError.hint,
-              code: relationshipError.code
-            });
-            console.error('❌ Family Setup - Failed relationships data:', relationshipsToInsert);
-            
-            Alert.alert(
-              'Warning',
-              'Your profile was updated, but there was an issue linking to child profiles. You can set this up later.',
-              [{ text: 'Continue', onPress: () => router.push('/upload-profile-picture') }]
-            );
-            return;
-          }
-
-          console.log('✅ Family Setup - Successfully created director-actor relationships');
-          console.log('📊 Family Setup - Inserted relationships data:', insertedData);
-        } else {
-          console.log('ℹ️ Family Setup - All relationships already exist, skipping insert');
-        }
+        // Navigate to the next screen
+        router.push('/invite-child');
       } else {
-        console.log('⚠️ Family Setup - No actor IDs to process, skipping relationship creation');
+        console.error('❌ Family Setup - API returned success: false');
+        Alert.alert(
+          'Error',
+          response.message || 'Failed to complete family setup. Please try again.',
+          [{ text: 'OK' }]
+        );
       }
-
-      console.log('🎉 Family Setup - Process completed successfully, navigating to profile picture upload');
-      // Navigate to profile picture upload screen
-      router.push('/upload-profile-picture');
       
     } catch (error) {
       console.error('💥 Family Setup - Unexpected error during save:', error);
       console.error('💥 Family Setup - Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      // Show user-friendly error message
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       Alert.alert(
         'Error',
-        'An unexpected error occurred. Please try again.',
+        errorMessage,
         [{ text: 'OK' }]
       );
     } finally {
@@ -334,7 +209,7 @@ export default function FamilySetupScreen() {
 
         {/* Main Content */}
         <View style={styles.mainContent}>
-          <Text style={styles.question}>Who's setting up the account today?</Text>
+          <Text style={styles.question}>What’s your relationship to the Child?</Text>
           
           <View style={styles.rolesContainer}>
             {roles.map((role, index) => (
@@ -426,7 +301,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 20,
+    paddingTop: 50,
     paddingBottom: 24,
     justifyContent: 'space-between',
   },
@@ -466,17 +341,17 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   question: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 20,
+    fontFamily: 'Poppins-Regular',
     color: '#1F2937',
-    lineHeight: 32,
+    lineHeight: 27,
     marginBottom: 40,
   },
   rolesContainer: {
     gap: 16,
   },
   roleButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F5F5F5',
     borderRadius: 16,
     paddingVertical: 20,
     paddingHorizontal: 24,
@@ -485,14 +360,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderWidth: 2,
     borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    
   },
   roleButtonSelected: {
     backgroundColor: '#EEF2FF',
@@ -503,8 +371,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   roleButtonText: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
     color: '#374151',
   },
   roleButtonTextSelected: {
@@ -530,21 +398,15 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   nextButton: {
-    backgroundColor: '#3B4F75',
+    backgroundColor: '#2F3A56',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B4F75',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
+    
+   
   },
   nextButtonDisabled: {
     backgroundColor: '#9CA3AF',
@@ -553,7 +415,7 @@ const styles = StyleSheet.create({
   nextButtonText: {
     color: '#ffffff',
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Poppins-Regular',
     marginRight: 8,
   },
   nextArrow: {

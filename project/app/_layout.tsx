@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   Inter_400Regular,
   Inter_600SemiBold,
@@ -75,39 +76,41 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="sign-in" />
-        <Stack.Screen name="create-account" />
-        <Stack.Screen name="onboarding-1" />
-        <Stack.Screen name="onboarding-2" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="family-setup" />
-        <Stack.Screen name="moments-selection" />
-        <Stack.Screen name="child-profile-setup" />
-        <Stack.Screen name="final-review" />
-        <Stack.Screen name="invite-child" />
-        <Stack.Screen name="welcome" />
-        <Stack.Screen name="message-settings" />
-        <Stack.Screen name="record-video-message" />
-        <Stack.Screen name="record-text-message" />
-        <Stack.Screen name="create-message" />
-        <Stack.Screen name="upload-profile-picture" />
-        <Stack.Screen name="preview-message" />
-        <Stack.Screen name="personalize-profile" /> 
-        <Stack.Screen name= "push-notification" />
-        <Stack.Screen name="forgot-password" />
-        <Stack.Screen name="verify-code" />
-        <Stack.Screen name="link-account" />
-        <Stack.Screen name="reset-password" />
-        <Stack.Screen name="reset-password-success" />
-        <Stack.Screen name="schedule-delivery" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-      <LoadingOverlay visible={isLoading} />
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="sign-in" />
+          <Stack.Screen name="create-account" />
+          <Stack.Screen name="onboarding-1" />
+          <Stack.Screen name="onboarding-2" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="family-setup" />
+          <Stack.Screen name="moments-selection" />
+          <Stack.Screen name="child-profile-setup" />
+          <Stack.Screen name="final-review" />
+          <Stack.Screen name="invite-child" />
+          <Stack.Screen name="welcome" />
+          <Stack.Screen name="message-settings" />
+          <Stack.Screen name="record-video-message" />
+          <Stack.Screen name="record-text-message" />
+          <Stack.Screen name="create-message" />
+          <Stack.Screen name="upload-profile-picture" />
+          <Stack.Screen name="preview-message" />
+          <Stack.Screen name="personalize-profile" /> 
+          <Stack.Screen name= "push-notification" />
+          <Stack.Screen name="forgot-password" />
+          <Stack.Screen name="verify-code" />
+          <Stack.Screen name="link-account" />
+          <Stack.Screen name="reset-password" />
+          <Stack.Screen name="reset-password-success" />
+          <Stack.Screen name="schedule-delivery" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        <StatusBar style="auto" />
+        <LoadingOverlay visible={isLoading} />
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
