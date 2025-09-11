@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 
 interface NextButtonProps {
@@ -8,7 +8,8 @@ interface NextButtonProps {
   disabled?: boolean;
   loading?: boolean;
   variant?: 'primary' | 'secondary';
-}
+  style?: StyleProp<ViewStyle>;
+} 
 
 export default function NextButton({
   onPress,
@@ -16,6 +17,7 @@ export default function NextButton({
   disabled = false,
   loading = false,
   variant = 'primary',
+  style,
 }: NextButtonProps) {
   return (
     <TouchableOpacity
@@ -24,6 +26,7 @@ export default function NextButton({
         styles[variant],
         disabled && styles.disabled,
         loading && styles.loading,
+        style,
       ]}
       onPress={onPress}
       disabled={disabled || loading}
@@ -51,15 +54,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 32,
-    shadowColor: '#334155',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-    gap: 8,
+   
   },
   primary: {
     backgroundColor: '#2F3A56',

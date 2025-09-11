@@ -168,22 +168,11 @@ export default function IndexScreen() {
       return;
     }
 
-    // Trigger password reset
-    supabase.auth.resetPasswordForEmail(formData.email)
-      .then(({ error }) => {
-        if (error) {
-          Alert.alert('Error', 'Failed to send password reset email. Please try again.');
-        } else {
-          Alert.alert(
-            'Password Reset Sent',
-            'Check your email for password reset instructions.',
-            [{ text: 'OK' }]
-          );
-        }
-      })
-      .catch(() => {
-        Alert.alert('Error', 'Failed to send password reset email. Please try again.');
-      });
+    // Navigate to forgot password screen with email pre-filled
+    router.push({
+      pathname: '/forgot-password',
+      params: { email: formData.email.trim() }
+    });
   };
 
   return (

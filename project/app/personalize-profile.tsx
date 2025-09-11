@@ -254,7 +254,7 @@ export default function PersonalizeProfileScreen() {
       }
     } else {
       // No image or avatar selected, proceed to next step
-      router.push('/link-account');
+      router.push('/moments-selection');
     }
   };
 
