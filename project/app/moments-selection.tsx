@@ -47,7 +47,6 @@ export default function MomentsSelectionScreen() {
   };
 
   useEffect(() => {
-    console.log('🔍 Moments Selection - Component mounted');
     fetchCategories();
     
     // Entrance animation
@@ -73,17 +72,14 @@ export default function MomentsSelectionScreen() {
   const fetchCategories = async () => {
     try {
       setIsLoading(true);
-      console.log('📋 Moments Selection - Fetching categories...');
       
       const response = await apiService.getCategories();
 
       if (!response.success) {
-        console.error('❌ Moments Selection - Error fetching categories:', response.message);
         Alert.alert('Error', 'Failed to load categories. Please try again.');
         return;
       }
 
-      console.log('✅ Moments Selection - Categories fetched:', response.data);
       setCategories(response.data || []);
       
       // Transform categories into moment types with visual elements
@@ -98,9 +94,7 @@ export default function MomentsSelectionScreen() {
       });
       
       setMomentTypes(transformedMoments);
-      console.log('📊 Moments Selection - Transformed moment types:', transformedMoments);
     } catch (error) {
-      console.error('💥 Moments Selection - Unexpected error fetching categories:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -137,28 +131,21 @@ export default function MomentsSelectionScreen() {
 
   const handleNext = async () => {
     if (selectedMoments.length === 0) {
-      console.log('❌ Moments Selection - No moments selected');
       Alert.alert('Selection Required', 'Please select at least one moment type to continue.');
       return;
     }
-
-   
 
     setIsSaving(true);
 
     try {
       // Save the selected categories using the new API
-      console.log('🔗 Moments Selection - Saving director categories...');
       const request: SaveDirectorCategoriesRequest = {
         category_ids: selectedMoments
       };
 
-      console.log('📝 Moments Selection - Request data:', request);
-
       const response = await apiService.saveDirectorCategories(request);
 
       if (!response.success) {
-        console.error('❌ Moments Selection - Error saving moment selections:', response.message);
         Alert.alert(
           'Error',
           response.message || 'Failed to save your selections. Please try again.',
@@ -168,12 +155,9 @@ export default function MomentsSelectionScreen() {
       }
       
       // Navigate to invite child screen
-      console.log('🎉 Moments Selection - Process completed successfully, navigating to invite child');
       router.push('/link-account');
       
     } catch (error) {
-      console.error('💥 Moments Selection - Unexpected error during save:', error);
-      console.error('💥 Moments Selection - Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       Alert.alert(
         'Error',
         'An unexpected error occurred. Please try again.',
@@ -181,7 +165,6 @@ export default function MomentsSelectionScreen() {
       );
     } finally {
       setIsSaving(false);
-      console.log('🏁 Moments Selection - handleNext process finished');
     }
   };
 
@@ -245,6 +228,8 @@ export default function MomentsSelectionScreen() {
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          bounces={true}
+          alwaysBounceVertical={false}
         >
           <View style={styles.mainContent}>
             <Text style={styles.question}>
@@ -308,35 +293,37 @@ export default function MomentsSelectionScreen() {
                 );
               })}
             </View>
+            
+            {/* Footer moved inside ScrollView */}
+            <View style={styles.footer}>
+              <TouchableOpacity
+                style={[
+                  styles.nextButton,
+                  (selectedMoments.length === 0 || isSaving) && styles.nextButtonDisabled,
+                ]}
+                onPress={handleNext}
+                disabled={selectedMoments.length === 0 || isSaving}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.nextButtonText}>
+                  {isSaving ? 'Saving...' : 'Next'}
+                </Text>
+                <ArrowLeft 
+                  size={20} 
+                  color="#ffffff" 
+                  strokeWidth={2}
+                  style={styles.nextArrow}
+                />
+              </TouchableOpacity>
+              
+              <Text style={styles.footerDescription}>
+                These questions will help us personalize your experience and suggest meaningful messages to create.
+              </Text>
+            </View>
           </View>
         </ScrollView>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={[
-              styles.nextButton,
-              (selectedMoments.length === 0 || isSaving) && styles.nextButtonDisabled,
-            ]}
-            onPress={handleNext}
-            disabled={selectedMoments.length === 0 || isSaving}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.nextButtonText}>
-              {isSaving ? 'Saving...' : 'Next'}
-            </Text>
-            <ArrowLeft 
-              size={20} 
-              color="#ffffff" 
-              strokeWidth={2}
-              style={styles.nextArrow}
-            />
-          </TouchableOpacity>
-          
-          <Text style={styles.footerDescription}>
-            These questions will help us personalize your experience and suggest meaningful messages to create.
-          </Text>
-        </View>
+        {/* Remove the footer that was here */}
       </Animated.View>
     </SafeAreaView>
   );
@@ -364,7 +351,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 20,
+    paddingTop: 50,
     paddingBottom: 24,
     justifyContent: 'space-between',
   },
@@ -376,11 +363,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
     color: '#1F2937',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 16,
+    fontFamily: 'Poppins-SemiBold',
   },
   headerSpacer: {
     width: 40,
@@ -404,21 +391,22 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 20,
   },
   mainContent: {
     paddingTop: 8,
     paddingBottom: 20,
   },
   question: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 18,
+    fontFamily: 'Poppins-Regular',
     color: '#1F2937',
     lineHeight: 32,
     marginBottom: 40,
   },
   questionSubtext: {
-    fontSize: 20,
-    fontWeight: '400',
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
     color: '#6B7280',
   },
   momentsContainer: {
@@ -503,26 +491,19 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   footer: {
-    paddingTop: 24,
-    paddingBottom: 32,
+    paddingTop: 32,
+    paddingBottom: 20,
     gap: 24,
   },
   nextButton: {
-    backgroundColor: '#3B4F75',
+    backgroundColor: '#2F3A56',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B4F75',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
+   
   },
   nextButtonDisabled: {
     backgroundColor: '#9CA3AF',

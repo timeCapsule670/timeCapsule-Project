@@ -9,6 +9,7 @@ import {
   Animated,
   Image,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import HeaderButtons from '@/components/HeaderButtons';
@@ -21,6 +22,7 @@ export default function OnboardingOneScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(100)).current;
   const imageSlideAnim = useRef(new Animated.Value(50)).current;
+  const swipeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Entrance animation with sliding effects
@@ -52,89 +54,133 @@ export default function OnboardingOneScreen() {
   };
 
   const handleNext = () => {
-    router.push('/onboarding-2');
+    // Trigger swipe left animation
+    Animated.timing(swipeAnim, {
+      toValue: -width,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      router.push('/onboarding-2');
+    });
   };
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      swipeAnim.setValue(event.translationX);
+    })
+    .onEnd((event) => {
+      if (event.translationX < -100) {
+        // Swipe left - go to next screen
+        Animated.timing(swipeAnim, {
+          toValue: -width,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          handleNext();
+        });
+      } else if (event.translationX > 100) {
+        // Swipe right - go to previous screen
+        Animated.timing(swipeAnim, {
+          toValue: width,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          handleBack();
+        });
+      } else {
+        // Reset position
+        Animated.spring(swipeAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      }
+    });
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          }
-        ]}
-      >
-        {/* Header with Back and Skip buttons */}
-        <HeaderButtons
-          onBack={handleBack}
-          onSkip={handleSkip}
-          backText="Back"
-          skipText="Skip"
-        />
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [
+                { translateY: slideAnim },
+                { translateX: swipeAnim }
+              ],
+            }
+          ]}
+        >
+          {/* Header with Back and Skip buttons */}
+          <HeaderButtons
+            onBack={handleBack}
+            onSkip={handleSkip}
+            backText="Back"
+            skipText="Skip"
+          />
 
-        {/* Main Content */}
-        <View style={styles.mainContent}>
-          {/* Illustration Container */}
-          <Animated.View
-            style={[
-              styles.illustrationContainer,
-              {
-                transform: [{ translateY: imageSlideAnim }],
-              }
-            ]}
-          >
-            <View style={styles.imageWrapper}>
-              <Image
-                source={require('../assets/images/crown.png')}
-                style={styles.phoneScreen}
-                resizeMode="contain"
-              />
+          {/* Main Content */}
+          <View style={styles.mainContent}>
+            {/* Illustration Container */}
+            <Animated.View
+              style={[
+                styles.illustrationContainer,
+                {
+                  transform: [{ translateY: imageSlideAnim }],
+                }
+              ]}
+            >
+              <View style={styles.imageWrapper}>
+                <Image
+                  source={require('../assets/images/crown.png')}
+                  style={styles.phoneScreen}
+                  resizeMode="contain"
+                />
 
-              {/* Floating elements overlay */}
-              
-            </View>
-          </Animated.View>
+                {/* Floating elements overlay */}
+                
+              </View>
+            </Animated.View>
 
-          {/* Text Content */}
-          <Animated.View
-            style={[
-              styles.textContent,
-              {
-                transform: [{ translateX: slideAnim }],
-              }
-            ]}
-          >
-            <Text style={styles.title}>Messages That Grow{'\n'}With Them</Text>
-            <Text style={styles.description}>
-              Capture your love, wisdom, and support for your child—delivered when they need it most.
-            </Text>
-          </Animated.View>
+            {/* Text Content */}
+            <Animated.View
+              style={[
+                styles.textContent,
+                {
+                  transform: [{ translateX: slideAnim }],
+                }
+              ]}
+            >
+              <Text style={styles.title}>Messages That Grow{'\n'}With Them</Text>
+              <Text style={styles.description}>
+                Capture your love, wisdom, and support for your child—delivered when they need it most.
+              </Text>
+            </Animated.View>
 
-          {/* Pagination Dots */}
-          <Animated.View
-            style={[
-              styles.pagination,
-              {
-                transform: [{ translateX: slideAnim }],
-              }
-            ]}
-          >
-            <View style={[styles.dot, styles.activeDot]} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-          </Animated.View>
-        </View>
+            {/* Pagination Dots */}
+            <Animated.View
+              style={[
+                styles.pagination,
+                {
+                  transform: [{ translateX: slideAnim }],
+                }
+              ]}
+            >
+              <View style={[styles.dot, styles.activeDot]} />
+              <View style={styles.dot} />
+              <View style={styles.dot} />
+            </Animated.View>
+          </View>
 
-        {/* Next Button */}
-        <NextButton
-          onPress={handleNext}
-          text="Next"
-        />
-      </Animated.View>
+          {/* Next Button */}
+          <NextButton
+            onPress={handleNext}
+            text="Next"
+          />
+        </Animated.View>
+      </GestureDetector>
     </SafeAreaView>
   );
 }

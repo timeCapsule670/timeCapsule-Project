@@ -330,6 +330,7 @@ const styles = StyleSheet.create({
   },
   yesButton: {
     marginBottom: 16,
+    minWidth: 400,
   },
   noButton: {
     marginBottom: 16,

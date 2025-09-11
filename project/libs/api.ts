@@ -134,6 +134,208 @@ export interface ResetPasswordWithOtpResponse {
   };
 }
 
+// Child Profile interfaces
+export interface Actor {
+  id: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: string;
+  gender: string | null;
+  notes: string | null;
+  created_at: string;
+  username: string;
+}
+
+export interface Relationship {
+  director_id: string;
+  actor_id: string;
+  relationship: string;
+}
+
+export interface ChildProfile {
+  id: string;
+  name: string;
+  birthday: string;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  date_of_birth?: string;
+  gender?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateChildProfileRequest {
+  children: Array<{
+    id: string;
+    name: string;
+    birthday: string;
+    username?: string;
+  }>;
+}
+
+export interface CreateChildProfileResponse {
+  success: boolean;
+  data: {
+    actors: Actor[];
+    relationships: Relationship[];
+    message: string;
+    nextStep: string;
+    actorIds: string[];
+  };
+  message: string;
+}
+
+export interface GetChildProfilesResponse {
+  success: boolean;
+  data: ChildProfile[];
+  message: string;
+}
+
+export interface GetChildProfileResponse {
+  success: boolean;
+  data: ChildProfile;
+  message: string;
+}
+
+export interface UpdateChildProfileRequest {
+  name?: string;
+  birthday?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  date_of_birth?: string;
+  gender?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateChildProfileResponse {
+  success: boolean;
+  data: ChildProfile;
+  message: string;
+}
+
+export interface DeleteChildProfileResponse {
+  success: boolean;
+  message: string;
+  data: {
+    deleted: boolean;
+    relationships_removed: number;
+  };
+}
+
+export interface BulkUpdateChildProfilesRequest {
+  children: Array<{
+    id: string;
+    updates: UpdateChildProfileRequest;
+  }>;
+}
+
+export interface BulkUpdateChildProfilesResponse {
+  success: boolean;
+  data: {
+    updated: ChildProfile[];
+    failed: Array<{
+      id: string;
+      error: string;
+    }>;
+  };
+  message: string;
+}
+
+// Family Setup interfaces
+export interface FamilySetupRequest {
+  selectedRole: string;
+  actorIds: string[];
+}
+
+export interface FamilySetupResponse {
+  success: boolean;
+  data: {
+    director_role_updated: boolean;
+    relationships_created: number;
+    message: string;
+  };
+  message: string;
+}
+
+export interface UpdateDirectorRoleRequest {
+  selectedRole: string;
+}
+
+export interface UpdateDirectorRoleResponse {
+  success: boolean;
+  data: {
+    director_role_updated: boolean;
+    message: string;
+  };
+  message: string;
+}
+
+// Invite Code interfaces
+export interface InviteCode {
+  id: string;
+  code: string;
+  director_id: string;
+  created_by: string;
+  expires_at: string;
+  is_used: boolean;
+  used_by: string | null;
+  used_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GenerateInviteCodeResponse {
+  success: boolean;
+  data: {
+    code: string;
+    expiresAt: string;
+    formattedExpiration: string;
+    message: string;
+  };
+}
+
+export interface ValidateInviteCodeRequest {
+  code: string;
+}
+
+export interface ValidateInviteCodeResponse {
+  success: boolean;
+  data: {
+    isValid: boolean;
+    isExpired: boolean;
+    directorName: string;
+    message: string;
+  };
+}
+
+export interface UseInviteCodeRequest {
+  code: string;
+  userId: string;
+}
+
+export interface UseInviteCodeResponse {
+  success: boolean;
+  data: {
+    message: string;
+    directorId: string;
+    relationshipCreated: boolean;
+  };
+}
+
+export interface GetMyInviteCodesResponse {
+  success: boolean;
+  data: InviteCode[];
+  message: string;
+}
+
+export interface RevokeInviteCodeResponse {
+  success: boolean;
+  message: string;
+}
+
 class ApiService {
   private async makeRequest<T>(
     endpoint: string,
@@ -310,6 +512,94 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(request),
     });
+  }
+
+  // Child Profile methods
+  async createChildProfiles(request: CreateChildProfileRequest): Promise<CreateChildProfileResponse> {
+    return this.makeRequest<CreateChildProfileResponse>('/child-profiles', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }, true);
+  }
+
+  async getChildProfiles(): Promise<GetChildProfilesResponse> {
+    return this.makeRequest<GetChildProfilesResponse>('/child-profiles', {
+      method: 'GET',
+    }, true);
+  }
+
+  async getChildProfile(id: string): Promise<GetChildProfileResponse> {
+    return this.makeRequest<GetChildProfileResponse>(`/child-profiles/${id}`, {
+      method: 'GET',
+    }, true);
+  }
+
+  async updateChildProfile(id: string, request: UpdateChildProfileRequest): Promise<UpdateChildProfileResponse> {
+    return this.makeRequest<UpdateChildProfileResponse>(`/child-profiles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(request),
+    }, true);
+  }
+
+  async deleteChildProfile(id: string): Promise<DeleteChildProfileResponse> {
+    return this.makeRequest<DeleteChildProfileResponse>(`/child-profiles/${id}`, {
+      method: 'DELETE',
+    }, true);
+  }
+
+  async bulkUpdateChildProfiles(request: BulkUpdateChildProfilesRequest): Promise<BulkUpdateChildProfilesResponse> {
+    return this.makeRequest<BulkUpdateChildProfilesResponse>('/child-profiles/bulk-update', {
+      method: 'PUT',
+      body: JSON.stringify(request),
+    }, true);
+  }
+
+  // Family Setup methods
+  async familySetup(request: FamilySetupRequest): Promise<FamilySetupResponse> {
+    return this.makeRequest<FamilySetupResponse>('/family-setup', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }, true);
+  }
+
+  async updateDirectorRole(request: UpdateDirectorRoleRequest): Promise<UpdateDirectorRoleResponse> {
+    return this.makeRequest<UpdateDirectorRoleResponse>('/family-setup/director-role', {
+      method: 'PUT',
+      body: JSON.stringify(request),
+    }, true);
+  }
+
+  // Invite Code methods
+  async generateInviteCode(): Promise<GenerateInviteCodeResponse> {
+    return this.makeRequest<GenerateInviteCodeResponse>('/invite-codes/generate', {
+      method: 'POST',
+    }, true);
+  }
+
+  async validateInviteCode(request: ValidateInviteCodeRequest): Promise<ValidateInviteCodeResponse> {
+    return this.makeRequest<ValidateInviteCodeResponse>('/invite-codes/validate', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async useInviteCode(request: UseInviteCodeRequest): Promise<UseInviteCodeResponse> {
+    return this.makeRequest<UseInviteCodeResponse>('/invite-codes/use', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }, true);
+  }
+
+  async getMyInviteCodes(): Promise<GetMyInviteCodesResponse> {
+    return this.makeRequest<GetMyInviteCodesResponse>('/invite-codes/my-codes', {
+      method: 'GET',
+    }, true);
+  }
+
+  async revokeInviteCode(id: string): Promise<RevokeInviteCodeResponse> {
+    return this.makeRequest<RevokeInviteCodeResponse>(`/invite-codes/${id}/revoke`, {
+      method: 'DELETE',
+    }, true);
   }
 }
 

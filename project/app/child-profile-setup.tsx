@@ -15,7 +15,7 @@ import {
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ArrowLeft, User, Calendar, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/libs/superbase';
+import { apiService } from '@/libs/api';
 
 interface Child {
   id: string;
@@ -40,8 +40,6 @@ export default function ChildProfileSetupScreen() {
   const progressAnim = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    console.log('🔍 Child Profile Setup - Component mounted');
-    
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -233,183 +231,52 @@ export default function ChildProfileSetupScreen() {
 
   const handleNext = async () => {
     if (!validateForm()) {
-      console.log('❌ Child Profile Setup - Form validation failed');
       return;
     }
-
-    console.log('🚀 Child Profile Setup - Starting handleNext process');
-    console.log('👥 Child Profile Setup - Children to save:', children);
 
     setIsSaving(true);
 
     try {
-      // Check authentication first
-      console.log('🔐 Child Profile Setup - Checking authentication...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('❌ Child Profile Setup - Session error:', sessionError);
-        Alert.alert(
-          'Authentication Error', 
-          'Please sign in again to continue.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      if (!session?.user) {
-        console.error('❌ Child Profile Setup - No authenticated user');
-        Alert.alert(
-          'Authentication Error', 
-          'Please sign in again to continue.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      console.log('✅ Child Profile Setup - User authenticated:', session.user.id);
-
-      // Step 1: Insert actors (children) first
-      const actorsToInsert = children.map(child => {
-        const firstName = child.name.trim();
-        const dateOfBirth = child.birthdayDate ? child.birthdayDate.toISOString().split('T')[0] : null;
-        const generatedUsername = generateUsername(firstName);
-
-        return {
-          first_name: firstName,
-          last_name: '', // Empty string as it's not collected in the UI
-          date_of_birth: dateOfBirth,
-          gender: null, // Not collected in current UI
-          notes: null, // Not collected in current UI
-          username: generatedUsername,
-        };
-      });
-
-      console.log('📝 Child Profile Setup - Actors to insert:', actorsToInsert);
-
-      const { data: insertedActors, error: actorsError } = await supabase
-        .from('actors')
-        .insert(actorsToInsert)
-        .select();
-
-      if (actorsError) {
-        console.error('❌ Child Profile Setup - Error inserting actors:', actorsError);
-        console.error('❌ Child Profile Setup - Error details:', {
-          message: actorsError.message,
-          details: actorsError.details,
-          hint: actorsError.hint,
-          code: actorsError.code
-        });
-        console.error('❌ Child Profile Setup - Failed actors data:', actorsToInsert);
-        
-        // Provide more specific error messages based on the error code
-        let errorMessage = 'Failed to save child profiles. Please try again.';
-        
-        if (actorsError.code === '42501') {
-          errorMessage = 'Permission denied. Please check your account permissions and try again.';
-        } else if (actorsError.code === '23505') {
-          errorMessage = 'A child with this information already exists. Please check the details and try again.';
-        } else if (actorsError.message.includes('row-level security')) {
-          errorMessage = 'Security policy violation. Please contact support if this issue persists.';
-        }
-        
-        Alert.alert(
-          'Error', 
-          errorMessage,
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      console.log('✅ Child Profile Setup - Successfully saved actors:', insertedActors);
-
-      // Step 2: Get the director profile for the current user
-      console.log('👤 Child Profile Setup - Fetching director profile...');
-      const { data: directorData, error: directorError } = await supabase
-        .from('directors')
-        .select('id, director_type')
-        .eq('auth_user_id', session.user.id)
-        .single();
-
-      if (directorError) {
-        console.error('❌ Child Profile Setup - Director fetch error:', directorError);
-        // Continue without creating relationships - they can be created later
-        console.log('⚠️ Child Profile Setup - Continuing without director relationships');
-        
-        // Navigate to family setup with actor IDs
-        const actorIds = insertedActors.map(actor => actor.id);
-        router.push({
-          pathname: '/family-setup',
-          params: { actorIds: actorIds.join(',') }
-        });
-        return;
-      }
-
-      if (!directorData) {
-        console.log('⚠️ Child Profile Setup - No director profile found, will create relationships later');
-        
-        // Navigate to family setup with actor IDs
-        const actorIds = insertedActors.map(actor => actor.id);
-        router.push({
-          pathname: '/family-setup',
-          params: { actorIds: actorIds.join(',') }
-        });
-        return;
-      }
-
-      console.log('✅ Child Profile Setup - Director found:', directorData);
-
-      // Step 3: Create director-actor relationships immediately
-      const directorId = directorData.id;
-      const actorIds = insertedActors.map(actor => actor.id);
-      
-      console.log('🔗 Child Profile Setup - Creating director-actor relationships...');
-      const relationshipsToInsert = actorIds.map(actorId => ({
-        director_id: directorId,
-        actor_id: actorId,
-        relationship: directorData.director_type || 'Parent', // Use existing director type or default
+      // Prepare children data for API
+      const childrenToCreate = children.map(child => ({
+        id: child.id,
+        name: child.name.trim(),
+        birthday: child.birthday,
+        username: generateUsername(child.name.trim())
       }));
 
-      console.log('📝 Child Profile Setup - Relationships to insert:', relationshipsToInsert);
+      // Call the child profile API
+      const response = await apiService.createChildProfiles({
+        children: childrenToCreate
+      });
 
-      const { data: insertedRelationships, error: relationshipError } = await supabase
-        .from('director_actor')
-        .insert(relationshipsToInsert)
-        .select();
-
-      if (relationshipError) {
-        console.error('❌ Child Profile Setup - Relationship insertion error:', relationshipError);
-        console.error('❌ Child Profile Setup - Relationship error details:', {
-          message: relationshipError.message,
-          details: relationshipError.details,
-          hint: relationshipError.hint,
-          code: relationshipError.code
-        });
-        
-        // Continue to family setup even if relationships failed - they can be created there
-        console.log('⚠️ Child Profile Setup - Continuing to family setup despite relationship error');
-      } else {
-        console.log('✅ Child Profile Setup - Successfully created director-actor relationships');
-        console.log('📊 Child Profile Setup - Inserted relationships:', insertedRelationships);
+      // Navigate to family setup with the created actor IDs
+      // Backend returns 'actors' instead of 'children'
+      const actorIds = response.data.actorIds || response.data.actors.map(actor => actor.id);
+      
+      if (!actorIds || actorIds.length === 0) {
+        throw new Error('No actor IDs received from the API');
       }
       
-      // Navigate to family setup screen with actor IDs
       router.push({
         pathname: '/family-setup',
         params: { actorIds: actorIds.join(',') }
       });
       
     } catch (error) {
-      console.error('💥 Child Profile Setup - Unexpected error during save:', error);
-      console.error('💥 Child Profile Setup - Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      let errorMessage = 'Failed to create child profiles. Please try again.';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       Alert.alert(
         'Error', 
-        'An unexpected error occurred. Please try again.',
+        errorMessage,
         [{ text: 'OK' }]
       );
     } finally {
       setIsSaving(false);
-      console.log('🏁 Child Profile Setup - handleNext process finished');
     }
   };
 
@@ -653,7 +520,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 20,
+    paddingTop: 50,
     paddingBottom: 24,
     justifyContent: 'space-between',
   },
@@ -664,8 +531,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontFamily: 'Poppins-SemiBold',
     color: '#1F2937',
     flex: 1,
     textAlign: 'center',
@@ -701,10 +568,7 @@ const styles = StyleSheet.create({
   childContainer: {
     marginBottom: 40,
     padding: 20,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+   
   },
   childHeader: {
     flexDirection: 'row',
@@ -737,8 +601,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   questionText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
     color: '#1F2937',
     marginBottom: 16,
     lineHeight: 24,
@@ -750,20 +614,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderWidth: 1,
+    borderColor: '#2F3A56',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 4,
     minHeight: 56,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   inputError: {
     borderColor: '#EF4444',
@@ -823,21 +679,13 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   nextButton: {
-    backgroundColor: '#3B4F75',
+    backgroundColor: '#2F3A56',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B4F75',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
   },
   nextButtonDisabled: {
     backgroundColor: '#9CA3AF',
@@ -846,7 +694,7 @@ const styles = StyleSheet.create({
   nextButtonText: {
     color: '#ffffff',
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Poppins-Regular',
     marginRight: 8,
   },
   nextArrow: {
