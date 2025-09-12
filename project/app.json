@@ -8,7 +8,7 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -16,27 +16,23 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kcdesign.timecapsule",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.kcdesign.timecapsule"
     },
-    "fonts": [
-      {
-        "asset": "./assets/fonts/Poppins-Medium.ttf",
-        "family": "Poppins-Medium"
-      },
-      {
-        "asset": "./assets/fonts/Poppins-SemiBold.ttf",
-        "family": "Poppins-SemiBold"
-      },
-      {
-        "asset": "./assets/fonts/Poppins-Bold.ttf",
-        "family": "Poppins-Bold"
+    "extra": {
+      "eas": {
+        "projectId": "555a01a5-6888-431a-b39e-95bc132b12ec"
       }
-    ]
+    }
   }
 }
