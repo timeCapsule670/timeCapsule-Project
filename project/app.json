@@ -20,7 +20,9 @@
       "bundleIdentifier": "com.kcdesign.timecapsule",
       "buildNumber": "4",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "This app uses the camera to take profile pictures and capture photos for time capsule messages, allowing you to create visual memories for your children.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone to record audio and video messages for your time capsule, enabling you to preserve voice memories for your children."
       }
     },
     "android": {
