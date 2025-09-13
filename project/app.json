@@ -18,6 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kcdesign.timecapsule",
+      "buildNumber": "4",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
