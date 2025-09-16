@@ -118,7 +118,7 @@ export default function CreateAccountScreen() {
         
         // Wait for toast to be visible before navigating
         setTimeout(() => {
-          router.push('/onboarding-1');
+          router.push('/onboarding-continuous');
         }, 1500);
       } else {
         setErrors(prev => ({

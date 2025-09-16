@@ -55,14 +55,13 @@ export default function RootLayout() {
 
         console.log('🔍 App - Initializing...');
         
-        // For now, just navigate to landing page
-        // The AuthContext will handle authentication state
-        router.replace('/');
+        // Navigate to intro animation first
+        router.replace('/intro-animation');
         
       } catch (error) {
         console.error('💥 App - Unexpected error during initialization:', error);
-        // On any unexpected error, navigate to landing page
-        router.replace('/');
+        // On any unexpected error, navigate to intro animation
+        router.replace('/intro-animation');
       } finally {
         setIsLoading(false);
       }
@@ -77,14 +76,13 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
+      <AuthProvider children={undefined}>
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="intro-animation" />
           <Stack.Screen name="index" />
           <Stack.Screen name="sign-in" />
           <Stack.Screen name="create-account" />
-          <Stack.Screen name="onboarding-1" />
-          <Stack.Screen name="onboarding-2" />
-          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="onboarding-continuous" />
           <Stack.Screen name="family-setup" />
           <Stack.Screen name="moments-selection" />
           <Stack.Screen name="child-profile-setup" />

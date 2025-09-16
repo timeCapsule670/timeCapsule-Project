@@ -186,19 +186,6 @@ export default function IndexScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
-          {/* Logo Section */}
-          <View style={styles.logoSection}>
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../assets/images/time-capsule.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-            
-            <Text style={styles.tagline}>Messages that grow with your child</Text>
-          </View>
-
           {/* Welcome Section */}
           <View style={styles.welcomeSection}>
             <Text style={styles.welcomeTitle}>Welcome</Text>
@@ -347,29 +334,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     justifyContent: 'space-between',
   },
-  logoSection: {
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoImage: {
-    width: 150,
-    height: 100,
-  },
-  tagline: {
-    fontSize: 7,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 22,
-    fontFamily: 'Poppins-Regular',
-    marginTop: -30,
-  },
   welcomeSection: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingTop: 60,
+    paddingBottom: 20,
   },
   welcomeTitle: {
     fontSize: 32,

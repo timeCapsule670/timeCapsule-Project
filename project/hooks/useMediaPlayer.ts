@@ -34,16 +34,19 @@ export function useAudioPlayer(initialUri: string): AudioPlayer {
   useEffect(() => {
     return () => {
       if (sound) {
-        sound.unloadAsync();
+        sound.unloadAsync().catch(console.error);
       }
     };
   }, [sound]);
 
   const loadSound = async (uri: string) => {
     try {
+      // Clean up existing sound before loading new one
       if (sound) {
         await sound.unloadAsync();
+        setSound(null);
       }
+      
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri },
         { shouldPlay: false }
@@ -63,17 +66,18 @@ export function useAudioPlayer(initialUri: string): AudioPlayer {
     playing,
     play: async () => {
       try {
-        if (sound) {
+        if (sound && isLoaded) {
           await sound.playAsync();
           setPlaying(true);
         }
       } catch (error) {
         console.error('Error playing sound:', error);
+        setPlaying(false);
       }
     },
     pause: async () => {
       try {
-        if (sound) {
+        if (sound && isLoaded) {
           await sound.pauseAsync();
           setPlaying(false);
         }
@@ -86,7 +90,7 @@ export function useAudioPlayer(initialUri: string): AudioPlayer {
     },
     seekTo: async (position: number) => {
       try {
-        if (sound) {
+        if (sound && isLoaded) {
           await sound.setPositionAsync(position);
         }
       } catch (error) {
@@ -102,6 +106,15 @@ export function useVideoPlayer(initialUri: string, onPlayerReady?: (player: Vide
   const [playing, setPlaying] = useState(false);
   const [loop, setLoop] = useState(false);
 
+  // Cleanup function to properly release video resources
+  useEffect(() => {
+    return () => {
+      if (video) {
+        video.unloadAsync().catch(console.error);
+      }
+    };
+  }, [video]);
+
   useEffect(() => {
     if (video && onPlayerReady) {
       onPlayerReady({
@@ -114,12 +127,19 @@ export function useVideoPlayer(initialUri: string, onPlayerReady?: (player: Vide
         loop,
       });
     }
-  }, [video, isLoaded]);
+  }, [video, isLoaded, onPlayerReady]);
 
   const loadVideo = async (uri: string) => {
     try {
       setIsLoaded(false);
       setPlaying(false);
+      
+      // Clean up existing video before loading new one
+      if (video) {
+        await video.unloadAsync();
+        setVideo(null);
+      }
+      
       // Video loading would be handled by the Video component
       setIsLoaded(true);
     } catch (error) {
@@ -134,17 +154,18 @@ export function useVideoPlayer(initialUri: string, onPlayerReady?: (player: Vide
     playing,
     play: async () => {
       try {
-        if (video) {
+        if (video && isLoaded) {
           await video.playAsync();
           setPlaying(true);
         }
       } catch (error) {
         console.error('Error playing video:', error);
+        setPlaying(false);
       }
     },
     pause: async () => {
       try {
-        if (video) {
+        if (video && isLoaded) {
           await video.pauseAsync();
           setPlaying(false);
         }
@@ -157,7 +178,7 @@ export function useVideoPlayer(initialUri: string, onPlayerReady?: (player: Vide
     },
     seekTo: async (position: number) => {
       try {
-        if (video) {
+        if (video && isLoaded) {
           await video.setPositionAsync(position);
         }
       } catch (error) {

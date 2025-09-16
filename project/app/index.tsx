@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Image,
   Alert,
   ScrollView,
+  Animated,
 } from 'react-native';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,9 @@ import { supabase } from '@/libs/superbase';
 
 export default function IndexScreen() {
   const router = useRouter();
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -28,6 +32,22 @@ export default function IndexScreen() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Start slide-up animation when component mounts
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -185,20 +205,15 @@ export default function IndexScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.content}>
-          {/* Logo Section */}
-          <View style={styles.logoSection}>
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../assets/images/time-capsule.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-            
-            <Text style={styles.tagline}>Messages that grow with your child</Text>
-          </View>
-
+        <Animated.View 
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
           {/* Welcome Section */}
           <View style={styles.welcomeSection}>
             <Text style={styles.welcomeTitle}>Welcome</Text>
@@ -324,7 +339,7 @@ export default function IndexScreen() {
             
             <Text style={styles.versionText}>Version 1.0.0</Text>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -347,29 +362,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     justifyContent: 'space-between',
   },
-  logoSection: {
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoImage: {
-    width: 150,
-    height: 100,
-  },
-  tagline: {
-    fontSize: 7,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 22,
-    fontFamily: 'Poppins-Regular',
-    marginTop: -30,
-  },
   welcomeSection: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingTop: 60,
+    paddingBottom: 20,
   },
   welcomeTitle: {
     fontSize: 32,

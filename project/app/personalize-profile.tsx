@@ -4,15 +4,15 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Animated,
   Image,
   Alert,
-  Modal,
+  // Modal,
   Platform,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Camera, Upload, X, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,7 +32,7 @@ export default function PersonalizeProfileScreen() {
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  // const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState<boolean | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -258,19 +258,6 @@ export default function PersonalizeProfileScreen() {
     }
   };
 
-  const handleChooseAvatar = () => {
-    setShowAvatarModal(true);
-  };
-
-  const handleAvatarSelect = (avatarId: string) => {
-    setSelectedAvatar(avatarId);
-    setSelectedImage(null); // Clear any selected image
-  };
-
-  const handleAvatarConfirm = () => {
-    setShowAvatarModal(false);
-  };
-
   const renderProfileImage = () => {
     if (selectedImage) {
       return (
@@ -414,12 +401,12 @@ export default function PersonalizeProfileScreen() {
               onPress={pickImageFromLibrary}
               activeOpacity={0.8}
             >
-              <Camera size={20} color="#ffffff" strokeWidth={2} />
+              <Camera size={24} color="#000000" strokeWidth={2} />
               <Text style={styles.uploadButtonText}>Upload Photo</Text>
             </TouchableOpacity>
 
             {/* Or Choose Avatar Section */}
-            <View style={styles.avatarSection}>
+            {/* <View style={styles.avatarSection}>
               <Text style={styles.avatarSectionTitle}>or choose an Avatar</Text>
               
                              <ScrollView
@@ -458,7 +445,7 @@ export default function PersonalizeProfileScreen() {
               >
                 <Text style={styles.moreAvatarsText}>See more avatars</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
           </View>
         </ScrollView>
 
@@ -487,7 +474,7 @@ export default function PersonalizeProfileScreen() {
       </Animated.View>
 
       {/* Avatar Selection Modal */}
-      <Modal
+      {/* <Modal
         visible={showAvatarModal}
         transparent={true}
         animationType="slide"
@@ -558,7 +545,7 @@ export default function PersonalizeProfileScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </Modal> */}
     </SafeAreaView>
   );
 }
@@ -625,11 +612,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    lineHeight: 24,
+    lineHeight: 27,
     color: '#000000',
     textAlign: 'center',
     marginBottom: 48,
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Regular',
   },
   imageUploadSection: {
     marginBottom: 32,
@@ -716,6 +703,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     marginBottom: 40,
+    marginTop: 40,
     shadowColor: '#3B82F6',
     shadowOffset: {
       width: 0,
@@ -728,7 +716,7 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     color: '#000000',
-    fontSize: 16,
+    fontSize: 22,
     fontFamily: 'Poppins-Regular',
   },
   avatarSection: {
@@ -787,7 +775,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   nextButton: {
-    backgroundColor: '#334155',
+    backgroundColor: '#2F3A56',
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 32,

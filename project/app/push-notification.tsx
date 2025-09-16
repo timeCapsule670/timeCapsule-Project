@@ -4,14 +4,15 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
-    SafeAreaView,
+
     StatusBar,
     Animated,
     ScrollView,
     Alert,
     Image,
     Platform,
-} from 'react-nativ\e';
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Bell, Check, MessageSquare, Heart, Star, Clock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 24,
-        paddingTop: 58,
+        paddingTop: 50,
         paddingBottom: 24,
         justifyContent: 'space-between',
     },
@@ -308,12 +309,11 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '600',
+        fontFamily: 'Poppins-SemiBold',
         color: '#1F2937',
         flex: 1,
         textAlign: 'center',
         marginHorizontal: 16,
-        fontFamily: 'Poppins-SemiBold',
     },
     headerSpacer: {
         width: 40,
@@ -358,11 +358,10 @@ const styles = StyleSheet.create({
         height: 70
     },
     mainTitle: {
-        fontSize: 24,
-        fontWeight: '600',
+        fontSize: 22,
         color: '#1F2937',
         textAlign: 'center',
-        lineHeight: 32,
+        lineHeight: 33,
         marginBottom: 20,
         paddingHorizontal: 16,
         fontFamily: 'Poppins-Bold',
@@ -424,19 +423,12 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     turnOnButton: {
-        backgroundColor: '#334155',
-        borderRadius: 16,
+        backgroundColor: '#2F3A56',
+        borderRadius: 10,
         paddingVertical: 18,
         paddingHorizontal: 32,
         alignItems: 'center',
-        shadowColor: '#334155',
-        shadowOffset: {
-            width: 0,
-            height: 8,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-        elevation: 8,
+       
     },
     turnOnButtonDisabled: {
         backgroundColor: '#9CA3AF',
@@ -444,13 +436,12 @@ const styles = StyleSheet.create({
     },
     turnOnButtonText: {
         color: '#ffffff',
-        fontSize: 18,
-        fontWeight: '600',
-        fontFamily: 'Poppins-SemiBold',
+        fontSize: 16,
+        fontFamily: 'Poppins-Regular',
     },
     skipButton: {
         backgroundColor: '#F59E0B',
-        borderRadius: 16,
+        borderRadius: 10,
         paddingVertical: 18,
         paddingHorizontal: 32,
         alignItems: 'center',
@@ -465,9 +456,8 @@ const styles = StyleSheet.create({
     },
     skipButtonText: {
         color: '#ffffff',
-        fontSize: 18,
-        fontWeight: '600',
-        fontFamily: 'Poppins-SemiBold',
+        fontSize: 16,
+        fontFamily: 'Poppins-Regular',
     },
     footerNote: {
         fontSize: 14,

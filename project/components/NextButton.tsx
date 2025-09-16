@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { TouchableOpacity, Text, View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 
 interface NextButtonProps {
@@ -35,12 +35,14 @@ export default function NextButton({
       <Text style={[styles.text, styles[`${variant}Text`]]}>
         {loading ? 'Loading...' : text}
       </Text>
-      <ArrowLeft
-        size={20}
-        color={variant === 'primary' ? '#ffffff' : '#334155'}
-        strokeWidth={2}
-        style={styles.arrow}
-      />
+      <View style={styles.arrowContainer}>
+        <ArrowLeft
+          size={20}
+          color={variant === 'primary' ? '#ffffff' : '#334155'}
+          strokeWidth={2}
+          style={styles.arrow}
+        />
+      </View>
     </TouchableOpacity>
   );
 }
@@ -81,6 +83,12 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     color: '#334155',
+  },
+  arrowContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+    marginBottom: 2,
   },
   arrow: {
     transform: [{ rotate: '180deg' }],
