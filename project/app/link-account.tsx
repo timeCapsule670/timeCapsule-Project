@@ -4,11 +4,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Animated,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Link, Heart, CalendarDays, Mic, MessageSquare } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import NextButton from '@/components/NextButton';
@@ -119,9 +120,14 @@ export default function LinkAccountScreen() {
                 }
               ]}
             >
-              <View style={styles.linkIcon}>
+              <LinearGradient
+                colors={['#C28FEF', '#1D6EE1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={styles.linkIcon}
+              >
                 <Link size={32} color="#ffffff" strokeWidth={2} />
-              </View>
+              </LinearGradient>
             </Animated.View>
 
             {/* Main Question */}
@@ -194,6 +200,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  
   },
   content: {
     flex: 1,
@@ -254,10 +261,9 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   linkIcon: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     borderRadius: 40,
-    backgroundColor: '#8B5CF6',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#8B5CF6',
@@ -271,7 +277,6 @@ const styles = StyleSheet.create({
   },
   mainQuestion: {
     fontSize: 22,
-    fontWeight: '600',
     color: '#1F2937',
     textAlign: 'center',
     lineHeight: 33,
@@ -285,10 +290,9 @@ const styles = StyleSheet.create({
   },
   benefitsTitle: {
     fontSize: 18,
-    fontWeight: '600',
     color: '#000000',
     marginBottom: 24,
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Regular',
     textAlign: 'center',
     lineHeight: 27
   },
@@ -330,10 +334,13 @@ const styles = StyleSheet.create({
   },
   yesButton: {
     marginBottom: 16,
-    minWidth: 400,
+    minWidth: 370,
+    borderRadius: 10,
   },
   noButton: {
     marginBottom: 16,
+    minWidth: 370,
+    borderRadius: 10,
   },
   footerNote: {
     fontSize: 14,

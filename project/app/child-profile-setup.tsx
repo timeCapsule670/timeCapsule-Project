@@ -5,13 +5,14 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
+
   StatusBar,
   Animated,
   ScrollView,
   Platform,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ArrowLeft, User, Calendar, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -285,9 +286,9 @@ export default function ChildProfileSetupScreen() {
   );
 
   const renderBirthdayInput = (child: Child) => {
-    if (Platform.OS === 'web') {
-      // Web fallback - use regular text input
-      return (
+    return (
+      <View style={styles.birthdayInputRow}>
+        {/* Manual Input */}
         <View style={[
           styles.inputWrapper, 
           styles.birthdayInput,
@@ -303,30 +304,17 @@ export default function ChildProfileSetupScreen() {
             keyboardType="numeric"
           />
         </View>
-      );
-    } else {
-      // Native platforms - use touchable that opens date picker
-      return (
+        
+        {/* Calendar Button */}
         <TouchableOpacity
-          style={[
-            styles.inputWrapper, 
-            styles.birthdayInput,
-            errors[child.id]?.birthday ? styles.inputError : null
-          ]}
+          style={styles.calendarButton}
           onPress={() => showDatePickerModal(child.id)}
           activeOpacity={0.7}
         >
-          <Calendar size={20} color="#64748B" style={styles.inputIcon} />
-          <Text style={[
-            styles.textInput,
-            styles.datePickerText,
-            !child.birthday && styles.placeholderText
-          ]}>
-            {child.birthday || 'Select Birthday'}
-          </Text>
+          <Calendar size={20} color="#3B4F75" strokeWidth={2} />
         </TouchableOpacity>
-      );
-    }
+      </View>
+    );
   };
 
   return (
@@ -502,6 +490,9 @@ export default function ChildProfileSetupScreen() {
           onChange={onDateChange}
           maximumDate={new Date()}
           minimumDate={new Date(1900, 0, 1)}
+          themeVariant="light"
+          textColor="#1F2937"
+          accentColor="#3B4F75"
         />
       )}
     </SafeAreaView>
@@ -601,11 +592,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   questionText: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Poppins-Regular',
     color: '#1F2937',
     marginBottom: 16,
-    lineHeight: 24,
+    lineHeight: 27,
   },
   inputContainer: {
     marginBottom: 8,
@@ -638,8 +629,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  birthdayInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   birthdayInput: {
     flex: 1,
+  },
+  calendarButton: {
+    width: 56,
+    height: 56,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   datePickerText: {
     paddingVertical: 16,
