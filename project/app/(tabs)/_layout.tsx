@@ -1,6 +1,21 @@
-import { Tabs } from 'expo-router';
-import { Home, Archive, Lightbulb, User } from 'lucide-react-native';
+import { Tabs, useRouter } from 'expo-router';
+import { Home, MessageSquare, Plus, Menu, User } from 'lucide-react-native';
 import React from 'react';
+import { TouchableOpacity, View, StyleSheet } from 'react-native';
+
+function CreateButton() {
+  const router = useRouter();
+
+  return (
+    <TouchableOpacity
+      style={styles.createButton}
+      onPress={() => router.push('/create-message')}
+      activeOpacity={0.8}
+    >
+      <Plus size={28} color="#ffffff" strokeWidth={2.5} />
+    </TouchableOpacity>
+  );
+}
 
 export default function TabLayout() {
   return (
@@ -23,7 +38,7 @@ export default function TabLayout() {
           shadowRadius: 8,
           elevation: 8,
         },
-        tabBarActiveTintColor: '#3B4F75',
+        tabBarActiveTintColor: '#000000',
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarLabelStyle: {
           fontSize: 12,
@@ -37,7 +52,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ size, color }) => (
-            <Home size={size} color={color} strokeWidth={2} />
+            <Home size={28} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -46,8 +61,20 @@ export default function TabLayout() {
         options={{
           title: 'Vault',
           tabBarIcon: ({ size, color }) => (
-            <Archive size={size} color={color} strokeWidth={2} />
+            <MessageSquare size={28} color={color} strokeWidth={2} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="create"
+        options={{
+          title: '',
+          tabBarButton: () => <CreateButton />,
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+          },
         }}
       />
       <Tabs.Screen
@@ -55,7 +82,7 @@ export default function TabLayout() {
         options={{
           title: 'Prompts',
           tabBarIcon: ({ size, color }) => (
-            <Lightbulb size={size} color={color} strokeWidth={2} />
+            <Menu size={28} color={color} strokeWidth={2} />
           ),
         }}
       />
@@ -64,10 +91,30 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ size, color }) => (
-            <User size={size} color={color} strokeWidth={2} />
+            <User size={28} color={color} strokeWidth={2} />
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  createButton: {
+    width: 56,
+    height: 56,
+    marginLeft:10,
+    borderRadius: 28,
+    backgroundColor: '#4A5B87',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+});

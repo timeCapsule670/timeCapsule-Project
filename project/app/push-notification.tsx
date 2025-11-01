@@ -61,8 +61,12 @@ export default function PushNotificationsScreen() {
                 'Notifications',
                 'Push notifications are not available on web platform. You can still use the app without notifications.',
                 [
-                    { text: 'Continue', onPress: () => router.push('/moments-selection') }
-                ]
+                    { 
+                        text: 'Continue', 
+                        onPress: () => router.push('/welcome') 
+                    }
+                ],
+                { cancelable: false }
             );
             return;
         }
@@ -77,16 +81,24 @@ export default function PushNotificationsScreen() {
                     'Notifications Enabled!',
                     'You\'ll now receive gentle reminders and updates about your messages.',
                     [
-                        { text: 'Continue', onPress: () => router.push('/moments-selection') }
-                    ]
+                        { 
+                            text: 'Continue', 
+                            onPress: () => router.push('/welcome') 
+                        }
+                    ],
+                    { cancelable: false }
                 );
             } else {
                 Alert.alert(
                     'Permissions Needed',
                     'To receive reminders, please enable notifications in your device settings. You can still use the app without notifications.',
                     [
-                        { text: 'Continue', onPress: () => router.push('/moments-selection') }
-                    ]
+                        { 
+                            text: 'Continue', 
+                            onPress: () => router.push('/welcome') 
+                        }
+                    ],
+                    { cancelable: false }
                 );
             }
         } catch (error) {
@@ -95,8 +107,13 @@ export default function PushNotificationsScreen() {
                 'Error',
                 'Failed to setup notifications. You can enable them later in settings.',
                 [
-                    { text: 'Continue', onPress: () => router.push('/moments-selection') }
-                ]
+                    { 
+                        text: 'Continue', 
+                        style: Platform.OS === 'ios' ? 'default' : undefined,
+                        onPress: () => router.push('/welcome') 
+                    }
+                ],
+                { cancelable: false }
             );
         } finally {
             setIsRequestingPermission(false);
@@ -157,7 +174,6 @@ export default function PushNotificationsScreen() {
                     contentContainerStyle={styles.scrollContent}
                     bounces={true}
                 >
-
                     {/* Header */}
                     <View style={styles.header}>
                         <TouchableOpacity
@@ -172,84 +188,76 @@ export default function PushNotificationsScreen() {
                         <View style={styles.headerSpacer} />
                     </View>
 
+                    {/* Main Content */}
+                    <View style={styles.mainContent}>
+                        {/* Bell Icon */}
+                        <Animated.View
+                            style={[
+                                styles.iconContainer,
+                                {
+                                    transform: [{ scale: scaleAnim }],
+                                }
+                            ]}
+                        >
+                            <View style={styles.bellIcon}>
+                                <Image
+                                    source={require('../assets/images/Icon Container.png')}
+                                    style={styles.logoImage}
+                                    resizeMode="contain"
+                                />
+                            </View>
+                        </Animated.View>
 
+                        {/* Main Title */}
+                        <Text style={styles.mainTitle}>
+                            Stay in the loop with gentle reminders
+                        </Text>
 
-                    <ScrollView
-                        style={styles.scrollView}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={styles.scrollContent}
-                    >
-                        {/* Main Content */}
-                        <View style={styles.mainContent}>
-                            {/* Bell Icon */}
-                            <Animated.View
-                                style={[
-                                    styles.iconContainer,
-                                    {
-                                        transform: [{ scale: scaleAnim }],
-                                    }
-                                ]}
-                            >
-                                <View style={styles.bellIcon}>
-                                    <Image
-                                        source={require('../assets/images/Icon Container.png')}
-                                        style={styles.logoImage}
-                                        resizeMode="contain"
-                                    />              </View>
-                            </Animated.View>
+                        {/* Description */}
+                        <Text style={styles.description}>
+                            Get notified when your messages are delivered, when you receive a response or when it's time to schedule a new capsule.
+                        </Text>
 
-                            {/* Main Title */}
-                            <Text style={styles.mainTitle}>
-                                Stay in the loop with gentle reminders
-                            </Text>
-
-                            {/* Description */}
-                            <Text style={styles.description}>
-                                Get notified when your messages are delivered, when you receive a response or when it's time to schedule a new capsule.
-                            </Text>
-
-                            {/* What Notifications Allow Section */}
-                            <View style={styles.featuresSection}>
-
-                                <View style={styles.featuresList}>
-                                    {notificationFeatures.map((feature, index) => {
-                                        const IconComponent = feature.icon;
-                                        return (
-                                            <Animated.View
-                                                key={feature.id}
-                                                style={[
-                                                    styles.featureItem,
-                                                    {
-                                                        opacity: fadeAnim,
-                                                        transform: [
-                                                            {
-                                                                translateY: slideAnim.interpolate({
-                                                                    inputRange: [0, 30],
-                                                                    outputRange: [0, 10 + (index * 3)],
-                                                                })
-                                                            }
-                                                        ],
-                                                    }
-                                                ]}
-                                            >
-                                                <View style={[
-                                                    styles.featureIcon,
-                                                    { backgroundColor: feature.iconBackground }
-                                                ]}>
-                                                    <IconComponent
-                                                        size={20}
-                                                        color={feature.iconColor}
-                                                        strokeWidth={2}
-                                                    />
-                                                </View>
-                                                <Text style={styles.featureText}>{feature.text}</Text>
-                                            </Animated.View>
-                                        );
-                                    })}
-                                </View>
+                        {/* What Notifications Allow Section */}
+                        <View style={styles.featuresSection}>
+                            <View style={styles.featuresList}>
+                                {notificationFeatures.map((feature, index) => {
+                                    const IconComponent = feature.icon;
+                                    return (
+                                        <Animated.View
+                                            key={feature.id}
+                                            style={[
+                                                styles.featureItem,
+                                                {
+                                                    opacity: fadeAnim,
+                                                    transform: [
+                                                        {
+                                                            translateY: slideAnim.interpolate({
+                                                                inputRange: [0, 30],
+                                                                outputRange: [0, 10 + (index * 3)],
+                                                            })
+                                                        }
+                                                    ],
+                                                }
+                                            ]}
+                                        >
+                                            <View style={[
+                                                styles.featureIcon,
+                                                { backgroundColor: feature.iconBackground }
+                                            ]}>
+                                                <IconComponent
+                                                    size={20}
+                                                    color={feature.iconColor}
+                                                    strokeWidth={2}
+                                                />
+                                            </View>
+                                            <Text style={styles.featureText}>{feature.text}</Text>
+                                        </Animated.View>
+                                    );
+                                })}
                             </View>
                         </View>
-                    </ScrollView>
+                    </View>
 
                     {/* Footer */}
                     <View style={styles.footer}>
@@ -428,7 +436,7 @@ const styles = StyleSheet.create({
         paddingVertical: 18,
         paddingHorizontal: 32,
         alignItems: 'center',
-       
+
     },
     turnOnButtonDisabled: {
         backgroundColor: '#9CA3AF',
@@ -440,19 +448,12 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins-Regular',
     },
     skipButton: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: '#FCB32B',
         borderRadius: 10,
         paddingVertical: 18,
         paddingHorizontal: 32,
         alignItems: 'center',
-        shadowColor: '#F59E0B',
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+       
     },
     skipButtonText: {
         color: '#ffffff',

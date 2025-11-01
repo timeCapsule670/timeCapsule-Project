@@ -50,6 +50,9 @@ export interface UploadProfilePictureResponse {
 export interface SaveProfilePictureRequest {
   type: 'upload' | 'avatar';
   data: string;
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string; // ISO 8601 format: YYYY-MM-DD
 }
 
 export interface SaveProfilePictureResponse {
@@ -368,24 +371,48 @@ class ApiService {
       delete headers['Content-Type'];
     }
 
-    const defaultOptions: RequestInit = {
-      headers,
-      ...options,
-    };
-
-    // Add authorization header if required
+    // Add authorization header if required BEFORE creating defaultOptions
     if (requiresAuth) {
       const token = await this.getAuthToken();
       if (token) {
-        defaultOptions.headers = {
-          ...defaultOptions.headers,
-          'Authorization': `Bearer ${token}`,
-        };
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        throw new Error('Authentication required. Please sign in again.');
       }
     }
 
+    // Merge headers properly - prioritize our headers over options.headers
+    const finalHeaders = {
+      ...(options.headers as Record<string, string> || {}),
+      ...headers, // Our headers (including Authorization) take precedence
+    };
+
+    const defaultOptions: RequestInit = {
+      ...options,
+      headers: finalHeaders,
+    };
+
     try {
-      const response = await fetch(url, defaultOptions);
+      let response = await fetch(url, defaultOptions);
+
+      // Handle non-JSON responses gracefully (e.g., HTML from cold starts / proxies)
+      const contentType = response.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
+
+      if (!isJson) {
+        const textBody = await response.text();
+
+        // If service is waking up (Render cold start), retry once after small delay
+        if (!response.ok && (response.status === 502 || response.status === 503)) {
+          await new Promise(r => setTimeout(r, 1200));
+          response = await fetch(url, defaultOptions);
+        } else {
+          // Provide a clearer error when server didn't return JSON
+          throw new Error(`Unexpected response format (${response.status}). Body starts with: ${textBody.slice(0, 80)}`);
+        }
+      }
+
+      // Parse JSON (second attempt will also land here)
       const data = await response.json();
 
       if (!response.ok) {
@@ -454,25 +481,36 @@ class ApiService {
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
       
-             // React Native FormData format
-       formData.append('image', {
-         uri,
-         type,
-         name: filename,
-       } as any);
-         } else {
-       // Web: use File object directly
-       formData.append('image', imageFile);
-     }
+      // React Native FormData format
+      formData.append('image', {
+        uri,
+        type,
+        name: filename,
+      } as any);
+    } else {
+      // Web: use File object directly
+      formData.append('image', imageFile);
+    }
 
-    return this.makeRequest<UploadProfilePictureResponse>('/profile-pictures/upload/profile-picture', {
+    // Endpoint: /api/avatars/upload/profile-picture (or similar avatars upload endpoint)
+    console.log('📤 API - uploadProfilePicture called, uploading to /avatars/upload/profile-picture');
+    
+    return this.makeRequest<UploadProfilePictureResponse>('/avatars/upload/profile-picture', {
       method: 'POST',
       body: formData,
     }, true);
   }
 
   async saveProfilePicture(request: SaveProfilePictureRequest): Promise<SaveProfilePictureResponse> {
-    return this.makeRequest<SaveProfilePictureResponse>('/profile-pictures/director/profile-picture', {
+    // Endpoint: /api/avatars/director/profile-picture
+    // Request format: { type: "upload", data: "https://...supabase.co/...", firstName: "...", lastName: "...", dateOfBirth: "YYYY-MM-DD" }
+    console.log('📤 API - saveProfilePicture called with:', {
+      endpoint: '/avatars/director/profile-picture',
+      fullUrl: `${BASE_URL}/avatars/director/profile-picture`,
+      requestBody: request,
+    });
+    
+    return this.makeRequest<SaveProfilePictureResponse>('/avatars/director/profile-picture', {
       method: 'POST',
       body: JSON.stringify(request),
     }, true);

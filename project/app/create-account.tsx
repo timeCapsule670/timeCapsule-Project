@@ -5,7 +5,6 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    SafeAreaView,
     StatusBar,
     Alert,
     Image,
@@ -17,6 +16,7 @@ import { apiService } from '@/libs/api';
 import { validatePassword } from '@/utils/passwordValidation';
 import { useAuth } from '@/contexts/AuthContext';
 import Toast from 'react-native-toast-message';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CreateAccountScreen() {
     const router = useRouter();
@@ -102,23 +102,26 @@ export default function CreateAccountScreen() {
       });
 
       if (apiResponse.success) {
-        // Store the token and user data using auth context
-        await signIn(apiResponse.data.user, apiResponse.data.token);
-        
         console.log('Account created successfully:', apiResponse.data.user);
         
         // Show success toast
         Toast.show({
           type: 'success',
           text1: 'Account Created!',
-          text2: 'Welcome to TimeCapsule! Redirecting to onboarding...',
+          text2: 'Please sign in to continue with your profile setup.',
           position: 'top',
           visibilityTime: 3000,
         });
         
         // Wait for toast to be visible before navigating
         setTimeout(() => {
-          router.push('/onboarding-continuous');
+          router.push({
+            pathname: '/sign-in',
+            params: {
+              email: formData.email,
+              newUser: 'true'
+            }
+          });
         }, 1500);
       } else {
         setErrors(prev => ({
@@ -176,7 +179,7 @@ export default function CreateAccountScreen() {
                                 />
                             </View>
 
-                            <Text style={styles.tagline}>Messages that grow with your child</Text>
+                            <Text style={styles.tagline}>Crafting Memories, Connecting Generations</Text>
                         </View>
                     </View>
                 </View>
@@ -436,13 +439,11 @@ const styles = StyleSheet.create({
         height: 100,
     },
     tagline: {
-        fontSize: 18,
-        color: '#64748B',
+        fontSize: 10,
+        color: '#777777',
         textAlign: 'center',
         lineHeight: 20,
         paddingHorizontal: 10,
-        marginTop: -10,
-        marginLeft: -50,
-        fontFamily: 'Poppins-SemiBold',
+        fontFamily: 'Poppins-Regular',
     },
 });

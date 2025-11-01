@@ -15,7 +15,7 @@ import { apiService } from '@/libs/api';
 
 export default function FamilySetupScreen() {
   const router = useRouter();
-  const { actorIds } = useLocalSearchParams();
+  const { actorIds, returnTo } = useLocalSearchParams();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -124,8 +124,12 @@ export default function FamilySetupScreen() {
         console.log(`📊 Family Setup - Director role updated: ${response.data.director_role_updated}`);
         console.log(`📊 Family Setup - Relationships created: ${response.data.relationships_created}`);
         
-        // Navigate to the next screen
-        router.push('/invite-child');
+        // Navigate to the next screen based on returnTo parameter
+        if (returnTo === 'create-message') {
+          router.push('/create-message');
+        } else {
+          router.push('/invite-child');
+        }
       } else {
         console.error('❌ Family Setup - API returned success: false');
         Alert.alert(
@@ -247,11 +251,7 @@ export default function FamilySetupScreen() {
                     {role.label}
                   </Text>
                   
-                  {selectedRole === role.id && (
-                    <View style={styles.selectedIndicator}>
-                      <View style={styles.selectedDot} />
-                    </View>
-                  )}
+                 
                 </TouchableOpacity>
               </Animated.View>
             ))}
@@ -312,12 +312,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 22,
+    fontFamily: 'Poppins-SemiBold',
     color: '#1F2937',
     flex: 1,
     textAlign: 'center',
-    marginHorizontal: 16,
+    marginHorizontal: 10,
   },
   headerSpacer: {
     width: 40,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   },
   roleButton: {
     backgroundColor: '#F5F5F5',
-    borderRadius: 16,
+    borderRadius: 8,
     paddingVertical: 20,
     paddingHorizontal: 24,
     flexDirection: 'row',
@@ -363,12 +363,9 @@ const styles = StyleSheet.create({
     
   },
   roleButtonSelected: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#3B4F75',
-    shadowColor: '#3B4F75',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#4A5B87',
+    borderColor: 'transparent',
+    
   },
   roleButtonText: {
     fontSize: 16,
@@ -376,23 +373,11 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   roleButtonTextSelected: {
-    color: '#3B4F75',
-    fontWeight: '600',
+    color: '#ffffff',
+    fontFamily: 'Poppins-SemiBold',
   },
-  selectedIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#3B4F75',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selectedDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ffffff',
-  },
+ 
+
   footer: {
     paddingBottom: 32,
     gap: 24,

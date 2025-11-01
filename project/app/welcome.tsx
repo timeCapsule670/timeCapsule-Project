@@ -4,30 +4,36 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Animated,
   ScrollView,
-  Modal,
   Alert,
-  Platform,
   Image,
+  Platform,
 } from 'react-native';
-import { Bell, CreditCard as Edit3, Lightbulb, Chrome as Home, Play, Check, X } from 'lucide-react-native';
+import { Lightbulb, RotateCcw, Video, Mic, Edit3, Image as ImageIcon, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import * as Notifications from 'expo-notifications';
-import { Poppins_600SemiBold, Poppins_800ExtraBold } from '@expo-google-fonts/poppins';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+interface MessageType {
+  id: 'video' | 'audio' | 'text' | 'image';
+  title: string;
+  description: string;
+  icon: React.ComponentType<any>;
+  iconColor: string;
+  iconBackground: string;
+}
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [showMessageTypeModal, setShowMessageTypeModal] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<string | null>(null);
+  const [selectedMessageType, setSelectedMessageType] = useState<string | null>(null);
+  const [showMessageTypes, setShowMessageTypes] = useState(false);
+
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const checklistAnim = useRef(new Animated.Value(0)).current;
+  const heartAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     // Entrance animation sequence
@@ -49,105 +55,117 @@ export default function WelcomeScreen() {
           useNativeDriver: true,
         }),
       ]),
-      Animated.timing(checklistAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
+      // Heart beating animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(heartAnim, {
+            toValue: 1.1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(heartAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ),
     ]).start();
   }, []);
 
-  const handleSetupNotifications = () => {
-    setShowNotificationModal(true);
-  };
+  const messageTypes: MessageType[] = [
+    {
+      id: 'video',
+      title: 'Record a Video Message',
+      description: 'Send a video that feels like a hug',
+      icon: Video,
+      iconColor: '#9E6802',
+      iconBackground: '#FDCB6E',
+    },
+    {
+      id: 'audio',
+      title: 'Record an Audio Message',
+      description: 'Share your voice with warmth and emotion',
+      icon: Mic,
+      iconColor: '#000000',
+      iconBackground: '#A3C4F3',
+    },
+    {
+      id: 'text',
+      title: 'Write a Text Message',
+      description: 'Express yourself through words',
+      icon: Edit3,
+      iconColor: '#000000',
+      iconBackground: '#D6C7ED',
+    },
+    {
+      id: 'image',
+      title: 'Upload an Image',
+      description: 'Upload your favorite memory',
+      icon: ImageIcon,
+      iconColor: '#ffffff',
+      iconBackground: '#6B7280',
+    },
+  ];
 
-  const handleCreateFirstMessage = () => {
-    setShowMessageTypeModal(true);
-  };
-
-  const handleExplorePrompts = () => {
-    // Navigate to prompts page (placeholder)
-    Alert.alert('Coming Soon', 'Message prompts feature is coming soon!');
-  };
-
-  const handleTakeTour = () => {
-    // Open tutorial (placeholder)
-    Alert.alert('Tutorial', 'Interactive tutorial coming soon!');
-  };
-
-  const handleGoHome = () => {
-    router.push('/(tabs)');
-  };
-
-  const requestNotificationPermission = async () => {
-    try {
-      if (Platform.OS === 'web') {
-        Alert.alert('Notifications', 'Push notifications are not available on web platform');
-        setShowNotificationModal(false);
-        return;
+  const handleUsePrompt = () => {
+    const promptText = "How do you think your childhood shaped who you are today?";
+    const promptTags = "#LifeAdvice,#TextMessage";
+    
+    router.push({
+      pathname: '/create-message',
+      params: {
+        promptText,
+        promptTags,
+        promptId: 'welcome-prompt-1',
       }
+    });
+  };
 
-      const { status } = await Notifications.requestPermissionsAsync();
-      setNotificationPermission(status);
+  const handleRefreshPrompt = () => {
+    // In a real app, this would fetch a new random prompt
+    Alert.alert('New Prompt', 'Prompt refresh functionality will be implemented soon!');
+  };
 
-      if (status === 'granted') {
-        Alert.alert('Success!', 'Notification reminders have been enabled. You\'ll receive gentle reminders to create and send messages.');
-      } else {
-        Alert.alert('Permissions Needed', 'To receive reminders, please enable notifications in your device settings.');
+  const handleSelectMessageType = () => {
+    setShowMessageTypes(true);
+    
+    // Animate the message types section
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleMessageTypeSelect = (typeId: string) => {
+    setSelectedMessageType(typeId);
+    
+    // Navigate to create message page with the selected type
+    router.push({
+      pathname: '/create-message',
+      params: {
+        messageType: typeId,
+        promptText: "How do you think your childhood shaped who you are today?",
+        promptTags: "#LifeAdvice",
+        promptId: 'welcome-prompt-1',
       }
-
-      setShowNotificationModal(false);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to setup notifications. Please try again.');
-      setShowNotificationModal(false);
-    }
+    });
   };
 
-  const handleMessageTypeSelection = (type: 'video' | 'audio' | 'text') => {
-    setShowMessageTypeModal(false);
-    // Navigate to appropriate message creation flow
-    Alert.alert('Message Creation', `${type.charAt(0).toUpperCase() + type.slice(1)} message creation flow coming soon!`);
-  };
-
-  const handleContinue = () => {
-    // Navigate to home tabs
+  const handleSkip = () => {
     router.push('/(tabs)');
   };
 
-  const handleSkipForNow = () => {
-    // Navigate to home tabs
-    router.push('/(tabs)');
+  const handleCloseMessageTypes = () => {
+    setShowMessageTypes(false);
   };
-
-  const ChecklistItem = ({ text, delay = 0 }: { text: string; delay?: number }) => (
-    <Animated.View
-      style={[
-        styles.checklistItem,
-        {
-          opacity: checklistAnim,
-          transform: [
-            {
-              translateX: checklistAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-20, 0],
-              }),
-            },
-          ],
-        },
-      ]}
-    >
-      <View style={styles.checkIcon}>
-        <Check size={16} color="#ffffff" strokeWidth={3} />
-      </View>
-      <Text style={styles.checklistText}>{text}</Text>
-    </Animated.View>
-  );
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
-      <Animated.View
+      
+      <Animated.View 
         style={[
           styles.content,
           {
@@ -161,195 +179,152 @@ export default function WelcomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Header with Family Icon */}
+          {/* Header Icon */}
           <Animated.View
             style={[
-              styles.header,
+              styles.headerIconContainer,
               {
                 transform: [{ scale: scaleAnim }],
               }
             ]}
           >
-            <View style={styles.iconContainer}>
-              <Image
-                source={require('../assets/images/logo.png')}
-                style={styles.familyIcon}
-                resizeMode="contain"
-              />
+            <View style={styles.iconWrapper}>
+              {/* Person with arms up */}
+             <Image
+              source={require('../assets/images/logo.png')}
+              style={styles.personIcon}
+              resizeMode="contain"
+            />
             </View>
-
-            <Text style={styles.welcomeText}>Welcome To</Text>
-            <Text style={styles.appName}>TimeCapsule</Text>
           </Animated.View>
 
-          {/* Description */}
-          <Text style={styles.description}>
-            You're all set to start capturing meaningful moments and supporting your child in ways that truly matter.
+          {/* Main Title */}
+          <Text style={styles.title}>
+            Your Time Capsule is ready!
           </Text>
 
-          {/* Ready to Go Section */}
-          <View style={styles.readySection}>
-            <Text style={styles.readyTitle}>Here's what's ready to go:</Text>
+          {/* Subtitle */}
+          <Text style={styles.subtitle}>
+            Let's create your first message!
+          </Text>
 
-            <View style={styles.checklist}>
-              <ChecklistItem text="Parent account created" delay={0} />
-              <ChecklistItem text="Invites sent successfully" delay={200} />
-              <ChecklistItem text="First message prompt ready" delay={400} />
+          {/* Inspiration Section */}
+          <View style={styles.inspirationSection}>
+            <Text style={styles.inspirationTitle}>
+              Need Inspiration? Try one of these prompts
+            </Text>
+
+            <View style={styles.promptCard}>
+              <View style={styles.promptHeader}>
+                <View style={styles.promptIconContainer}>
+                  <Lightbulb size={20} color="#F59E0B" strokeWidth={2} />
+                </View>
+                <TouchableOpacity
+                  style={styles.refreshButton}
+                  onPress={handleRefreshPrompt}
+                  activeOpacity={0.7}
+                >
+                  <RotateCcw size={20} color="#6B7280" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.promptText}>
+                How do you think your childhood shaped who you are today?
+              </Text>
+
+              <TouchableOpacity
+                style={styles.usePromptButton}
+                onPress={handleUsePrompt}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.usePromptButtonText}>Use Prompt</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* Action Question */}
-          <Text style={styles.actionQuestion}>What would you like to do first?</Text>
+          {/* Message Type Selection */}
+          <View style={styles.messageTypeSection}>
+            <View style={styles.messageTypeSectionHeader}>
+              <Text style={styles.messageTypeSectionTitle}>Select Message Type</Text>
+              {showMessageTypes && (
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={handleCloseMessageTypes}
+                  activeOpacity={0.7}
+                >
+                  <X size={20} color="#6B7280" strokeWidth={2} />
+                </TouchableOpacity>
+              )}
+            </View>
 
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.notificationButton]}
-              onPress={handleSetupNotifications}
-              activeOpacity={0.8}
-            >
-              <Image
-                source={require('../assets/images/twemoji_bell.png')}
-                style={styles.notificationLogo}
-                resizeMode="contain"
-              />
-              <Text style={styles.notificationButtonText}>Set Up Notification Reminders</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionButton, styles.messageButton]}
-              onPress={handleCreateFirstMessage}
-              activeOpacity={0.8}
-            >
-              <Image
-                source={require('../assets/images/emojione_pencil.png')}
-                style={styles.notificationLogo}
-                resizeMode='contain' />
-              <Text style={styles.messageButtonText}>Create Your First Message</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionButton, styles.promptsButton]}
-              onPress={handleExplorePrompts}
-              activeOpacity={0.8}
-            >
-              <Image
-                source={require('../assets/images/fxemoji_lightbulb.png')}
-                style={styles.notificationLogo}
-                resizeMode='contain' />
-              <Text style={styles.promptsButtonText}>Explore Message Prompts</Text>
-            </TouchableOpacity>
+            {!showMessageTypes ? (
+              <TouchableOpacity
+                style={styles.selectMessageTypeButton}
+                onPress={handleSelectMessageType}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.selectMessageTypeText}>Choose Message Type</Text>
+              </TouchableOpacity>
+            ) : (
+              <Animated.View
+                style={[
+                  styles.messageTypesContainer,
+                  {
+                    opacity: fadeAnim,
+                  }
+                ]}
+              >
+                {messageTypes.map((type, index) => {
+                  const IconComponent = type.icon;
+                  const isSelected = selectedMessageType === type.id;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={type.id}
+                      style={[
+                        styles.messageTypeCard,
+                        isSelected && styles.messageTypeCardSelected
+                      ]}
+                      onPress={() => handleMessageTypeSelect(type.id)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.messageTypeIcon, { backgroundColor: type.iconBackground }]}>
+                        <IconComponent size={24} color={type.iconColor} strokeWidth={2} />
+                      </View>
+                      
+                      <View style={styles.messageTypeContent}>
+                        <Text style={[
+                          styles.messageTypeTitle,
+                          isSelected && styles.messageTypeTitleSelected
+                        ]}>
+                          {type.title}
+                        </Text>
+                        <Text style={[
+                          styles.messageTypeDescription,
+                          isSelected && styles.messageTypeDescriptionSelected
+                        ]}>
+                          {type.description}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </Animated.View>
+            )}
           </View>
-
-          {/* Footer Note */}
-          <Text style={styles.footerNote}>
-            You can change or update any settings later in the menu.
-          </Text>
-
-          {/* Home Button - Now inside ScrollView */}
-          <TouchableOpacity
-            style={styles.homeButton}
-            onPress={handleGoHome}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.homeButtonText}>Home</Text>
-          </TouchableOpacity>
         </ScrollView>
+
+        {/* Skip Button */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={handleSkip}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.skipButtonText}>Skip</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
-
-      {/* Notification Permission Modal */}
-      <Modal
-        visible={showNotificationModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowNotificationModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Enable Notifications</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowNotificationModal(false)}
-              >
-                <X size={24} color="#6B7280" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.modalDescription}>
-              Get gentle reminders to create and send meaningful messages to your child. You can customize these reminders anytime.
-            </Text>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowNotificationModal(false)}
-              >
-                <Text style={styles.modalCancelText}>Maybe Later</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.modalConfirmButton}
-                onPress={requestNotificationPermission}
-              >
-                <Text style={styles.modalConfirmText}>Enable Notifications</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Message Type Selection Modal */}
-      <Modal
-        visible={showMessageTypeModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowMessageTypeModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.messageTypeModal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Choose Message Type</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowMessageTypeModal(false)}
-              >
-                <X size={24} color="#6B7280" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.modalDescription}>
-              What type of message would you like to create?
-            </Text>
-
-            <View style={styles.messageTypeOptions}>
-              <TouchableOpacity
-                style={styles.messageTypeButton}
-                onPress={() => handleMessageTypeSelection('video')}
-              >
-                <Text style={styles.messageTypeEmoji}>🎥</Text>
-                <Text style={styles.messageTypeText}>Video Message</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.messageTypeButton}
-                onPress={() => handleMessageTypeSelection('audio')}
-              >
-                <Text style={styles.messageTypeEmoji}>🎙️</Text>
-                <Text style={styles.messageTypeText}>Audio Message</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.messageTypeButton}
-                onPress={() => handleMessageTypeSelection('text')}
-              >
-                <Text style={styles.messageTypeEmoji}>✍️</Text>
-                <Text style={styles.messageTypeText}>Text Message</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -361,291 +336,216 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingHorizontal: 24,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 40, // Increased padding at bottom to accommodate home button
+    paddingTop: 60,
+    paddingBottom: 20,
   },
-  header: {
+  headerIconContainer: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
   },
-  iconContainer: {
-    width: 120,
-    height: 120,
+  iconWrapper: {
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 5,
   },
-  familyIcon: {
-    width: 80,
-    height: 80,
+  personIcon: {
+    width: 100,
+    height: 100,
   },
-  notificationLogo: {
-    width: 25,
-    height: 30,
+  title: {
+    fontSize: 32,
+    color: '#4A5B87',
+    textAlign: 'center',
+    lineHeight: 40,
+    marginBottom: 16,
+    fontFamily: 'Poppins-Bold',
   },
-  welcomeText: {
+  subtitle: {
     fontSize: 18,
-    color: '#6B7280',
-    marginBottom: 2,
+    color: '#1F2937',
+    textAlign: 'center',
+    lineHeight: 26,
+    marginBottom: 40,
     fontFamily: 'Poppins-Medium',
   },
-  appName: {
-    fontSize: 32,
-    fontFamily: 'Poppins-Bold',
-    color: '#1F2937',
-    marginBottom: 10,
-    letterSpacing: -0.5,
-  },
-  description: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 24,
-    fontFamily: 'Poppins-Regular',
-    marginBottom: 30,
-    paddingHorizontal: 8,
-  },
-  readySection: {
+  inspirationSection: {
     marginBottom: 40,
   },
-  readyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  checklist: {
-    gap: 16,
-    backgroundColor: '#F5F5F5',
-    padding: 15,
-    borderRadius: 10,
-    paddingVertical: 30
-  },
-  checklistItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  checkIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#8B5CF6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  checklistText: {
-    fontSize: 16,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  actionQuestion: {
+  inspirationTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    textAlign: 'center',
+    color: '#6B7280',
+    textAlign: 'left',
+    lineHeight: 24,
+    marginBottom: 20,
     fontFamily: 'Poppins-Regular',
-    marginBottom: 32,
   },
-  actionButtons: {
-    gap: 16,
-    marginBottom: 32,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 24,
+  promptCard: {
+    backgroundColor: '#FBF9FD',
     borderRadius: 16,
-    gap: 12,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#8A5FCC',
+    borderStyle: 'dashed',
   },
-  notificationButton: {
-    backgroundColor: '#E8E8E8',
-    borderWidth: 2,
-    borderColor: '#E8E8E8',
-  },
-  notificationButtonText: {
-    fontSize: 13,
-    color: '#000000',
-    fontFamily: 'Poppins-Regular'
-  },
-  messageButton: {
-    backgroundColor: '#9DAACA',
-    shadowColor: '#9DAACA',
-  },
-  messageButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#000000',
-    fontFamily: 'Poppins-Regular'
-  },
-  promptsButton: {
-    backgroundColor: '#D6C7ED',
-    shadowColor: '#D6C7ED',
-  },
-  promptsButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#0000000',
-    fontFamily: 'Poppins-Regular'
-  },
-  footerNote: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 16,
-    marginBottom: 24, // Added margin to separate from home button
-  },
-  homeButton: {
-    backgroundColor: '#FCB32B',
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    shadowColor: '#FCB32B',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    marginTop: 16, // Added margin to separate from other content
-  },
-  homeButtonText: {
-    color: '#000000',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 20,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 25,
-    elevation: 25,
-  },
-  messageTypeModal: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 20,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 25,
-    elevation: 25,
-  },
-  modalHeader: {
+  promptHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  modalCloseButton: {
+  promptIconContainer: {
     width: 32,
     height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FEF3C7',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalDescription: {
-    fontSize: 16,
-    color: '#6B7280',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+  refreshButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  modalCancelText: {
+  promptText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
+    color: '#374151',
+    lineHeight: 24,
+    marginBottom: 20,
+    fontFamily: 'Poppins-Regular',
   },
-  modalConfirmButton: {
-    flex: 1,
+  usePromptButton: {
+    backgroundColor: '#B093DC',
+    borderRadius: 12,
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: '#3B4F75',
     alignItems: 'center',
+    
   },
-  modalConfirmText: {
+  usePromptButtonText: {
+    color: '#000000',
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    fontFamily: 'Poppins-SemiBold',
   },
-  messageTypeOptions: {
-    gap: 12,
+  messageTypeSection: {
+    marginBottom: 40,
   },
-  messageTypeButton: {
+  messageTypeSectionHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
+    marginBottom: 20,
+  },
+  messageTypeSectionTitle: {
+    fontSize: 18,
+    color: '#5A5A5A',
+    fontFamily: 'Poppins-SemiBold',
+    lineHeight: 27,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectMessageTypeButton: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  selectMessageTypeText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6B7280',
+    fontFamily: 'Poppins-Medium',
+  },
+  messageTypesContainer: {
     gap: 16,
   },
-  messageTypeEmoji: {
-    fontSize: 24,
+  messageTypeCard: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
-  messageTypeText: {
+  messageTypeCardSelected: {
+    backgroundColor: '#4A5B87',
+  },
+  messageTypeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  messageTypeContent: {
+    flex: 1,
+  },
+  messageTypeTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#374151',
+    marginBottom: 4,
+    fontFamily: 'Poppins-Regular',
+  },
+  messageTypeTitleSelected: {
+    color: '#ffffff',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  messageTypeDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+    fontFamily: 'Poppins-Regular',
+  },
+  messageTypeDescriptionSelected: {
+    color: '#ffffff',
+  },
+  footer: {
+    paddingBottom: 32,
+    alignItems: 'center',
+  },
+  skipButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  skipButtonText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
   },
 });

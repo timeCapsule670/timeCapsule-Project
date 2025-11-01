@@ -5,20 +5,23 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Image,
   Alert,
   ScrollView,
 } from 'react-native';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { supabase } from '@/libs/superbase';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { apiService } from '@/libs/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function IndexScreen() {
   const router = useRouter();
+  const { signIn: authSignIn } = useAuth();
+  const { email: prefilledEmail, newUser } = useLocalSearchParams();
   const [formData, setFormData] = useState({
-    email: '',
+    email: (prefilledEmail as string) || '',
     password: '',
   });
   const [errors, setErrors] = useState({
@@ -72,76 +75,59 @@ export default function IndexScreen() {
     setIsLoading(true);
     
     try {
-      // Attempt to sign in with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Sign in using the API service
+      const response = await apiService.signIn({
         email: formData.email,
         password: formData.password,
       });
 
-      if (error) {
-        console.error('Supabase sign-in error:', error);
+      if (response.success && response.data.token) {
+        // Store the token and user data using AuthContext
+        await authSignIn(response.data.user, response.data.token);
         
-        // Check if the error is due to user not found
-        if (error.message.includes('Invalid login credentials') || 
-            error.message.includes('Email not confirmed') ||
-            error.message.includes('User not found')) {
-          
-          // Navigate to create account with pre-filled data
-          router.push({
-            pathname: '/create-account',
-            params: {
-              email: formData.email,
-              password: formData.password,
-            }
-          });
+        // Check if profile is complete (has username/first_name)
+        if (!response.data.user.username || response.data.user.username === '') {
+          // Profile not complete, redirect to profile setup
+          router.push('/profile-setup');
           return;
         }
-        
-        setErrors(prev => ({
-          ...prev,
-          general: error.message || 'Invalid email or password. Please try again.',
-        }));
+
+        // For existing users who haven't completed onboarding, redirect to moments-selection
+        // The moments-selection page will handle checking if categories are already selected
+        // and allow users to complete or continue their onboarding
+        router.push('/profile-setup');
         return;
-      }
-
-      if (data.user) {
-        // Get the director profile for this user
-        const { data: directorData, error: directorError } = await supabase
-          .from('directors')
-          .select('first_name')
-          .eq('auth_user_id', data.user.id)
-          .single();
-
-        if (directorError) {
-          console.error('Error fetching director profile:', directorError);
-          // Still proceed to home, but without the first name
-          router.push({
-            pathname: '/(tabs)',
-            params: { firstName: 'there' }
-          });
-          return;
-        }
-
-        // Extract the user's first name from the director profile
-        const firstName = directorData?.first_name || 'there';
-        
-        // Navigate to home tab with the user's name as a parameter
-        router.push({
-          pathname: '/(tabs)',
-          params: { firstName }
-        });
       } else {
         setErrors(prev => ({
           ...prev,
-          general: 'Login failed. Please try again.',
+          general: response.message || 'Invalid email or password. Please try again.',
         }));
       }
 
     } catch (error) {
-      console.error('Unexpected error during sign-in:', error);
+      console.error('Sign-in error:', error);
+      
+      // Check if the error is due to user not found or invalid credentials
+      const errorMessage = error instanceof Error ? error.message : 'Network error. Please check your connection and try again.';
+      
+      if (errorMessage.includes('Invalid login credentials') || 
+          errorMessage.includes('User not found') ||
+          errorMessage.includes('Invalid email or password')) {
+        
+        // Navigate to create account with pre-filled data
+        router.push({
+          pathname: '/create-account',
+          params: {
+            email: formData.email,
+            password: formData.password,
+          }
+        });
+        return;
+      }
+      
       setErrors(prev => ({
         ...prev,
-        general: 'Network error. Please check your connection and try again.',
+        general: errorMessage,
       }));
     } finally {
       setIsLoading(false);
@@ -187,10 +173,28 @@ export default function IndexScreen() {
       >
         <View style={styles.content}>
           {/* Welcome Section */}
+          <View style={styles.headerContent}>
+                        <View style={styles.logoSection}>
+                            <View style={styles.logoContainer}>
+                                <Image
+                                    source={require('../assets/images/time-capsule.png')}
+                                    style={styles.logoImage}
+                                    resizeMode="contain"
+                                />
+                            </View>
+
+                            <Text style={styles.tagline}>Crafting Memories, Connecting Generations</Text>
+                        </View>
+                    </View>
           <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeTitle}>Welcome</Text>
+            <Text style={styles.welcomeTitle}>
+              {newUser === 'true' ? 'Welcome' : 'Welcome'}
+            </Text>
             <Text style={styles.welcomeSubtitle}>
-              Sign in to access your capsules and stay connected
+              {newUser === 'true' 
+                ? 'Sign in to access your capsules and stay connected'
+                : 'Sign in to access your capsules and stay connected'
+              }
             </Text>
           </View>
 
@@ -266,22 +270,7 @@ export default function IndexScreen() {
               </Text>
             </TouchableOpacity>
 
-            {/* OR Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* I Have a Code Button */}
-            <TouchableOpacity
-              style={styles.codeButton}
-              onPress={handleIHaveACode}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.codeButtonText}>I Have a Code</Text>
-            </TouchableOpacity>
-
+           
             {/* Sign Up Link */}
             <View style={styles.signUpContainer}>
               <Text style={styles.signUpText}>Don't have an account? </Text>
@@ -336,21 +325,20 @@ const styles = StyleSheet.create({
   },
   welcomeSection: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 30,
+    paddingBottom: 85,
   },
   welcomeTitle: {
     fontSize: 32,
     color: '#1C2333',
     lineHeight: 40,
-    verticalAlign: 'middle',
-    marginBottom: 16,
+    marginBottom: 12,
     fontFamily: 'Poppins-Bold',
     letterSpacing: -0.5,
   },
   welcomeSubtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#000000',
     textAlign: 'center',
     lineHeight: 21,
     fontWeight: '400',
@@ -519,4 +507,43 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontFamily: 'Poppins-Medium',
   },
+  headerContent: {
+    flex: 1,
+},
+headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 4,
+    letterSpacing: -0.5,
+},
+headerSubtitle: {
+    fontSize: 16,
+    color: '#64748B',
+    lineHeight: 24,
+},
+logoSection: {
+  alignItems: 'center',
+  paddingTop: 10,
+  flex: 1,
+  justifyContent: 'center',
+},
+logoContainer: {
+  marginBottom: 4,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+logoImage: {
+  width: 257,
+  height: 57,
+},
+tagline: {
+  fontSize: 10,
+  color: '#777777',
+  textAlign: 'center',
+  lineHeight: 13,
+  paddingHorizontal: 10,
+  fontFamily: 'Poppins-Regular',
+},
+
 });

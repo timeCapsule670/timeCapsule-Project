@@ -10,6 +10,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import {
+  Poppins_300Light,
   Poppins_400Regular,
   Poppins_500Medium,
   Poppins_600SemiBold,
@@ -33,6 +34,7 @@ export default function RootLayout() {
     'Inter-Regular': Inter_400Regular,
     'Inter-SemiBold': Inter_600SemiBold,
     'Inter-Bold': Inter_700Bold,
+    'Poppins-Light': Poppins_300Light,
     'Poppins-Regular': Poppins_400Regular,
     'Poppins-Medium': Poppins_500Medium,
     'Poppins-SemiBold': Poppins_600SemiBold,
@@ -76,7 +78,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider children={undefined}>
+      <AuthProvider>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="intro-animation" />
           <Stack.Screen name="index" />
@@ -93,6 +95,7 @@ export default function RootLayout() {
           <Stack.Screen name="record-video-message" />
           <Stack.Screen name="record-text-message" />
           <Stack.Screen name="create-message" />
+          <Stack.Screen name="message-success" />
           <Stack.Screen name="upload-profile-picture" />
           <Stack.Screen name="preview-message" />
           <Stack.Screen name="personalize-profile" /> 
@@ -103,6 +106,9 @@ export default function RootLayout() {
           <Stack.Screen name="reset-password" />
           <Stack.Screen name="reset-password-success" />
           <Stack.Screen name="schedule-delivery" />
+          <Stack.Screen name="get-started" />
+          <Stack.Screen name="profile-setup" />
+          <Stack.Screen name="premium-sub" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="+not-found" />
         </Stack>
