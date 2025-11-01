@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Animated,
   ScrollView,
@@ -12,12 +11,17 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { ArrowLeft, Mail, Check, Mic, Video as VideoIcon, MessageSquare, Edit3, ArrowRight, Home, Play, Pause } from 'lucide-react-native';
+import { ArrowLeft, Mail, Check, Mic, Video as VideoIcon, MessageSquare, Edit3, Play, Pause, Calendar, Image as ImageIcon } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEvent } from 'expo';
 import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { supabase } from '@/libs/superbase';
+import { apiService } from '@/libs/api';
+import { storage } from '@/utils/storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import LoadingAnimation from '@/components/loading-animation';
 
 interface Child {
   id: string;
@@ -25,6 +29,7 @@ interface Child {
   last_name: string;
   date_of_birth: string;
   username: string;
+  profile_image_url?: string;
 }
 
 export default function FinalReviewScreen() {
@@ -43,11 +48,27 @@ export default function FinalReviewScreen() {
     repeatAnnually,
     lifeMomentDescription,
     reminderOption,
+    imageUri,
   } = useLocalSearchParams();
+
+  const [uploadedImageUri, setUploadedImageUri] = useState<string | null>(null);
 
   const [child, setChild] = useState<Child | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const calculateAge = (dateOfBirth: string): number => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    return age;
+  };
 
   // Audio player setup
   const audioPlayer = useAudioPlayer(recordedUri && messageType === 'audio' ? recordedUri as string : '');
@@ -68,6 +89,16 @@ export default function FinalReviewScreen() {
 
   useEffect(() => {
     fetchChildData();
+
+    // Load uploaded image from session storage
+    storage.getUploadedImageUri().then((storedUri) => {
+      if (storedUri) {
+        setUploadedImageUri(storedUri);
+      } else if (imageUri) {
+        // Fallback to imageUri from params
+        setUploadedImageUri(imageUri as string);
+      }
+    });
 
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -99,30 +130,61 @@ export default function FinalReviewScreen() {
   useEffect(() => {
     if (recordedUri) {
       if (messageType === 'audio') {
-        audioPlayer.replace(recordedUri as string);
+        try {
+          audioPlayer.replace(recordedUri as string);
+        } catch (error: unknown) {
+          console.error('Error loading audio:', error);
+        }
       } else if (messageType === 'video') {
-        videoPlayer.replace(recordedUri as string);
+        videoPlayer.replaceAsync(recordedUri as string).catch((error: unknown) => {
+          console.error('Error loading video:', error);
+        });
       }
     }
   }, [recordedUri, messageType]);
 
   const fetchChildData = async () => {
     try {
+      // Handle vault messages
+      if (childId === 'vault') {
+        setChild({
+          id: 'vault',
+          first_name: 'Vault',
+          last_name: 'Messages',
+          date_of_birth: '2000-01-01',
+          username: 'vault'
+        });
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
 
-      const { data, error } = await supabase
-        .from('actors')
-        .select('id, first_name, last_name, date_of_birth, username')
-        .eq('id', childId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching child:', error);
+      // Fetch child data using API service (same method as create-message.tsx)
+      const res = await apiService.getChildProfiles();
+      // Backend returns { data: { actors: [...], relationships: [...] } }
+      const actorsList = (res as any)?.data?.actors ?? (res as any)?.data ?? [];
+      
+      // Find the specific child by childId
+      const childData = actorsList.find((actor: any) => actor.id === childId);
+      
+      if (!childData) {
+        console.error('Child not found with id:', childId);
         Alert.alert('Error', 'Failed to load child data. Please try again.');
         return;
       }
 
-      setChild(data);
+      // Map API response to local Child interface
+      const mappedChild: Child = {
+        id: childData.id,
+        first_name: childData.first_name ?? childData.firstName ?? childData.name?.split(' ')[0] ?? '',
+        last_name: childData.last_name ?? childData.lastName ?? (childData.name?.split(' ').slice(1).join(' ') || ''),
+        date_of_birth: childData.date_of_birth ?? childData.birthday ?? '',
+        username: childData.username,
+        profile_image_url: childData.profile_image_url ?? childData.profilePictureUrl ?? undefined,
+      };
+
+      setChild(mappedChild);
     } catch (error) {
       console.error('Unexpected error fetching child:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
@@ -172,21 +234,31 @@ export default function FinalReviewScreen() {
       audio: { icon: Mic, label: 'Audio Message', color: '#8B5CF6' },
       video: { icon: VideoIcon, label: 'Video Message', color: '#EF4444' },
       text: { icon: MessageSquare, label: 'Text Message', color: '#3B82F6' },
+      image: { icon: ImageIcon, label: 'Image Message', color: '#10B981' },
     };
     return typeMap[messageType as keyof typeof typeMap] || { icon: MessageSquare, label: 'Message', color: '#6B7280' };
   };
 
   const toggleMediaPlayback = async () => {
     if (messageType === 'video') {
+      if (!recordedUri) {
+        Alert.alert('No Video', 'No video file available to play.');
+        return;
+      }
+
       try {
         if (isVideoPlaying) {
-          videoPlayer.pause();
+          await videoPlayer.pause();
         } else {
-          videoPlayer.play();
+          // Ensure video is loaded before playing
+          if (recordedUri) {
+            await videoPlayer.replaceAsync(recordedUri as string);
+          }
+          await videoPlayer.play();
         }
       } catch (error) {
         console.error('Error controlling video playback:', error);
-        Alert.alert('Error', 'Failed to control video playback.');
+        Alert.alert('Error', 'Failed to control video playback. Please try again.');
       }
     } else if (messageType === 'audio') {
       if (Platform.OS === 'web') {
@@ -194,13 +266,20 @@ export default function FinalReviewScreen() {
         return;
       }
 
-      if (!recordedUri) return;
+      if (!recordedUri) {
+        Alert.alert('No Audio', 'No audio file available to play.');
+        return;
+      }
 
       try {
         if (isAudioPlaying) {
-          audioPlayer.pause();
+          await audioPlayer.pause();
         } else {
-          audioPlayer.play();
+          // Ensure audio is loaded before playing
+          if (recordedUri) {
+            await audioPlayer.replace(recordedUri as string);
+          }
+          await audioPlayer.play();
         }
       } catch (error) {
         console.error('Failed to play audio:', error);
@@ -244,39 +323,105 @@ export default function FinalReviewScreen() {
         </View>
       );
     } else if (messageType === 'audio' && recordedUri) {
+      // Use uploaded image as background if available, otherwise use placeholder
+      const backgroundImageUri = uploadedImageUri || 'https://images.pexels.com/photos/1648387/pexels-photo-1648387.jpeg?auto=compress&cs=tinysrgb&w=800';
+      
       return (
         <View style={styles.audioPlayerCard}>
-          <TouchableOpacity
-            style={styles.playButton}
-            onPress={toggleMediaPlayback}
-            activeOpacity={0.8}
-          >
-            {isAudioPlaying ? (
-              <Pause size={24} color="#ffffff" strokeWidth={2} />
-            ) : (
-              <Play size={24} color="#ffffff" strokeWidth={2} />
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.waveformContainer}>
-            {[...Array(20)].map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.waveformBar,
-                  {
-                    height: Math.random() * 30 + 10,
-                    backgroundColor: isAudioPlaying ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)'
-                  }
-                ]}
-              />
-            ))}
+          <Image
+            source={{ uri: backgroundImageUri }}
+            style={styles.audioBackground}
+            resizeMode="cover"
+          />
+          <View style={styles.audioOverlay}>
+            <View style={styles.waveformContainer}>
+              {[...Array(30)].map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.waveformBar,
+                    {
+                      height: Math.random() * 40 + 10,
+                      backgroundColor: '#FFFFFF'
+                    }
+                  ]}
+                />
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.playButton}
+              onPress={toggleMediaPlayback}
+              activeOpacity={0.8}
+            >
+              {isAudioPlaying ? (
+                <Pause size={28} color="#ffffff" strokeWidth={2.5} />
+              ) : (
+                <Play size={28} color="#ffffff" strokeWidth={2.5} />
+              )}
+            </TouchableOpacity>
           </View>
+        </View>
+      );
+    } else if (messageType === 'image') {
+      // Use uploaded image from session storage if available, otherwise use recordedUri
+      const imageSource = uploadedImageUri || recordedUri;
+      
+      if (!imageSource) {
+        return (
+          <View style={styles.fallbackPreviewCard}>
+            <ImageIcon size={32} color="#10B981" strokeWidth={2} />
+            <Text style={[styles.fallbackPreviewText, { color: '#10B981' }]}>
+              Image Message
+            </Text>
+          </View>
+        );
+      }
 
-          <Text style={styles.audioDuration}>00:10</Text>
+      return (
+        <View style={styles.imagePreviewCard}>
+          <View style={styles.imagePreviewHeader}>
+            <ImageIcon size={20} color="#10B981" strokeWidth={2} />
+            <Text style={styles.imagePreviewTitle}>Image Message</Text>
+          </View>
+          <Image
+            source={{ uri: imageSource as string }}
+            style={styles.imagePreview}
+            resizeMode="cover"
+          />
+          {promptText && (
+            <View style={styles.imagePreviewTextContainer}>
+              <Text style={styles.imagePreviewText}>
+                {promptText}
+              </Text>
+            </View>
+          )}
         </View>
       );
     } else if (messageType === 'text') {
+      // Show uploaded image if available, otherwise just text
+      if (uploadedImageUri) {
+        return (
+          <View style={styles.textPreviewCard}>
+            <View style={styles.textPreviewHeader}>
+              <MessageSquare size={20} color="#3B82F6" strokeWidth={2} />
+              <Text style={styles.textPreviewTitle}>Text Message</Text>
+            </View>
+            <Image
+              source={{ uri: uploadedImageUri }}
+              style={styles.imagePreview}
+              resizeMode="cover"
+            />
+            {promptText && (
+              <View style={styles.textPreviewContent}>
+                <Text style={styles.textPreviewText} numberOfLines={6}>
+                  {promptText}
+                </Text>
+              </View>
+            )}
+          </View>
+        );
+      }
+      
       return (
         <View style={styles.textPreviewCard}>
           <View style={styles.textPreviewHeader}>
@@ -334,18 +479,6 @@ export default function FinalReviewScreen() {
     });
   };
 
-  const handleCreateAnotherMessage = () => {
-    router.push('/create-message');
-  };
-
-  const handleViewScheduledMessages = () => {
-    router.push('/(tabs)/vault');
-  };
-
-  const handleGoHome = () => {
-    router.push('/(tabs)');
-  };
-
   const handleScheduleMessage = async () => {
     if (!child) {
       Alert.alert('Error', 'Child data not loaded. Please try again.');
@@ -357,17 +490,59 @@ export default function FinalReviewScreen() {
     try {
       console.log('🚀 Final Review - Starting message scheduling process');
 
-      // Get the current authenticated user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // Get the current authenticated user from stored token/user data
+      // Try Supabase session first, then fallback to stored user data
+      let authUserId: string | null = null;
       
-      if (sessionError || !session?.user) {
-        console.error('❌ Final Review - Authentication error:', sessionError);
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          authUserId = session.user.id;
+          console.log('✅ Final Review - Authenticated user ID from Supabase session:', authUserId);
+        } else {
+          // Fallback to stored user data from JWT token
+          const userData = await storage.getUserData();
+          if (userData?.id || userData?.user_id) {
+            authUserId = userData.id || userData.user_id;
+            console.log('✅ Final Review - Authenticated user ID from stored user data:', authUserId);
+          } else {
+            console.error('❌ Final Review - No authentication found (no session, no stored user data)');
+            console.log('Debug - stored userData:', userData);
+            Alert.alert('Authentication Error', 'Please sign in again to continue.');
+            setIsSaving(false);
+            return;
+          }
+        }
+      } catch (authError) {
+        console.error('❌ Final Review - Authentication error:', authError);
+        // Try fallback to stored user data
+        try {
+          const userData = await storage.getUserData();
+          if (userData?.id || userData?.user_id) {
+            authUserId = userData.id || userData.user_id;
+            console.log('✅ Final Review - Authenticated user ID from stored user data (fallback):', authUserId);
+          } else {
+            console.error('❌ Final Review - No user ID in stored user data');
+            console.log('Debug - stored userData:', userData);
+            Alert.alert('Authentication Error', 'Please sign in again to continue.');
+            setIsSaving(false);
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('❌ Final Review - Fallback authentication error:', fallbackError);
+          Alert.alert('Authentication Error', 'Please sign in again to continue.');
+          setIsSaving(false);
+          return;
+        }
+      }
+      
+      if (!authUserId) {
+        console.error('❌ Final Review - No auth user ID found');
         Alert.alert('Authentication Error', 'Please sign in again to continue.');
+        setIsSaving(false);
         return;
       }
-
-      const authUserId = session.user.id;
-      console.log('✅ Final Review - Authenticated user ID:', authUserId);
 
       // Get the director record for the current user
       const { data: directorData, error: directorError } = await supabase
@@ -379,6 +554,7 @@ export default function FinalReviewScreen() {
       if (directorError || !directorData) {
         console.error('❌ Final Review - Director fetch error:', directorError);
         Alert.alert('Error', 'Could not find your profile. Please try again.');
+        setIsSaving(false);
         return;
       }
 
@@ -418,13 +594,49 @@ export default function FinalReviewScreen() {
       console.log('📅 Final Review - Scheduled at:', scheduledAt);
 
       // Insert message into messages table
+      // Calculate proper scheduled_at based on delivery option
+      let finalScheduledAt: string;
+      if (child?.first_name === 'Vault') {
+        // Vault messages: use far future date
+        finalScheduledAt = '9999-12-31T00:00:00Z';
+      } else if (deliveryOption === 'now') {
+        // Send now: use current time
+        finalScheduledAt = new Date().toISOString();
+      } else if (deliveryOption === 'specificDate' && scheduledDate && scheduledTime) {
+        // Specific date: parse and use the scheduled date/time
+        try {
+          const [month, day, year] = (scheduledDate as string).split('/');
+          const [time, period] = (scheduledTime as string).split(' ');
+          const [hours, minutes] = time.split(':');
+          
+          let hour24 = parseInt(hours, 10);
+          if (period.toUpperCase() === 'PM' && hour24 !== 12) hour24 += 12;
+          if (period.toUpperCase() === 'AM' && hour24 === 12) hour24 = 0;
+          
+          const scheduledDateTime = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day),
+            hour24,
+            parseInt(minutes)
+          );
+          
+          finalScheduledAt = scheduledDateTime.toISOString();
+        } catch (error) {
+          console.error('❌ Final Review - Date parsing error:', error);
+          finalScheduledAt = new Date().toISOString();
+        }
+      } else {
+        // Default: use current time
+        finalScheduledAt = new Date().toISOString();
+      }
+
       const messageData = {
         director_id: directorId,
         actor_id: childId,
+        scheduled_at: finalScheduledAt,
         message_type: messageType,
-        content: messageType === 'text' ? (promptText as string) : null,
-        scheduled_at: scheduledAt,
-        auth_user_id: authUserId,
+        content: promptText || null,
       };
 
       console.log('📝 Final Review - Message data to insert:', messageData);
@@ -438,32 +650,100 @@ export default function FinalReviewScreen() {
       if (messageError) {
         console.error('❌ Final Review - Message insertion error:', messageError);
         Alert.alert('Error', 'Failed to save message. Please try again.');
+        setIsSaving(false);
         return;
       }
 
       console.log('✅ Final Review - Message inserted successfully:', insertedMessage);
       const messageId = insertedMessage.id;
 
+      // Determine the image source: prefer uploaded image from session storage, then recordedUri, then imageUri param
+      const finalImageUri = uploadedImageUri || recordedUri || (imageUri as string);
+      
       // Insert media if applicable
-      if (recordedUri && (messageType === 'audio' || messageType === 'video' || messageType === 'image')) {
+      if (messageType === 'image') {
+        // For image messages, use the uploaded image
+        if (finalImageUri) {
+          const mediaData = {
+            message_id: messageId,
+            media_url: finalImageUri as string,
+            media_type: 'image',
+          };
+
+          console.log('📎 Final Review - Image media data to insert:', mediaData);
+
+          const { error: mediaError } = await supabase
+            .from('message_media')
+            .insert(mediaData);
+
+          if (mediaError) {
+            console.error('❌ Final Review - Image media insertion error:', mediaError);
+            console.log('⚠️ Final Review - Continuing despite media error');
+          } else {
+            console.log('✅ Final Review - Image media inserted successfully');
+          }
+        }
+      } else if (messageType === 'text' && finalImageUri) {
+        // For text messages with uploaded image, save the image
         const mediaData = {
           message_id: messageId,
-          media_url: recordedUri as string,
-          media_type: messageType,
+          media_url: finalImageUri as string,
+          media_type: 'image',
         };
 
-        console.log('📎 Final Review - Media data to insert:', mediaData);
+        console.log('📎 Final Review - Text message image media data to insert:', mediaData);
 
         const { error: mediaError } = await supabase
           .from('message_media')
           .insert(mediaData);
 
         if (mediaError) {
-          console.error('❌ Final Review - Media insertion error:', mediaError);
-          // Don't fail the entire process for media errors
+          console.error('❌ Final Review - Text message image media insertion error:', mediaError);
+          console.log('⚠️ Final Review - Continuing despite image media error');
+        } else {
+          console.log('✅ Final Review - Text message image media inserted successfully');
+        }
+      } else if (recordedUri && (messageType === 'audio' || messageType === 'video')) {
+        // For audio/video messages, save the audio/video media
+        const mediaData = {
+          message_id: messageId,
+          media_url: recordedUri as string,
+          media_type: messageType,
+        };
+
+        console.log('📎 Final Review - Audio/Video media data to insert:', mediaData);
+
+        const { error: mediaError } = await supabase
+          .from('message_media')
+          .insert(mediaData);
+
+        if (mediaError) {
+          console.error('❌ Final Review - Audio/Video media insertion error:', mediaError);
           console.log('⚠️ Final Review - Continuing despite media error');
         } else {
-          console.log('✅ Final Review - Media inserted successfully');
+          console.log('✅ Final Review - Audio/Video media inserted successfully');
+        }
+
+        // If there's also an uploaded image for audio/video messages, save it separately
+        if (finalImageUri && finalImageUri !== recordedUri) {
+          const imageMediaData = {
+            message_id: messageId,
+            media_url: finalImageUri as string,
+            media_type: 'image',
+          };
+
+          console.log('📎 Final Review - Additional image media data to insert:', imageMediaData);
+
+          const { error: imageMediaError } = await supabase
+            .from('message_media')
+            .insert(imageMediaData);
+
+          if (imageMediaError) {
+            console.error('❌ Final Review - Additional image media insertion error:', imageMediaError);
+            console.log('⚠️ Final Review - Continuing despite image media error');
+          } else {
+            console.log('✅ Final Review - Additional image media inserted successfully');
+          }
         }
       }
 
@@ -493,30 +773,28 @@ export default function FinalReviewScreen() {
       }
 
       console.log('🎉 Final Review - Message scheduling completed successfully');
-
-      // Show success message and navigate
-      Alert.alert(
-        'Message Scheduled!',
-        'Your message has been saved and will be delivered at the right moment.',
-        [
-          {
-            text: 'View My Messages',
-            onPress: () => router.push('/(tabs)/vault'),
-          },
-          {
-            text: 'Go Home',
-            onPress: () => router.push('/(tabs)'),
-            style: 'default',
-          },
-        ]
-      );
+      
+      // Clear uploaded image from session storage after successful save
+      await storage.removeUploadedImageUri();
+      
+      // Keep isSaving true to show loading animation, navigation will happen in onComplete
 
     } catch (error) {
       console.error('💥 Final Review - Unexpected error during scheduling:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleLoadingComplete = () => {
+    // Navigate to message success screen after loading animation completes
+    router.replace({
+      pathname: '/message-success',
+      params: {
+        childName: child?.first_name || 'your loved one',
+        messageType: messageType as string,
+      }
+    });
   };
 
   if (isLoading) {
@@ -532,6 +810,17 @@ export default function FinalReviewScreen() {
 
   const messageTypeDisplay = getMessageTypeDisplay();
   const MessageTypeIcon = messageTypeDisplay.icon;
+
+  // Show loading animation as full screen when saving
+  if (isSaving) {
+    return (
+      <LoadingAnimation
+        duration={5000}
+        showSuccess={true}
+        onComplete={handleLoadingComplete}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -569,99 +858,101 @@ export default function FinalReviewScreen() {
               },
             ]}
           >
-            <View style={styles.successIcon}>
-              <Mail size={32} color="#3B4F75" strokeWidth={2} />
-              <View style={styles.checkmarkOverlay}>
-                <Check size={20} color="#ffffff" strokeWidth={3} />
-              </View>
-            </View>
+            <LinearGradient
+              colors={['#A78BFA', '#60A5FA']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.successIcon}
+            >
+              <Mail size={40} color="#ffffff" strokeWidth={2} />
+            </LinearGradient>
           </Animated.View>
 
           {/* Success Message */}
           <Text style={styles.successTitle}>Your Message is Ready</Text>
           <Text style={styles.successSubtitle}>
-            It's been saved and will be delivered at just the right moment.
+            We've saved your message securely and privately.
           </Text>
 
-          {/* Message Preview Section */}
-          <View style={styles.messagePreviewSection}>
-            <Text style={styles.messagePreviewTitle}>Your Message</Text>
+          {/* Sending To Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Sending to</Text>
+              <TouchableOpacity onPress={handleEditMessage} activeOpacity={0.7}>
+                <Edit3 size={18} color="#6B7280" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.recipientCard}>
+              <View style={styles.recipientAvatar}>
+                {child?.profile_image_url ? (
+                  <Image source={{ uri: child.profile_image_url }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>{child?.first_name?.charAt(0) || 'C'}</Text>
+                )}
+              </View>
+              <View style={styles.recipientInfo}>
+                <Text style={styles.recipientName}>{child?.first_name || 'Child'}</Text>
+                <Text style={styles.recipientAge}>Age {calculateAge(child?.date_of_birth || '2014-01-01')}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Message Title Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Message Title</Text>
+              <TouchableOpacity onPress={handleEditMessage} activeOpacity={0.7}>
+                <Edit3 size={18} color="#6B7280" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.messageTitle}>{messageTitle || 'I love you Ava'}</Text>
+          </View>
+
+          {/* Preview Media Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Preview Media</Text>
+              <TouchableOpacity onPress={handleEditMessage} activeOpacity={0.7}>
+                <Edit3 size={18} color="#6B7280" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
             {renderMessagePreview()}
           </View>
 
-          {/* Message Details */}
-          <View style={styles.detailsContainer}>
-            <Text style={styles.detailsTitle}>Message Details</Text>
 
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>To:</Text>
-              <Text style={styles.detailValue}>{child?.first_name || 'Child'}</Text>
+          {/* Scheduled Delivery Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Scheduled Delivery</Text>
+              <TouchableOpacity onPress={handleEditSchedule} activeOpacity={0.7}>
+                <Edit3 size={18} color="#6B7280" strokeWidth={2} />
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Title:</Text>
-              <Text style={styles.detailValue}>{messageTitle || 'Untitled Message'}</Text>
-            </View>
-
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Format:</Text>
-              <View style={styles.formatContainer}>
-                <MessageTypeIcon size={16} color="#374151" strokeWidth={2} />
-                <Text style={styles.detailValue}>{messageTypeDisplay.label}</Text>
+            <View style={styles.deliveryCard}>
+              <View style={styles.deliveryHeader}>
+                <View style={styles.deliveryIconContainer}>
+                  <Calendar size={20} color="#6B7280" strokeWidth={2} />
+                </View>
+                <View style={styles.deliveryTextContainer}>
+                  <Text style={styles.deliveryTitle}>Scheduled Delivery</Text>
+                  <Text style={styles.deliverySubtitle}>Send by Date & Time</Text>
+                </View>
+              </View>
+              <View style={styles.deliveryDetails}>
+                <View style={styles.deliveryRow}>
+                  <Text style={styles.deliveryLabel}>Date:</Text>
+                  <Text style={styles.deliveryValue}>{scheduledDate ? formatScheduledDate(scheduledDate as string) : 'August 17, 2030'}</Text>
+                </View>
+                <View style={styles.deliveryRow}>
+                  <Text style={styles.deliveryLabel}>Time:</Text>
+                  <Text style={styles.deliveryValue}>{scheduledTime || '9:00 AM'}</Text>
+                </View>
+                <View style={styles.deliveryRow}>
+                  <Text style={styles.deliveryLabel}>Reminder</Text>
+                  <Text style={styles.deliveryValue}>{reminderOption || '1 day before'}</Text>
+                </View>
               </View>
             </View>
-
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Delivery:</Text>
-              <Text style={styles.detailValue}>{getDeliveryDisplay()}</Text>
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtonsContainer}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleEditMessage}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.actionButtonText}>Edit Message</Text>
-              <ArrowRight size={16} color="#374151" strokeWidth={2} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleEditSchedule}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.actionButtonText}>Edit Schedule</Text>
-              <ArrowRight size={16} color="#374151" strokeWidth={2} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleCreateAnotherMessage}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.actionButtonText}>Create Another Message</Text>
-              <ArrowRight size={16} color="#374151" strokeWidth={2} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleViewScheduledMessages}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.actionButtonText}>View My Scheduled Messages</Text>
-              <ArrowRight size={16} color="#374151" strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Inspirational Message */}
-          <View style={styles.inspirationalContainer}>
-            <Text style={styles.inspirationalTitle}>That was a powerful thing you just did.</Text>
-            <Text style={styles.inspirationalSubtitle}>
-              One day, this may mean everything to them.
-            </Text>
           </View>
         </ScrollView>
 
@@ -677,10 +968,6 @@ export default function FinalReviewScreen() {
               {isSaving ? 'Scheduling...' : 'Schedule'}
             </Text>
           </TouchableOpacity>
-
-          <Text style={styles.footerNote}>
-            We've saved your message securely and privately.
-          </Text>
         </View>
       </Animated.View>
     </SafeAreaView>
@@ -710,9 +997,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 20,
-    paddingBottom: 24,
+    paddingBottom: 16,
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: '#E5E7EB',
   },
   backButton: {
@@ -724,7 +1011,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#4B5563',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 16,
@@ -738,68 +1025,114 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingVertical: 24,
+    paddingBottom: 40,
   },
   successIconContainer: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   successIcon: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#DBEAFE',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-    shadowColor: '#3B82F6',
+    shadowColor: '#8B5CF6',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 4,
     },
     shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  checkmarkOverlay: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#ffffff',
+    shadowRadius: 12,
+    elevation: 6,
   },
   successTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#111827',
     textAlign: 'center',
-    marginBottom: 12,
-    fontFamily: 'Poppins-Bold',
+    marginBottom: 8,
+    fontFamily: 'Poppins-SemiBold',
   },
   successSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 40,
-    paddingHorizontal: 16,
+    lineHeight: 20,
+    marginBottom: 32,
+    paddingHorizontal: 24,
     fontFamily: 'Poppins-Regular',
   },
-  messagePreviewSection: {
-    marginBottom: 32,
+  section: {
+    marginBottom: 24,
   },
-  messagePreviewTitle: {
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  recipientCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3B5998',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  recipientAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  avatarText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 16,
+    color: '#3B5998',
     fontFamily: 'Poppins-SemiBold',
+  },
+  recipientInfo: {
+    flex: 1,
+  },
+  recipientName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 2,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  recipientAge: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontFamily: 'Poppins-Regular',
+  },
+  messageTitle: {
+    fontSize: 16,
+    color: '#374151',
+    fontFamily: 'Poppins-Regular',
   },
   // Video Player Styles
   videoPlayerCard: {
@@ -854,26 +1187,46 @@ const styles = StyleSheet.create({
   },
   // Audio Player Styles
   audioPlayerCard: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#000000',
     borderRadius: 16,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    shadowColor: '#8B5CF6',
+    overflow: 'hidden',
+    position: 'relative',
+    height: 200,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
   },
+  audioBackground: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  audioOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  audioControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
   playButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#EF4444',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -881,23 +1234,26 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   waveformContainer: {
-    flex: 1,
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'center',
     height: 40,
     gap: 2,
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
   },
   waveformBar: {
-    width: 3,
+    width: 2,
     backgroundColor: '#ffffff',
-    borderRadius: 1.5,
-    opacity: 0.8,
+    borderRadius: 1,
+    opacity: 0.9,
   },
   audioDuration: {
     fontSize: 14,
@@ -946,6 +1302,55 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontFamily: 'Poppins-Regular',
   },
+  // Image Preview Styles
+  imagePreviewCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  imagePreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  imagePreviewTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#10B981',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 250,
+    backgroundColor: '#F3F4F6',
+  },
+  imagePreviewTextContainer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  imagePreviewText: {
+    fontSize: 16,
+    color: '#374151',
+    lineHeight: 24,
+    fontFamily: 'Poppins-Regular',
+  },
   // Fallback Preview Styles
   fallbackPreviewCard: {
     backgroundColor: '#F9FAFB',
@@ -961,119 +1366,85 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontFamily: 'Poppins-SemiBold',
   },
-  detailsContainer: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  detailsTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 20,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  detailLabel: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontFamily: 'Poppins-Regular',
-    flex: 1,
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    fontFamily: 'Poppins-SemiBold',
-    flex: 2,
-    textAlign: 'right',
-  },
-  formatContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    flex: 2,
-    gap: 8,
-  },
-  actionButtonsContainer: {
-    gap: 12,
-    marginBottom: 32,
-  },
-  actionButton: {
+  deliveryCard: {
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#374151',
-    fontFamily: 'Poppins-Medium',
-  },
-  inspirationalContainer: {
+  deliveryHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  inspirationalTitle: {
-    fontSize: 18,
+  deliveryIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  deliveryTextContainer: {
+    flex: 1,
+  },
+  deliveryTitle: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#1F2937',
-    textAlign: 'center',
-    marginBottom: 8,
+    color: '#111827',
+    marginBottom: 2,
     fontFamily: 'Poppins-SemiBold',
   },
-  inspirationalSubtitle: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    lineHeight: 20,
+  deliverySubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
     fontFamily: 'Poppins-Regular',
+  },
+  deliveryDetails: {
+    gap: 12,
+  },
+  deliveryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  deliveryLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Poppins-Regular',
+  },
+  deliveryValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: 'Poppins-SemiBold',
   },
   footer: {
     paddingHorizontal: 24,
     paddingBottom: 32,
     paddingTop: 16,
-    borderTopWidth: 1,
+    borderTopWidth: 0.5,
     borderTopColor: '#E5E7EB',
-    gap: 16,
   },
   scheduleButton: {
-    backgroundColor: '#3B4F75',
-    borderRadius: 16,
-    paddingVertical: 18,
+    backgroundColor: '#2C3E5F',
+    borderRadius: 12,
+    paddingVertical: 16,
     paddingHorizontal: 32,
     alignItems: 'center',
-    shadowColor: '#3B4F75',
+    shadowColor: '#2C3E5F',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 4,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   scheduleButtonDisabled: {
     backgroundColor: '#9CA3AF',
@@ -1081,15 +1452,8 @@ const styles = StyleSheet.create({
   },
   scheduleButtonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Poppins-SemiBold',
-  },
-  footerNote: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    lineHeight: 16,
-    fontFamily: 'Poppins-Regular',
   },
 });

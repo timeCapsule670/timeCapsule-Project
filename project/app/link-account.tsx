@@ -7,12 +7,14 @@ import {
   StatusBar,
   Animated,
   ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Link, Heart, CalendarDays, Mic, MessageSquare } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import NextButton from '@/components/NextButton';
+import NextButton from '@/components/NextButton'; 
+
 
 export default function LinkAccountScreen() {
   const router = useRouter();
@@ -47,9 +49,7 @@ export default function LinkAccountScreen() {
     ]).start();
   }, []);
 
-  const handleBack = () => {
-    router.push('/personalize-profile');
-  };
+  
 
   const handleYesLink = () => {
     router.push('/child-profile-setup');
@@ -78,36 +78,7 @@ export default function LinkAccountScreen() {
           contentContainerStyle={styles.scrollContent}
           bounces={true}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton} 
-              onPress={handleBack}
-              activeOpacity={0.7}
-            >
-              <ArrowLeft size={24} color="#374151" strokeWidth={2} />
-            </TouchableOpacity>
-            
-            <Text style={styles.headerTitle}>Link An Account</Text>
-            <View style={styles.headerSpacer} />
-          </View>
-
-          {/* Progress Bar */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressTrack}>
-              <Animated.View 
-                style={[
-                  styles.progressFill,
-                  {
-                    width: progressAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0%', '100%'],
-                    }),
-                  }
-                ]}
-              />
-            </View>
-          </View>
+           
 
           {/* Main Content */}
           <View style={styles.mainContent}>
@@ -205,14 +176,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 58,
-    paddingBottom: 24,
-    justifyContent: 'space-between',
-  },
   backButton: {
     width: 40,
     height: 40,
@@ -254,7 +217,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 40,
     alignItems: 'center',
   },
   iconContainer: {
@@ -292,8 +255,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#000000',
     marginBottom: 24,
-    fontFamily: 'Poppins-Regular',
-    textAlign: 'center',
+    fontFamily: 'Poppins-SemiBold',
+    textAlign: 'left',
     lineHeight: 27
   },
   benefitsList: {
@@ -350,5 +313,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 8,
     fontFamily: 'Poppins-Regular',
+  },
+  linkedAccountImage: {
+    width: 100,
+    height: 100,
   },
 });

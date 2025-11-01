@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Animated,
   Image,
@@ -16,6 +15,7 @@ import { ArrowLeft, Mic, RotateCcw, Play, Pause, Edit3, ArrowRight } from 'lucid
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAudioRecorder, useAudioPlayer, AudioModule, RecordingPresets } from 'expo-audio';
 import { supabase } from '@/libs/superbase';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Child {
   id: string;
@@ -376,6 +376,72 @@ export default function RecordAudioMessageScreen() {
     );
   }
 
+  if (hasPermission === null) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading microphone permissions...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (hasPermission === false) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        
+        <Animated.View 
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.headerBackButton} 
+              onPress={handleBack}
+              activeOpacity={0.7}
+            >
+              <ArrowLeft size={24} color="#374151" strokeWidth={2} />
+            </TouchableOpacity>
+            
+            <Text style={styles.headerTitle}>Record Audio Message</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+
+          {/* Permission Request */}
+          <View style={styles.permissionContainer}>
+            <View style={styles.permissionIcon}>
+              <Mic size={48} color="#8B5CF6" strokeWidth={2} />
+            </View>
+            
+            <Text style={styles.permissionTitle}>Microphone Access Required</Text>
+            <Text style={styles.permissionDescription}>
+              To record audio messages, we need access to your microphone.
+            </Text>
+            
+            <TouchableOpacity
+              style={styles.enablePermissionsButton}
+              onPress={requestAudioPermission}
+              activeOpacity={0.8}
+            >
+              <Mic size={24} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.enablePermissionsButtonText}>
+                Enable Microphone
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -649,6 +715,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   backButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: '#ffffff',
+  },
+  permissionIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+    borderWidth: 2,
+    borderColor: '#E0E7FF',
+  },
+  permissionTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
+    textAlign: 'center',
+    fontFamily: 'Poppins-Bold',
+  },
+  permissionDescription: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+    fontFamily: 'Poppins-Regular',
+  },
+  enablePermissionsButton: {
+    backgroundColor: '#3B4F75',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: '#3B4F75',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  enablePermissionsButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',

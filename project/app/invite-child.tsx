@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Animated,
   Alert,
@@ -15,8 +14,8 @@ import { ArrowLeft, Copy, Mail, MessageSquare, RotateCcw, ArrowRight, Trash2 } f
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
-import { supabase } from '@/libs/superbase';
 import { apiService, InviteCode } from '@/libs/api';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function InviteChildScreen() {
   const router = useRouter();
@@ -33,7 +32,7 @@ export default function InviteChildScreen() {
   useEffect(() => {
     // Load existing invite codes on component mount
     loadInviteCodes();
-    
+
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -80,16 +79,16 @@ export default function InviteChildScreen() {
 
   const generateInviteCode = async () => {
     setIsGenerating(true);
-    
+
     try {
       const result = await apiService.generateInviteCode();
       if (result.success) {
         setCurrentCode(result.data.code);
         setExpirationDate(result.data.formattedExpiration);
-        
+
         // Reload the list of invite codes
         await loadInviteCodes();
-        
+
         Alert.alert('Success', 'New invite code generated successfully!');
       } else {
         Alert.alert('Error', 'Failed to generate invite code');
@@ -124,7 +123,7 @@ export default function InviteChildScreen() {
 
   const handleGenerateNewCode = () => {
     generateInviteCode();
-    
+
     // Reset copied state
     setIsCodeCopied(false);
   };
@@ -138,12 +137,12 @@ export default function InviteChildScreen() {
     try {
       await Clipboard.setStringAsync(currentCode);
       setIsCodeCopied(true);
-      
+
       // Reset copied state after 2 seconds
       setTimeout(() => {
         setIsCodeCopied(false);
       }, 2000);
-      
+
       // Show success feedback
       if (Platform.OS !== 'web') {
         Alert.alert('Copied!', 'Invite code copied to clipboard');
@@ -178,7 +177,7 @@ Love,
 [Your Name]`;
 
     const emailUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
+
     Linking.openURL(emailUrl).catch(() => {
       Alert.alert('Error', 'Unable to open email app');
     });
@@ -191,21 +190,21 @@ Love,
     }
 
     const message = `Hi! I've set up a TimeCapsule account to share special messages with you. Use invite code ${currentCode} when you sign up to connect with me. Code expires ${expirationDate}. Download the app and enter this code during sign-up!`;
-    
+
     const smsUrl = Platform.select({
       ios: `sms:&body=${encodeURIComponent(message)}`,
       android: `sms:?body=${encodeURIComponent(message)}`,
       default: `sms:?body=${encodeURIComponent(message)}`,
     });
-    
+
     Linking.openURL(smsUrl).catch(() => {
       Alert.alert('Error', 'Unable to open messaging app');
     });
   };
 
   const handleNext = () => {
-    // Navigate to welcome screen
-    router.push('/welcome');
+    // Navigate to push notifications screen
+    router.push('/push-notification');
   };
 
   const confirmRevokeCode = (codeId: string, code: string) => {
@@ -233,8 +232,8 @@ Love,
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
-      <Animated.View 
+
+      <Animated.View
         style={[
           styles.content,
           {
@@ -245,14 +244,14 @@ Love,
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={handleBack}
             activeOpacity={0.7}
           >
             <ArrowLeft size={24} color="#374151" strokeWidth={2} />
           </TouchableOpacity>
-          
+
           <Text style={styles.headerTitle}>Invite Your Child</Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -260,7 +259,7 @@ Love,
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressTrack}>
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.progressFill,
                 {
@@ -275,7 +274,7 @@ Love,
         </View>
 
         {/* Scrollable Main Content */}
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
           showsVerticalScrollIndicator={false}
@@ -283,7 +282,7 @@ Love,
           <Text style={styles.description}>
             We'll generate a unique invite code or link. You can share it with your child to connect their account.
           </Text>
-          
+
           <Text style={styles.subDescription}>
             This will also be stored in your profile for future use.
           </Text>
@@ -291,7 +290,7 @@ Love,
           {/* Current Invite Code Section */}
           <View style={styles.linkCodeSection}>
             <Text style={styles.linkCodeTitle}>Current Invite Code</Text>
-            
+
             {currentCode ? (
               <View style={styles.codeCard}>
                 <Text style={styles.inviteCode}>{currentCode}</Text>
@@ -322,14 +321,14 @@ Love,
           {currentCode && (
             <View style={styles.shareSection}>
               <Text style={styles.shareSectionTitle}>Share Your Code</Text>
-              
+
               <View style={styles.shareButtons}>
                 <TouchableOpacity
                   style={[styles.shareButton, styles.copyButton]}
                   onPress={handleCopyCode}
                   activeOpacity={0.8}
                 >
-                  <Copy size={20} color="#374151" strokeWidth={2} />
+                  <Copy size={20} color="#000000" strokeWidth={2} />
                   <Text style={styles.copyButtonText}>
                     {isCodeCopied ? 'Copied!' : 'Copy Code'}
                   </Text>
@@ -340,7 +339,7 @@ Love,
                   onPress={handleSendViaEmail}
                   activeOpacity={0.8}
                 >
-                  <Mail size={20} color="#ffffff" strokeWidth={2} />
+                  <Mail size={20} color="#000000" strokeWidth={2} />
                   <Text style={styles.emailButtonText}>Send Via Email</Text>
                 </TouchableOpacity>
 
@@ -349,7 +348,7 @@ Love,
                   onPress={handleSendViaText}
                   activeOpacity={0.8}
                 >
-                  <MessageSquare size={20} color="#ffffff" strokeWidth={2} />
+                  <MessageSquare size={20} color="#000000" strokeWidth={2} />
                   <Text style={styles.textButtonText}>Send Via Text</Text>
                 </TouchableOpacity>
               </View>
@@ -360,7 +359,7 @@ Love,
           {inviteCodes.length > 0 && (
             <View style={styles.historySection}>
               <Text style={styles.historySectionTitle}>Invite Code History</Text>
-              
+
               {inviteCodes.map((code) => (
                 <View key={code.id} style={styles.historyCard}>
                   <View style={styles.historyCardContent}>
@@ -382,7 +381,7 @@ Love,
                       </View>
                     </View>
                   </View>
-                  
+
                   {!code.is_used && (
                     <TouchableOpacity
                       style={styles.revokeButton}
@@ -430,7 +429,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 20,
+    paddingTop: 50,
     paddingBottom: 24,
     justifyContent: 'space-between',
   },
@@ -441,13 +440,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 22,
+    fontFamily: 'Poppins-SemiBold',
     color: '#1F2937',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 16,
-    fontFamily: 'Poppins-SemiBold',
   },
   headerSpacer: {
     width: 40,
@@ -481,6 +479,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
   },
   subDescription: {
+    textAlign: 'center',
     fontSize: 14,
     color: '#9CA3AF',
     lineHeight: 20,
@@ -489,6 +488,20 @@ const styles = StyleSheet.create({
   },
   linkCodeSection: {
     marginBottom: 40,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   linkCodeTitle: {
     fontSize: 16,
@@ -498,9 +511,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Medium',
   },
   codeCard: {
-    backgroundColor: '#F9FAFB',
+    width: '80%',
+    backgroundColor: '#F5F5F5',
     borderRadius: 16,
-    padding: 24,
+    padding: 20,
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
@@ -599,32 +613,29 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   copyButton: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#9DAACA',
     borderWidth: 1,
     borderColor: '#D1D5DB',
   },
   copyButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+    color: '#000000',
     fontFamily: 'Poppins-SemiBold',
   },
   emailButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#FEE5B6',
   },
   emailButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
+    color: '#000000',
     fontFamily: 'Poppins-SemiBold',
   },
   textButton: {
-    backgroundColor: '#A855F7',
+    backgroundColor: '#D6C7ED',
   },
   textButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
+    color: '#000000',
     fontFamily: 'Poppins-SemiBold',
   },
   historySection: {

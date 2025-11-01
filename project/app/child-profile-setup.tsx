@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ArrowLeft, User, Calendar, Plus } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { apiService } from '@/libs/api';
 
 interface Child {
@@ -28,6 +28,7 @@ interface Child {
 
 export default function ChildProfileSetupScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [children, setChildren] = useState<Child[]>([
     { id: '1', name: '', birthday: '' }
   ]);
@@ -261,7 +262,10 @@ export default function ChildProfileSetupScreen() {
       
       router.push({
         pathname: '/family-setup',
-        params: { actorIds: actorIds.join(',') }
+        params: { 
+          actorIds: actorIds.join(','),
+          returnTo: params.returnTo || undefined
+        }
       });
       
     } catch (error) {

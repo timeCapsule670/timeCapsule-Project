@@ -155,7 +155,7 @@ export default function MomentsSelectionScreen() {
       }
       
       // Navigate to invite child screen
-      router.push('/link-account');
+      router.push('/premium-sub');
       
     } catch (error) {
       Alert.alert(
@@ -282,12 +282,8 @@ export default function MomentsSelectionScreen() {
                           {moment.label}
                         </Text>
                       </View>
+                     
                       
-                      {isSelected && (
-                        <View style={styles.selectedIndicator}>
-                          <Check size={16} color="#ffffff" strokeWidth={3} />
-                        </View>
-                      )}
                     </TouchableOpacity>
                   </Animated.View>
                 );
@@ -306,7 +302,7 @@ export default function MomentsSelectionScreen() {
                 activeOpacity={0.9}
               >
                 <Text style={styles.nextButtonText}>
-                  {isSaving ? 'Saving...' : 'Next'}
+                  {isSaving ? 'Creating...' : 'Create Your Capsule'}
                 </Text>
                 <ArrowLeft 
                   size={20} 
@@ -362,12 +358,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 22,
     color: '#1F2937',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Bold',
   },
   headerSpacer: {
     width: 40,
@@ -413,7 +409,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   momentButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F5F5F5',
     borderRadius: 16,
     paddingVertical: 20,
     paddingHorizontal: 24,
@@ -422,22 +418,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderWidth: 2,
     borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+   
   },
   momentButtonSelected: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#3B4F75',
-    shadowColor: '#3B4F75',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: '#4A5B87',
+    color: '#ffffff',
   },
   momentContent: {
     flexDirection: 'row',
@@ -463,25 +448,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   momentButtonTextSelected: {
-    color: '#3B4F75',
-    fontWeight: '600',
+    color: '#ffffff',
+    fontFamily: 'Poppins-SemiBold',
   },
-  selectedIndicator: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#3B4F75',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#3B4F75',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
+  
   footer: {
     paddingTop: 32,
     paddingBottom: 20,

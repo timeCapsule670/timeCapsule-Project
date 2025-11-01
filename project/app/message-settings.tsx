@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Animated,
   ScrollView,
@@ -31,6 +30,10 @@ import { useEvent } from 'expo';
 import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { supabase } from '@/libs/superbase';
+import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiService } from '@/libs/api';
+import { storage } from '@/utils/storage';
 
 interface Child {
   id: string;
@@ -56,6 +59,9 @@ export default function MessageSettingsScreen() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState<boolean | null>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
   // Audio player setup
   const audioPlayer = useAudioPlayer(recordedUri && messageType === 'audio' ? recordedUri as string : '');
@@ -96,6 +102,22 @@ export default function MessageSettingsScreen() {
 
   useEffect(() => {
     fetchData();
+    checkPermissions();
+
+    // Initialize selectedImage from recordedUri if it's an image or text message with image
+    // For audio/video, recordedUri is the media file, not an image, so we don't auto-initialize
+    if (recordedUri && (messageType === 'text' || messageType === 'image')) {
+      setSelectedImage(recordedUri as string);
+      // Save to session storage
+      storage.setUploadedImageUri(recordedUri as string);
+    } else {
+      // Load from session storage if available
+      storage.getUploadedImageUri().then((storedUri) => {
+        if (storedUri) {
+          setSelectedImage(storedUri);
+        }
+      });
+    }
 
     // Entrance animation
     Animated.parallel([
@@ -119,6 +141,123 @@ export default function MessageSettingsScreen() {
     };
   }, []);
 
+  const checkPermissions = async () => {
+    if (Platform.OS === 'web') {
+      setHasMediaLibraryPermission(false);
+      setHasCameraPermission(false);
+      return;
+    }
+
+    try {
+      const mediaLibraryStatus = await ImagePicker.getMediaLibraryPermissionsAsync();
+      setHasMediaLibraryPermission(mediaLibraryStatus.granted);
+
+      const cameraStatus = await ImagePicker.getCameraPermissionsAsync();
+      setHasCameraPermission(cameraStatus.granted);
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      setHasMediaLibraryPermission(false);
+      setHasCameraPermission(false);
+    }
+  };
+
+  const requestMediaLibraryPermission = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      setHasMediaLibraryPermission(status === 'granted');
+      return status === 'granted';
+    } catch (error) {
+      console.error('Error requesting media library permission:', error);
+      return false;
+    }
+  };
+
+  const requestCameraPermission = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      setHasCameraPermission(status === 'granted');
+      return status === 'granted';
+    } catch (error) {
+      console.error('Error requesting camera permission:', error);
+      return false;
+    }
+  };
+
+  const pickImageFromLibrary = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Available', 'Photo upload is not available on web platform. Please use the mobile app for full functionality.');
+      return;
+    }
+
+    if (!hasMediaLibraryPermission) {
+      const granted = await requestMediaLibraryPermission();
+      if (!granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please grant access to your photo library to upload a profile picture.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        setSelectedImage(imageUri);
+        // Save to session storage
+        await storage.setUploadedImageUri(imageUri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
+    }
+  };
+
+  const takePhoto = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Available', 'Camera is not available on web platform. Please use the mobile app for full functionality.');
+      return;
+    }
+
+    if (!hasCameraPermission) {
+      const granted = await requestCameraPermission();
+      if (!granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please grant camera access to take a profile picture.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        setSelectedImage(imageUri);
+        // Save to session storage
+        await storage.setUploadedImageUri(imageUri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
   // Update player sources when recordedUri changes
   useEffect(() => {
     if (recordedUri) {
@@ -134,20 +273,30 @@ export default function MessageSettingsScreen() {
     try {
       setIsLoading(true);
 
-      // Fetch child data
-      const { data: childData, error: childError } = await supabase
-        .from('actors')
-        .select('id, first_name, last_name, date_of_birth, username')
-        .eq('id', childId)
-        .single();
-
-      if (childError) {
-        console.error('Error fetching child:', childError);
+      // Fetch child data using API service (same endpoint as create-message.tsx)
+      const res = await apiService.getChildProfiles();
+      // Backend returns { data: { actors: [...], relationships: [...] } }
+      const actorsList = (res as any)?.data?.actors ?? (res as any)?.data ?? [];
+      
+      // Find the specific child by childId
+      const childData = actorsList.find((actor: any) => actor.id === childId);
+      
+      if (!childData) {
+        console.error('Child not found with id:', childId);
         Alert.alert('Error', 'Failed to load child data. Please try again.');
         return;
       }
 
-      setChild(childData);
+      // Map API response to local Child interface
+      const mappedChild: Child = {
+        id: childData.id,
+        first_name: childData.first_name ?? childData.firstName ?? childData.name?.split(' ')[0] ?? '',
+        last_name: childData.last_name ?? childData.lastName ?? (childData.name?.split(' ').slice(1).join(' ') || ''),
+        date_of_birth: childData.date_of_birth ?? childData.birthday ?? '',
+        username: childData.username,
+      };
+
+      setChild(mappedChild);
 
       // Fetch categories for tags
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -271,10 +420,31 @@ export default function MessageSettingsScreen() {
     });
   };
 
-  const handleScheduleDelivery = () => {
+  const handleScheduleDelivery = async () => {
     if (!messageTitle.trim()) {
       Alert.alert('Title Required', 'Please give your message a title before scheduling delivery.');
       return;
+    }
+
+    // Save uploaded image to session storage before navigating
+    if (selectedImage) {
+      await storage.setUploadedImageUri(selectedImage);
+    }
+
+    // Handle image for all message types:
+    // - For text/image messages: selectedImage becomes the main recordedUri
+    // - For audio/video messages: keep recordedUri for media, pass selectedImage as imageUri
+    let finalRecordedUri = recordedUri;
+    let imageUriParam = undefined;
+    
+    if (selectedImage) {
+      if (messageType === 'text' || messageType === 'image') {
+        // For text/image messages, the uploaded image is the main content
+        finalRecordedUri = selectedImage;
+      } else {
+        // For audio/video messages, keep the media in recordedUri and pass image separately
+        imageUriParam = selectedImage;
+      }
     }
 
     // Navigate to schedule delivery screen with all necessary parameters
@@ -283,11 +453,12 @@ export default function MessageSettingsScreen() {
       params: {
         childId: childId,
         messageType: messageType,
-        recordedUri: recordedUri,
+        recordedUri: finalRecordedUri as string || recordedUri,
         messageTitle: messageTitle.trim(),
         privacy: selectedPrivacy,
         tags: selectedTags.join(','),
         promptText: promptText || '',
+        imageUri: imageUriParam,
       }
     });
   };
@@ -470,8 +641,8 @@ export default function MessageSettingsScreen() {
             </View>
           </View>
 
-          {/* Image Section - Only show for text messages with image */}
-          {messageType === 'text' && recordedUri && (
+          {/* Image Section - Show when image exists for any message type */}
+          {selectedImage && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Image</Text>
@@ -486,7 +657,7 @@ export default function MessageSettingsScreen() {
 
               <View style={styles.imagePreviewCard}>
                 <Image
-                  source={{ uri: recordedUri as string }}
+                  source={{ uri: (selectedImage || recordedUri) as string }}
                   style={styles.imagePreview}
                   resizeMode="cover"
                 />
@@ -510,82 +681,127 @@ export default function MessageSettingsScreen() {
             {renderMessagePreview()}
           </View>
 
-          {/* Privacy Settings Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Privacy Settings</Text>
 
-            <View style={styles.privacyOptions}>
+          {/* Image Upload Section - Available for all message types */}
+          <View style={styles.profilePictureSection}>
+            <Text style={styles.profilePictureTitle}>Let's Upload An Image To Your Message (Optional)</Text>
+
+            {/* Illustration */}
+            <View style={styles.illustrationContainer}>
+              <View style={styles.illustration}>
+                {selectedImage ? (
+                  <Image
+                    source={{ uri: selectedImage }}
+                    style={styles.illustrationImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Image
+                    source={require('../assets/images/family-upload.png')}
+                    style={styles.illustrationImage}
+                  />
+                )}
+              </View>
+            </View>
+
+           
+
+            {/* Upload Buttons */}
+            <View style={styles.uploadButtonsContainer}>
               <TouchableOpacity
-                style={[
-                  styles.privacyOption,
-                  selectedPrivacy === 'private' && styles.privacyOptionSelected,
-                ]}
-                onPress={() => handlePrivacySelect('private')}
+                style={styles.takePhotoButton}
+                onPress={takePhoto}
                 activeOpacity={0.8}
               >
-                <Lock size={20} color={selectedPrivacy === 'private' ? "#3B4F75" : "#6B7280"} strokeWidth={2} />
-                <Text style={[
-                  styles.privacyOptionText,
-                  selectedPrivacy === 'private' && styles.privacyOptionTextSelected,
-                ]}>
-                  Private (Only Recipient)
-                </Text>
+                <Text style={styles.takePhotoButtonText}>Take a Photo</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[
-                  styles.privacyOption,
-                  selectedPrivacy === 'family' && styles.privacyOptionSelected,
-                ]}
-                onPress={() => handlePrivacySelect('family')}
+                style={styles.choosePhotoButton}
+                onPress={pickImageFromLibrary}
                 activeOpacity={0.8}
               >
-                <Users size={20} color={selectedPrivacy === 'family' ? "#3B4F75" : "#6B7280"} strokeWidth={2} />
-                <Text style={[
-                  styles.privacyOptionText,
-                  selectedPrivacy === 'family' && styles.privacyOptionTextSelected,
-                ]}>
-                  Share With Family Group
-                </Text>
+                <Text style={styles.choosePhotoButtonText}>Choose a Photo</Text>
               </TouchableOpacity>
             </View>
+
           </View>
+          {/* Privacy Settings Section */}
+            {/* <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Privacy Settings</Text>
+
+              <View style={styles.privacyOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.privacyOption,
+                    selectedPrivacy === 'private' && styles.privacyOptionSelected,
+                  ]}
+                  onPress={() => handlePrivacySelect('private')}
+                  activeOpacity={0.8}
+                >
+                  <Lock size={20} color={selectedPrivacy === 'private' ? "#3B4F75" : "#6B7280"} strokeWidth={2} />
+                  <Text style={[
+                    styles.privacyOptionText,
+                    selectedPrivacy === 'private' && styles.privacyOptionTextSelected,
+                  ]}>
+                    Private (Only Recipient)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.privacyOption,
+                    selectedPrivacy === 'family' && styles.privacyOptionSelected,
+                  ]}
+                  onPress={() => handlePrivacySelect('family')}
+                  activeOpacity={0.8}
+                >
+                  <Users size={20} color={selectedPrivacy === 'family' ? "#3B4F75" : "#6B7280"} strokeWidth={2} />
+                  <Text style={[
+                    styles.privacyOptionText,
+                    selectedPrivacy === 'family' && styles.privacyOptionTextSelected,
+                  ]}>
+                    Share With Family Group
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View> */}
 
           {/* Tags Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Let's add some tags</Text>
+            {/* <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Let's add some tags</Text>
 
-            <View style={styles.tagsContainer}>
-              {categories.map((category) => {
-                const isSelected = selectedTags.includes(category.id);
+              <View style={styles.tagsContainer}>
+                {categories.map((category) => {
+                  const isSelected = selectedTags.includes(category.id);
 
-                return (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.tagButton,
-                      isSelected && styles.tagButtonSelected,
-                    ]}
-                    onPress={() => handleTagToggle(category.id)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.tagEmoji}>{category.emoji}</Text>
-                    <Text style={[
-                      styles.tagText,
-                      isSelected && styles.tagTextSelected,
-                    ]}>
-                      {category.name}
-                    </Text>
-                    {isSelected && (
-                      <View style={styles.tagCheckmark}>
-                        <Check size={16} color="#ffffff" strokeWidth={3} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
+                  return (
+                    <TouchableOpacity
+                      key={category.id}
+                      style={[
+                        styles.tagButton,
+                        isSelected && styles.tagButtonSelected,
+                      ]}
+                      onPress={() => handleTagToggle(category.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.tagEmoji}>{category.emoji}</Text>
+                      <Text style={[
+                        styles.tagText,
+                        isSelected && styles.tagTextSelected,
+                      ]}>
+                        {category.name}
+                      </Text>
+                      {isSelected && (
+                        <View style={styles.tagCheckmark}>
+                          <Check size={16} color="#ffffff" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View> */}
         </ScrollView>
 
         {/* Schedule Delivery Button */}
@@ -918,6 +1134,66 @@ const styles = StyleSheet.create({
   },
   tagsContainer: {
     gap: 12,
+  },
+  choosePhotoButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Poppins-Light',
+  },
+  uploadButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  profilePictureSection: {
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  profilePictureTitle: {
+    fontSize: 16,
+    color: '#5A5A5A',
+    marginBottom: 24,
+    textAlign: 'center',
+    fontFamily: 'Poppins-Light',
+    lineHeight: 21,
+  },
+  illustrationContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  illustration: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  illustrationImage: {
+    width: 200,
+    height: 200,
+    filter: 'lightgray 6.5px 6.794px / 96.399% 100% no-repeat',
+  },
+  takePhotoButton: {
+    flex: 1,
+    backgroundColor: '#A3C4F3',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+   
+  },
+  takePhotoButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Poppins-Light',
+  },
+  choosePhotoButton: {
+    flex: 1,
+    backgroundColor: '#A3C4F3',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+   
   },
   tagButton: {
     backgroundColor: '#F9FAFB',

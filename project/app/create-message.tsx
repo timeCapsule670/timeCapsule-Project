@@ -1,155 +1,98 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  Animated,
+  TouchableOpacity,
   ScrollView,
   Image,
   Alert,
+  Animated,
+  StatusBar,
 } from 'react-native';
-import { ArrowLeft, Video, Mic, MessageSquare, Check } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { supabase } from '@/libs/superbase';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiService } from '@/libs/api';
+import { 
+  ArrowLeft, 
+  MessageCircle, 
+  Users, 
+  Calendar, 
+  GraduationCap, 
+  Heart,
+  ArrowRight,
+  Check
+} from 'lucide-react-native';
 
 interface Child {
   id: string;
   first_name: string;
   last_name: string;
   date_of_birth: string;
+  profile_picture_url?: string;
   username: string;
 }
 
-interface MessageType {
-  id: 'video' | 'audio' | 'text';
-  label: string;
-  icon: React.ComponentType<any>;
-  emoji: string;
-  color: string;
-  backgroundColor: string;
-}
-
 export default function CreateMessageScreen() {
-  const router = useRouter();
-  const { promptText, promptTags, promptId } = useLocalSearchParams();
-  
+  const params = useLocalSearchParams();
   const [children, setChildren] = useState<Child[]>([]);
-  const [selectedChild, setSelectedChild] = useState<string | null>(null);
-  const [selectedMessageType, setSelectedMessageType] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
+  const [selectedChild, setSelectedChild] = useState<string>('');
+  const [selectedMessageType, setSelectedMessageType] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [vaultActorId, setVaultActorId] = useState<string>('');
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     fetchChildren();
     
-    // Entrance animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Pre-select message type based on prompt tags
-    if (promptTags) {
-      const tags = Array.isArray(promptTags) ? promptTags : promptTags.split(',');
-      if (tags.includes('#VideoMessage')) {
-        setSelectedMessageType('video');
-      } else if (tags.includes('#VoiceMessage') || tags.includes('#AudioMessage')) {
-        setSelectedMessageType('audio');
-      } else if (tags.includes('#TextMessage')) {
-        setSelectedMessageType('text');
-      }
+    // Set message type from params if provided
+    if (params.messageType) {
+      setSelectedMessageType(params.messageType as string);
     }
-  }, [promptTags]);
+
+    // Animate entrance
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  // Refetch children when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchChildren();
+    }, [])
+  );
 
   const fetchChildren = async () => {
     try {
-      setIsLoading(true);
-      
-      // Get the current authenticated user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session?.user) {
-        console.error('Authentication error:', sessionError);
-        Alert.alert('Authentication Error', 'Please sign in again to continue.');
-        return;
-      }
-
-      const authUserId = session.user.id;
-
-      // Get the director record for the current user
-      const { data: directorData, error: directorError } = await supabase
-        .from('directors')
-        .select('id')
-        .eq('auth_user_id', authUserId)
-        .single();
-
-      if (directorError || !directorData) {
-        console.error('Error fetching director:', directorError);
-        Alert.alert('Error', 'Could not find your profile. Please try again.');
-        return;
-      }
-
-      const directorId = directorData.id;
-
-      // Get the actor IDs associated with this director
-      const { data: relationshipData, error: relationshipError } = await supabase
-        .from('director_actor')
-        .select('actor_id')
-        .eq('director_id', directorId);
-
-      if (relationshipError) {
-        console.error('Error fetching director-actor relationships:', relationshipError);
-        Alert.alert('Error', 'Failed to load your children. Please try again.');
-        return;
-      }
-
-      if (!relationshipData || relationshipData.length === 0) {
-        console.log('No children found for this director');
-        setChildren([]);
-        return;
-      }
-
-      // Extract actor IDs
-      const actorIds = relationshipData.map(rel => rel.actor_id);
-
-      // Fetch the detailed actor (children) data
-      const { data: childrenData, error: childrenError } = await supabase
-        .from('actors')
-        .select('id, first_name, last_name, date_of_birth, username')
-        .in('id', actorIds)
-        .order('first_name');
-
-      if (childrenError) {
-        console.error('Error fetching children data:', childrenError);
-        Alert.alert('Error', 'Failed to load children details. Please try again.');
-        return;
-      }
-
-      console.log('Successfully fetched children:', childrenData);
-      setChildren(childrenData || []);
-      
+      const res = await apiService.getChildProfiles();
+      // Backend returns { data: { actors: [...], relationships: [...] } }
+      const list = (res as any)?.data?.actors ?? (res as any)?.data ?? [];
+      const mapped = list.map((cp: any) => {
+        const first = cp.first_name ?? cp.firstName ?? cp.name?.split(' ')[0] ?? '';
+        const last = cp.last_name ?? cp.lastName ?? (cp.name?.split(' ').slice(1).join(' ') || '');
+        const dob = cp.date_of_birth ?? cp.birthday ?? '';
+        return {
+          id: cp.id,
+          first_name: first,
+          last_name: last,
+          date_of_birth: dob,
+          profile_picture_url: cp.profile_picture_url ?? cp.profilePictureUrl ?? undefined,
+          username: cp.username,
+        } as Child;
+      });
+      setChildren(mapped);
     } catch (error) {
-      console.error('Unexpected error fetching children:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      console.error('Error fetching children:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const calculateAge = (dateOfBirth: string): number => {
+  const calculateAge = (dateOfBirth: string) => {
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -162,119 +105,72 @@ export default function CreateMessageScreen() {
     return age;
   };
 
-  const messageTypes: MessageType[] = [
-    {
-      id: 'video',
-      label: 'Video Message',
-      icon: Video,
-      emoji: '🎥',
-      color: '#EF4444',
-      backgroundColor: '#FEF2F2',
-    },
-    {
-      id: 'audio',
-      label: 'Audio Message',
-      icon: Mic,
-      emoji: '🎙️',
-      color: '#8B5CF6',
-      backgroundColor: '#F3E8FF',
-    },
-    {
-      id: 'text',
-      label: 'Text Message',
-      icon: MessageSquare,
-      emoji: '✍️',
-      color: '#3B82F6',
-      backgroundColor: '#DBEAFE',
-    },
-  ];
-
-  const handleBack = () => {
-    router.back();
-  };
-
   const handleChildSelect = (childId: string) => {
     setSelectedChild(childId);
-    
-    // Animate selection
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 0.9,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
-  const handleMessageTypeSelect = (typeId: string) => {
-    setSelectedMessageType(typeId);
-    
-    // Animate selection
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 0.9,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
+  const handleVaultSelect = () => {
+    setSelectedChild('vault');
+    setSelectedMessageType('text'); // Default to text for vault messages
   };
 
-  const handleRecordMessage = () => {
-    if (!selectedChild || !selectedMessageType) {
-      return;
-    }
+  const handleCreateLinkedAccount = () => {
+    router.push({
+      pathname: '/child-profile-setup',
+      params: { returnTo: 'create-message' }
+    });
+  };
 
-    const selectedChildData = children.find(child => child.id === selectedChild);
-    
-     if (selectedMessageType === 'audio') {
-      // Navigate to audio recording screen
-      router.push({
-        pathname: '/record-audio-message',
-        params: {
-          childId: selectedChild,
-          promptText: promptText || '',
-          promptTags: promptTags || '',
-          promptId: promptId || '',
-        }
-      });
-    } else if (selectedMessageType === 'video') {
-      // Navigate to video recording screen
-      router.push({
-        pathname: '/record-video-message',
-        params: {
-          childId: selectedChild,
-          promptText: promptText || '',
-          promptTags: promptTags || '',
-          promptId: promptId || '',
-        }
-      });
-    }else if (selectedMessageType === 'text') {
-      // Navigate to text message creation screen
+  const handleNext = () => {
+    if (selectedChild === 'vault') {
       router.push({
         pathname: '/record-text-message',
         params: {
-          childId: selectedChild,
-          promptText: promptText || '',
-          promptTags: promptTags || '',
-          promptId: promptId || '',
+          childId: vaultActorId,
+          messageType: 'text',
+          isVaultMessage: 'true'
         }
       });
+      return;
+    }
+
+    switch (selectedMessageType) {
+      case 'text':
+        router.push({
+          pathname: '/record-text-message',
+          params: { childId: selectedChild, messageType: 'text' }
+        });
+        break;
+      case 'audio':
+        router.push({
+          pathname: '/record-audio-message',
+          params: { childId: selectedChild, messageType: 'audio' }
+        });
+        break;
+      case 'video':
+        router.push({
+          pathname: '/record-video-message',
+          params: { childId: selectedChild, messageType: 'video' }
+        });
+        break;
+      default:
+        // Fallback to message settings if no type chosen
+        router.push({
+          pathname: '/message-settings',
+          params: { childId: selectedChild }
+        });
     }
   };
 
-  const isFormValid = selectedChild && selectedMessageType;
+  const handleSaveForLater = () => {
+    router.push('/(tabs)/vault');
+  };
 
-  if (isLoading) {
+  const isFormValid = () => {
+    return selectedChild !== '' && (selectedChild === 'vault' || !!selectedMessageType);
+  };
+
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -288,79 +184,34 @@ export default function CreateMessageScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          }
-        ]}
-      >
+      <Animated.View style={[styles.animatedContainer, { opacity: fadeAnim }]}>
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={styles.backButton}
-            onPress={handleBack}
-            activeOpacity={0.7}
+            onPress={() => router.back()}
           >
-            <ArrowLeft size={24} color="#374151" strokeWidth={2} />
+            <ArrowLeft size={24} color="#333" />
           </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>Create Message</Text>
-          <View style={styles.headerSpacer} />
+          <Text style={styles.headerTitle}>Recipient</Text>
+          <View style={styles.headerRight} />
         </View>
 
-        {/* Make everything below header scrollable */}
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { flexGrow: 1 }
-          ]}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Selected Prompt Section */}
-          {promptText && (
-            <View style={styles.promptSection}>
-              <Text style={styles.promptSectionTitle}>Your Selected Prompt</Text>
-              <View style={styles.promptCard}>
-                <Text style={styles.promptText}>{promptText}</Text>
-                {promptTags && (
-                  <View style={styles.promptTags}>
-                    {(Array.isArray(promptTags) ? promptTags : promptTags.split(',')).map((tag, index) => (
-                      <View key={index} style={styles.promptTag}>
-                        <Text style={styles.promptTagText}>{tag}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
+        {/* Progress Bar */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: '20%' }]} />
+          </View>
+        </View>
 
-          {/* Who is this message for? */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Who is this message for?</Text>
-
-            {children.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateTitle}>No Children Found</Text>
-                <Text style={styles.emptyStateText}>
-                  You haven't added any children to your account yet. Please complete the setup process to add children.
-                </Text>
-                <TouchableOpacity
-                  style={styles.setupButton}
-                  onPress={() => router.push('/child-profile-setup')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.setupButtonText}>Add Children</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.childrenContainer}>
+        {/* Question */}
+        <Text style={styles.question}>Who is this message for?</Text>
+        <View style={styles.childrenContainer}>
                 {children.map((child) => {
                   const age = calculateAge(child.date_of_birth);
                   const isSelected = selectedChild === child.id;
@@ -406,76 +257,120 @@ export default function CreateMessageScreen() {
                   );
                 })}
               </View>
-            )}
+
+        {/* Save To Vault Option */}
+        <TouchableOpacity
+          style={[
+            styles.vaultCard,
+            selectedChild === 'vault' && styles.vaultCardSelected
+          ]}
+          onPress={handleVaultSelect}
+        >
+          <View style={styles.vaultIconContainer}>
+            <MessageCircle size={24} color="#fff" />
           </View>
+          <View style={styles.vaultContent}>
+            <Text style={styles.vaultTitle}>Save To Vault</Text>
+            <Text style={styles.vaultDescription}>
+              Store this message privately until you're ready to share.
+            </Text>
+          </View>
+        </TouchableOpacity>
 
-          {/* How would you like to share this message? */}
-          {children.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>How would you like to share this message?</Text>
-
-              <View style={styles.messageTypesContainer}>
-                {messageTypes.map((type) => {
-                  const isSelected = selectedMessageType === type.id;
-                  const IconComponent = type.icon;
-
-                  return (
-                    <TouchableOpacity
-                      key={type.id}
-                      style={[
-                        styles.messageTypeCard,
-                        isSelected && {
-                          backgroundColor: type.backgroundColor,
-                          borderColor: type.color,
-                        },
-                      ]}
-                      onPress={() => handleMessageTypeSelect(type.id)}
-                      activeOpacity={0.8}
-                    >
-                      <View style={styles.messageTypeContent}>
-                        <View style={[
-                          styles.messageTypeIconContainer,
-                          { backgroundColor: isSelected ? type.color : '#F3F4F6' }
-                        ]}>
-                          <Text style={styles.messageTypeEmoji}>{type.emoji}</Text>
-                        </View>
-
-                        <Text style={[
-                          styles.messageTypeLabel,
-                          isSelected && { color: type.color },
-                        ]}>
-                          {type.label}
-                        </Text>
-                      </View>
-
-                      {isSelected && (
-                        <View style={[styles.selectedIndicator, { backgroundColor: type.color }]}>
-                          <Check size={16} color="#ffffff" strokeWidth={3} />
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
+        {/* Children List or No Linked Accounts */}
+          {/* {children.length === 0 ? (
+            <View style={styles.noAccountsCard}>
+              <View style={styles.noAccountsIconContainer}>
+              <Image source={require('../assets/images/linked-acct.png')} style={styles.noAccountsIcon} />
               </View>
-            </View>
-          )}
-
-          {/* Record Message Button */}
-          {children.length > 0 && (
-            <View style={styles.footer}>
+              <Text style={styles.noAccountsTitle}>No Linked accounts yet</Text>
+              <Text style={styles.noAccountsDescription}>
+                Start building connections by linking your loved one's account.
+              </Text>
+              
+              <Text style={styles.unlockTitle}>Linking unlocks:</Text>
+              
+              <View style={styles.benefitsList}>
+                <View style={styles.benefitItem}>
+                  <Calendar size={20} color="#3B82F6" />
+                  <Text style={styles.benefitText}>
+                    Schedule message to deliver for future dates
+                  </Text>
+                </View>
+                
+                <View style={styles.benefitItem}>
+                  <GraduationCap size={20} color="#F59E0B" />
+                  <Text style={styles.benefitText}>
+                    Milestone & "Open When" triggers
+                  </Text>
+                </View>
+                
+                <View style={styles.benefitItem}>
+                  <Heart size={20} color="#EF4444" />
+                  <Text style={styles.benefitText}>
+                    Instant emotional support delivery
+                  </Text>
+                </View>
+              </View>
+              
               <TouchableOpacity
-                style={[
-                  styles.recordButton,
-                  !isFormValid && styles.recordButtonDisabled,
-                ]}
-                onPress={handleRecordMessage}
-                disabled={!isFormValid}
-                activeOpacity={0.9}
+                style={styles.createAccountButton}
+                onPress={handleCreateLinkedAccount}
               >
-                <Text style={styles.recordButtonText}>Record Message</Text>
+                <Text style={styles.createAccountButtonText}>
+                  Create Linked Account
+                </Text>
               </TouchableOpacity>
             </View>
+          ) : (
+            <View style={styles.childrenContainer}>
+              {children.map((child) => (
+                <TouchableOpacity
+                  key={child.id}
+                  style={[
+                    styles.childCard,
+                    selectedChild === child.id && styles.childCardSelected
+                  ]}
+                  onPress={() => handleChildSelect(child.id)}
+                >
+                  <Image
+                    source={{ 
+                      uri: child.profile_picture_url || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'
+                    }}
+                    style={styles.childAvatar}
+                  />
+                  <View style={styles.childInfo}>
+                    <Text style={styles.childName}>{child.first_name}</Text>
+                    <Text style={styles.childAge}>Age {calculateAge(child.date_of_birth)}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )} */}
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[
+              styles.nextButton,
+              !isFormValid() && styles.nextButtonDisabled
+            ]}
+            onPress={handleNext}
+            disabled={!isFormValid()}
+          >
+            <Text style={styles.nextButtonText}>Next, Record Message</Text>
+            <ArrowRight size={20} color="#fff" />
+          </TouchableOpacity>
+          
+          {children.length > 0 && (
+            <TouchableOpacity
+              style={styles.saveForLaterButton}
+              onPress={handleSaveForLater}
+            >
+              <Text style={styles.saveForLaterText}>Save For Later</Text>
+            </TouchableOpacity>
           )}
+        </View>
         </ScrollView>
       </Animated.View>
     </SafeAreaView>
@@ -485,9 +380,9 @@ export default function CreateMessageScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff',
   },
-  content: {
+  animatedContainer: {
     flex: 1,
   },
   loadingContainer: {
@@ -497,171 +392,238 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#666',
     fontFamily: 'Poppins-Regular',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 24,
-    marginTop: 30,
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 16,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  headerSpacer: {
-    width: 40,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 20,
   },
-  promptSection: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    marginBottom: 32,
-  },
-  promptSectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 16,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  promptCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  promptText: {
-    fontSize: 16,
-    color: '#374151',
-    lineHeight: 24,
-    marginBottom: 12,
-    fontFamily: 'Poppins-Regular',
-  },
-  promptTags: {
+  header: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
   },
-  promptTag: {
-    backgroundColor: '#E0E7FF',
-    borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  promptTagText: {
-    fontSize: 12,
-    color: '#3730A3',
-    fontWeight: '500',
-    fontFamily: 'Poppins-Medium',
-  },
-  section: {
-    paddingHorizontal: 24,
-    marginBottom: 20,
-  },
-  sectionTitle: {
+  headerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#333',
+  },
+  headerRight: {
+    width: 40,
+  },
+  progressContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 30,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: '#e5e5e5',
+    borderRadius: 2,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#2F3A56',
+    borderRadius: 2,
+  },
+  question: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#333',
+    paddingHorizontal: 20,
+    marginBottom: 30,
+  },
+  vaultCard: {
+    marginHorizontal: 20,
     marginBottom: 20,
-    fontFamily: 'Poppins-SemiBold',
-  },
-  emptyState: {
-    backgroundColor: '#F9FAFB',
+    padding: 20,
+    backgroundColor: '#f0fdf4',
     borderRadius: 16,
-    padding: 32,
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    borderStyle: 'dashed',
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
-  emptyStateTitle: {
+  vaultCardSelected: {
+    backgroundColor: '#dcfce7',
+    borderColor: '#16a34a',
+  },
+  vaultIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#22c55e',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  vaultContent: {
+    flex: 1,
+  },
+  vaultTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-    fontFamily: 'Poppins-SemiBold',
+    color: '#333',
+    marginBottom: 4,
   },
-  emptyStateText: {
+  vaultDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  noAccountsCard: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    padding: 30,
+    backgroundColor: '#FBF9FD',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#8B5CF6',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  noAccountsIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+   
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  noAccountsTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  noAccountsDescription: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#666',
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 24,
-    fontFamily: 'Poppins-Regular',
+    marginBottom: 30,
   },
-  setupButton: {
-    backgroundColor: '#3B4F75',
+  unlockTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 20,
+    alignSelf: 'flex-start',
+  },
+  benefitsList: {
+    width: '100%',
+    marginBottom: 30,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  benefitText: {
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 12,
+    flex: 1,
+  },
+  createAccountButton: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    shadowColor: '#3B4F75',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    alignItems: 'center',
   },
-  setupButtonText: {
-    color: '#ffffff',
+  createAccountButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'Poppins-SemiBold',
   },
   childrenContainer: {
-    flexDirection: 'row', // changed from 'row' to 'column'
-    flexWrap: 'wrap',
-    gap: 16,
+    paddingHorizontal: 20,
   },
   childCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    marginBottom: 12,
     borderWidth: 2,
     borderColor: 'transparent',
-    minWidth: 180,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   childCardSelected: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#3B4F75',
-    shadowColor: '#3B4F75',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: '#ede9fe',
+    borderColor: '#8B5CF6',
   },
+  childAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 16,
+  },
+  childInfo: {
+    flex: 1,
+  },
+  childName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  childAge: {
+    fontSize: 14,
+    color: '#666',
+  },
+  footer: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  nextButton: {
+    backgroundColor: '#374151',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  nextButtonDisabled: {
+    backgroundColor: '#9ca3af',
+  },
+  nextButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  saveForLaterButton: {
+    alignItems: 'center',
+  },
+  saveForLaterText: {
+    color: '#3B82F6',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  noAccountsIcon: {
+    width: 80,
+    height: 80,
+  },
+
   childImageContainer: {
     position: 'relative',
     marginBottom: 12,
@@ -682,24 +644,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  childInfo: {
-    alignItems: 'center',
-  },
-  childName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 4,
-    fontFamily: 'Poppins-SemiBold',
-  },
+
   childNameSelected: {
     color: '#3B4F75',
   },
-  childAge: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontFamily: 'Poppins-Regular',
-  },
+  
   childAgeSelected: {
     color: '#3B4F75',
   },
@@ -752,37 +701,5 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  recordButton: {
-    backgroundColor: '#3B4F75',
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    shadowColor: '#3B4F75',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  recordButtonDisabled: {
-    backgroundColor: '#9CA3AF',
-    shadowOpacity: 0.1,
-  },
-  recordButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: 'Poppins-SemiBold',
   },
 });
