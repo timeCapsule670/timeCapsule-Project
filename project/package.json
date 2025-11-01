@@ -66,9 +66,7 @@
   },
   "expo": {
     "install": {
-      "exclude": [
-        "react-native-reanimated"
-      ]
+      "exclude": []
     }
   }
 }

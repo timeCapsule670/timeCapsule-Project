@@ -9,6 +9,9 @@
       "distribution": "internal",
       "ios": {
         "buildConfiguration": "Debug"
+      },
+      "env": {
+        "SKIP_BUNDLING": "0"
       }
     },
     "preview": {
@@ -16,6 +19,9 @@
       "ios": {
         "buildConfiguration": "Release",
         "image": "latest"
+      },
+      "env": {
+        "SKIP_BUNDLING": "0"
       }
     },
     "production": {
@@ -23,6 +29,9 @@
       "ios": {
         "buildConfiguration": "Release",
         "image": "latest"
+      },
+      "env": {
+        "SKIP_BUNDLING": "0"
       }
     }
   },
