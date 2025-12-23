@@ -1,0 +1,1 @@
+-Always add SafeAreaView to each page

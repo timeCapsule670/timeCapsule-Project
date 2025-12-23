@@ -15,7 +15,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "This app uses the camera to take profile pictures and capture photos for time capsule messages, allowing you to create visual memories for your children.",
-        "NSMicrophoneUsageDescription": "This app uses the microphone to record audio and video messages for your time capsule, enabling you to preserve voice memories for your children."
+        "NSMicrophoneUsageDescription": "This app uses the microphone to record audio and video messages for your time capsule, enabling you to preserve voice memories for your children.",
+        "NSUserNotificationsUsageDescription": "This app uses notifications to remind you to record messages and to notify you when your children receive them."
       }
     },
     "android": {
@@ -25,7 +26,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-       "package": "com.kcdesign.timecapsule",
+      "package": "com.kcdesign.timecapsule",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
@@ -51,7 +52,9 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-font",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
