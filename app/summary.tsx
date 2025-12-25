@@ -68,9 +68,14 @@ export default function SummaryPage() {
   };
 
   const handleMessageType = (route: string) => {
-    console.log("Navigating to:", route);
-    // For now, placeholders for message creation routes
-    // router.push(route as any);
+    // Extract type from route (e.g., "/create-video" -> "video")
+    const type = route.replace("/create-", "");
+    console.log("Navigating to recipient selection for:", type);
+    // Navigate to recipient selection page first, passing the type
+    router.push({
+      pathname: "/recipient",
+      params: { type }
+    });
   };
 
   const handleSkip = () => {

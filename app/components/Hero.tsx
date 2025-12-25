@@ -1,6 +1,6 @@
-import React from "react";
-import { ImageBackground, View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
+import React from "react";
+import { ImageBackground, Text, TouchableOpacity, View } from "react-native";
 import { heroBg } from "../_constants/assets";
 
 export default function Hero() {
@@ -24,7 +24,8 @@ export default function Hero() {
         </Text>
 
         <TouchableOpacity
-          onPress={() => router.push("/onboarding-2")}
+          // onPress={() => router.push("/onboarding-2")}
+          onPress={() => router.push("/final-touches")}
           activeOpacity={0.9}
           className="bg-[#4a5b87] h-14 rounded-md items-center justify-center w-full"
         >

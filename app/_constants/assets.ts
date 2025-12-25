@@ -23,3 +23,10 @@ export const linkFeatureCalendar = "https://www.figma.com/api/mcp/asset/c9c9287c
 export const linkFeatureMicrophone = "https://www.figma.com/api/mcp/asset/2aa62a21-2c39-4b7d-8a7b-a51a3a5ae79d";
 export const linkFeatureMessage = "https://www.figma.com/api/mcp/asset/db85419d-e837-4238-b44b-1547176e1b55";
 
+// Milestone Tags Icons
+export const cakeIcon = require("../../assets/images/cake (1).png");
+export const carIcon = require("../../assets/images/car.png");
+export const openBookIcon = require("../../assets/images/open-book.png");
+export const schoolIcon = require("../../assets/images/school.png");
+export const trophyIcon = require("../../assets/images/trophy-cup.png");
+
