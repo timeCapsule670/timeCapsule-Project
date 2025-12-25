@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "timecapsule.app",
-    "slug": "timecapsule",
+    "slug": "timeCapsule",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -59,6 +59,7 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "owner": "time_capsule"
   }
 }
