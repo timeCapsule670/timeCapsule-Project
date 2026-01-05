@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -17,8 +17,12 @@ import { apiService } from '@/libs/api';
 import { validatePassword } from '@/utils/passwordValidation';
 import { useAuth } from '@/contexts/AuthContext';
 import Toast from 'react-native-toast-message';
+import { CustomAuthPublicClientApplication, ICustomAuthPublicClientApplication } from '@azure/msal-browser/custom-auth';
+import { customAuthConfig } from '@/config/auth-config';
 
 export default function CreateAccountScreen() {
+    const [authClient, setAuthClient] = useState<ICustomAuthPublicClientApplication | null>(null);
+
     const router = useRouter();
     const { signIn } = useAuth();
   const { email: prefilledEmail, password: prefilledPassword } = useLocalSearchParams();
@@ -35,6 +39,16 @@ export default function CreateAccountScreen() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  // Initialize Entra Id auth client
+  useEffect(() => {
+        const initializeApp = async () => {
+            const appInstance = await CustomAuthPublicClientApplication.create(customAuthConfig);
+            setAuthClient(appInstance);
+        };
+
+        initializeApp();
+    }, []);
+
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -23,7 +23,7 @@ import {
   Heart,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 
 const { width } = Dimensions.get('window');
 
@@ -96,46 +96,46 @@ export default function PromptsScreen() {
   }, []);
 
   const fetchCategories = async () => {
-    try {
-      setIsLoading(true);
+    // try {
+    //   setIsLoading(true);
       
-      const { data, error } = await supabase
-        .from('categories')
-        .select('id, name')
-        .order('name');
+    //   const { data, error } = await supabase
+    //     .from('categories')
+    //     .select('id, name')
+    //     .order('name');
 
-      if (error) {
-        console.error('Error fetching categories:', error);
-        Alert.alert('Error', 'Failed to load categories. Please try again.');
-        return;
-      }
+    //   if (error) {
+    //     console.error('Error fetching categories:', error);
+    //     Alert.alert('Error', 'Failed to load categories. Please try again.');
+    //     return;
+    //   }
 
-      setCategories(data || []);
+    //   setCategories(data || []);
       
-      // Transform categories into prompt categories with visual elements
-      const transformedCategories: PromptCategory[] = (data || []).map(category => {
-        const visuals = getCategoryVisuals(category.name);
-        return {
-          id: category.id,
-          label: category.name,
-          emoji: visuals.emoji,
-          color: visuals.color,
-          backgroundColor: visuals.backgroundColor,
-        };
-      });
+    //   // Transform categories into prompt categories with visual elements
+    //   const transformedCategories: PromptCategory[] = (data || []).map(category => {
+    //     const visuals = getCategoryVisuals(category.name);
+    //     return {
+    //       id: category.id,
+    //       label: category.name,
+    //       emoji: visuals.emoji,
+    //       color: visuals.color,
+    //       backgroundColor: visuals.backgroundColor,
+    //     };
+    //   });
       
-      setPromptCategories(transformedCategories);
+    //   setPromptCategories(transformedCategories);
       
-      // Set the first category as selected by default
-      if (transformedCategories.length > 0) {
-        setSelectedCategory(transformedCategories[0].id);
-      }
-    } catch (error) {
-      console.error('Unexpected error fetching categories:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    //   // Set the first category as selected by default
+    //   if (transformedCategories.length > 0) {
+    //     setSelectedCategory(transformedCategories[0].id);
+    //   }
+    // } catch (error) {
+    //   console.error('Unexpected error fetching categories:', error);
+    //   Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const prompts: PromptCard[] = [

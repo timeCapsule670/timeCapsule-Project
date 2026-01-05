@@ -22,7 +22,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 
 interface NotificationSettings {
   messageReminders: boolean;
@@ -106,18 +106,18 @@ export default function AccountSettingsScreen() {
   };
 
   const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        Alert.alert('Error', 'Failed to log out. Please try again.');
-        return;
-      }
+    // try {
+    //   const { error } = await supabase.auth.signOut();
+    //   if (error) {
+    //     Alert.alert('Error', 'Failed to log out. Please try again.');
+    //     return;
+    //   }
       
-      setShowLogoutModal(false);
-      router.replace('/');
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    }
+    //   setShowLogoutModal(false);
+    //   router.replace('/');
+    // } catch (error) {
+    //   Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    // }
   };
 
   const handleDeleteAccount = () => {

@@ -12,7 +12,7 @@ import {
 import { useEvent } from 'expo';
 import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer } from 'expo-video';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 import VaultMessageCard from '@/components/VaultMessageCard';
 
 interface VaultMessage {
@@ -75,69 +75,69 @@ export default function VaultScreen() {
   }, [currentMediaUrl, currentPlayingId]);
 
   const fetchVaultMessages = async () => {
-    try {
-      setIsLoading(true);
-      console.log('🔍 Vault - Starting fetchVaultMessages process');
+    // try {
+    //   setIsLoading(true);
+    //   console.log('🔍 Vault - Starting fetchVaultMessages process');
       
-      // Get the current authenticated user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    //   // Get the current authenticated user
+    //   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session?.user) {
-        console.error('❌ Vault - Authentication error:', sessionError);
-        setVaultMessages([]);
-        Alert.alert('Authentication Error', 'Please sign in again to view your vault.');
-        return;
-      }
+    //   if (sessionError || !session?.user) {
+    //     console.error('❌ Vault - Authentication error:', sessionError);
+    //     setVaultMessages([]);
+    //     Alert.alert('Authentication Error', 'Please sign in again to view your vault.');
+    //     return;
+    //   }
 
-      const authUserId = session.user.id;
-      console.log('✅ Vault - Authenticated user ID:', authUserId);
+    //   const authUserId = session.user.id;
+    //   console.log('✅ Vault - Authenticated user ID:', authUserId);
 
-      // Get the director record for the current user
-      const { data: directorData, error: directorError } = await supabase
-        .from('directors')
-        .select('id')
-        .eq('auth_user_id', authUserId)
-        .single();
+    //   // Get the director record for the current user
+    //   const { data: directorData, error: directorError } = await supabase
+    //     .from('directors')
+    //     .select('id')
+    //     .eq('auth_user_id', authUserId)
+    //     .single();
 
-      if (directorError || !directorData) {
-        console.error('❌ Vault - Director fetch error:', directorError);
-        setVaultMessages([]);
-        Alert.alert('Error', 'Could not find your profile. Please ensure you have completed onboarding.');
-        return;
-      }
+    //   if (directorError || !directorData) {
+    //     console.error('❌ Vault - Director fetch error:', directorError);
+    //     setVaultMessages([]);
+    //     Alert.alert('Error', 'Could not find your profile. Please ensure you have completed onboarding.');
+    //     return;
+    //   }
 
-      const directorId = directorData.id;
-      console.log('✅ Vault - Director ID found:', directorId);
+    //   const directorId = directorData.id;
+    //   console.log('✅ Vault - Director ID found:', directorId);
 
-      // Fetch all messages for the current director, ordered by scheduled_at
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          child:actors!messages_actor_id_fkey(first_name, last_name),
-          message_media(media_url, media_type)
-        `)
-        .eq('director_id', directorId)
-        .order('scheduled_at', { ascending: false }); // Show most recent first
+    //   // Fetch all messages for the current director, ordered by scheduled_at
+    //   const { data: messagesData, error: messagesError } = await supabase
+    //     .from('messages')
+    //     .select(`
+    //       *,
+    //       child:actors!messages_actor_id_fkey(first_name, last_name),
+    //       message_media(media_url, media_type)
+    //     `)
+    //     .eq('director_id', directorId)
+    //     .order('scheduled_at', { ascending: false }); // Show most recent first
 
-      if (messagesError) {
-        console.error('❌ Vault - Messages fetch error:', messagesError);
-        setVaultMessages([]);
-        Alert.alert('Error', 'Failed to load your messages. Please try again.');
-        return;
-      }
+    //   if (messagesError) {
+    //     console.error('❌ Vault - Messages fetch error:', messagesError);
+    //     setVaultMessages([]);
+    //     Alert.alert('Error', 'Failed to load your messages. Please try again.');
+    //     return;
+    //   }
 
-      console.log('✅ Vault - Successfully fetched messages:', messagesData);
-      setVaultMessages(messagesData || []);
+    //   console.log('✅ Vault - Successfully fetched messages:', messagesData);
+    //   setVaultMessages(messagesData || []);
       
-    } catch (error) {
-      console.error('💥 Vault - Unexpected error fetching messages:', error);
-      setVaultMessages([]);
-      Alert.alert('Error', 'An unexpected error occurred while fetching messages.');
-    } finally {
-      setIsLoading(false);
-      console.log('🏁 Vault - fetchVaultMessages process finished');
-    }
+    // } catch (error) {
+    //   console.error('💥 Vault - Unexpected error fetching messages:', error);
+    //   setVaultMessages([]);
+    //   Alert.alert('Error', 'An unexpected error occurred while fetching messages.');
+    // } finally {
+    //   setIsLoading(false);
+    //   console.log('🏁 Vault - fetchVaultMessages process finished');
+    // }
   };
 
   const handlePlayMessage = async (messageId: string, mediaUrl?: string, messageType?: string) => {
@@ -282,31 +282,31 @@ export default function VaultScreen() {
   };
 
   const confirmDeleteMessage = async (messageId: string) => {
-    try {
-      // Stop playback if this message is currently playing
-      if (currentPlayingId === messageId) {
-        await stopCurrentPlayback();
-      }
+    // try {
+    //   // Stop playback if this message is currently playing
+    //   if (currentPlayingId === messageId) {
+    //     await stopCurrentPlayback();
+    //   }
 
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .eq('id', messageId);
+    //   const { error } = await supabase
+    //     .from('messages')
+    //     .delete()
+    //     .eq('id', messageId);
 
-      if (error) {
-        console.error('❌ Vault - Delete error:', error);
-        Alert.alert('Error', 'Failed to delete message. Please try again.');
-        return;
-      }
+    //   if (error) {
+    //     console.error('❌ Vault - Delete error:', error);
+    //     Alert.alert('Error', 'Failed to delete message. Please try again.');
+    //     return;
+    //   }
 
-      // Remove from local state
-      setVaultMessages(prev => prev.filter(msg => msg.id !== messageId));
-      Alert.alert('Success', 'Message deleted successfully.');
+    //   // Remove from local state
+    //   setVaultMessages(prev => prev.filter(msg => msg.id !== messageId));
+    //   Alert.alert('Success', 'Message deleted successfully.');
 
-    } catch (error) {
-      console.error('❌ Vault - Unexpected delete error:', error);
-      Alert.alert('Error', 'An unexpected error occurred while deleting the message.');
-    }
+    // } catch (error) {
+    //   console.error('❌ Vault - Unexpected delete error:', error);
+    //   Alert.alert('Error', 'An unexpected error occurred while deleting the message.');
+    // }
   };
 
   // Get current playing state for a specific message

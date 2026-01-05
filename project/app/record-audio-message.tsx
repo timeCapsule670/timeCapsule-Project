@@ -15,7 +15,7 @@ import {
 import { ArrowLeft, Mic, RotateCcw, Play, Pause, Edit3, ArrowRight } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAudioRecorder, useAudioPlayer, AudioModule, RecordingPresets } from 'expo-audio';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 
 interface Child {
   id: string;
@@ -133,28 +133,28 @@ export default function RecordAudioMessageScreen() {
   }, [recordedUri]);
 
   const fetchChildData = async () => {
-    try {
-      setIsLoading(true);
+    // try {
+    //   setIsLoading(true);
       
-      const { data, error } = await supabase
-        .from('actors')
-        .select('id, first_name, last_name, date_of_birth, username')
-        .eq('id', childId)
-        .single();
+    //   const { data, error } = await supabase
+    //     .from('actors')
+    //     .select('id, first_name, last_name, date_of_birth, username')
+    //     .eq('id', childId)
+    //     .single();
 
-      if (error) {
-        console.error('Error fetching child:', error);
-        Alert.alert('Error', 'Failed to load child data. Please try again.');
-        return;
-      }
+    //   if (error) {
+    //     console.error('Error fetching child:', error);
+    //     Alert.alert('Error', 'Failed to load child data. Please try again.');
+    //     return;
+    //   }
 
-      setChild(data);
-    } catch (error) {
-      console.error('Unexpected error fetching child:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    //   setChild(data);
+    // } catch (error) {
+    //   console.error('Unexpected error fetching child:', error);
+    //   Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const calculateAge = (dateOfBirth: string): number => {

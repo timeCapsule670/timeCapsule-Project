@@ -17,7 +17,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEvent } from 'expo';
 import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer } from 'expo-video';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 import HomeMessageCard from '@/components/HomeMesssageCard';
 
 interface HomeMessage {
@@ -120,7 +120,7 @@ export default function HomeScreen() {
   ];
 
   useEffect(() => {
-    fetchMessages();
+    // fetchMessages();
 
     // Entrance animation
     Animated.parallel([
@@ -157,90 +157,90 @@ export default function HomeScreen() {
   }, [currentMediaUrl, currentPlayingId]);
 
   const fetchMessages = async () => {
-    try {
-      console.log('🔍 Home - Starting fetchMessages process');
+    // try {
+    //   console.log('🔍 Home - Starting fetchMessages process');
 
-      // Get the current authenticated user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    //   // Get the current authenticated user
+    //   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (sessionError || !session?.user) {
-        console.error('❌ Home - Authentication error:', sessionError);
-        setUpcomingMessages([]);
-        setRecentActivity([]);
-        return;
-      }
+    //   if (sessionError || !session?.user) {
+    //     console.error('❌ Home - Authentication error:', sessionError);
+    //     setUpcomingMessages([]);
+    //     setRecentActivity([]);
+    //     return;
+    //   }
 
-      const authUserId = session.user.id;
-      console.log('✅ Home - Authenticated user ID:', authUserId);
+    //   const authUserId = session.user.id;
+    //   console.log('✅ Home - Authenticated user ID:', authUserId);
 
-      // Get the director record for the current user
-      const { data: directorData, error: directorError } = await supabase
-        .from('directors')
-        .select('id')
-        .eq('auth_user_id', authUserId)
-        .single();
+    //   // Get the director record for the current user
+    //   const { data: directorData, error: directorError } = await supabase
+    //     .from('directors')
+    //     .select('id')
+    //     .eq('auth_user_id', authUserId)
+    //     .single();
 
-      if (directorError || !directorData) {
-        console.error('❌ Home - Director fetch error:', directorError);
-        setUpcomingMessages([]);
-        setRecentActivity([]);
-        return;
-      }
+    //   if (directorError || !directorData) {
+    //     console.error('❌ Home - Director fetch error:', directorError);
+    //     setUpcomingMessages([]);
+    //     setRecentActivity([]);
+    //     return;
+    //   }
 
-      const directorId = directorData.id;
-      console.log('✅ Home - Director ID found:', directorId);
+    //   const directorId = directorData.id;
+    //   console.log('✅ Home - Director ID found:', directorId);
 
-      // Fetch upcoming messages (scheduled in the future)
-      setIsLoadingMessages(true);
-      const { data: upcomingData, error: upcomingError } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          child:actors!messages_actor_id_fkey(first_name, last_name),
-          message_media(media_url, media_type)
-        `)
-        .eq('director_id', directorId)
-        .gte('scheduled_at', new Date().toISOString())
-        .order('scheduled_at', { ascending: true })
-        .limit(3);
+    //   // Fetch upcoming messages (scheduled in the future)
+    //   setIsLoadingMessages(true);
+    //   const { data: upcomingData, error: upcomingError } = await supabase
+    //     .from('messages')
+    //     .select(`
+    //       *,
+    //       child:actors!messages_actor_id_fkey(first_name, last_name),
+    //       message_media(media_url, media_type)
+    //     `)
+    //     .eq('director_id', directorId)
+    //     .gte('scheduled_at', new Date().toISOString())
+    //     .order('scheduled_at', { ascending: true })
+    //     .limit(3);
 
-      if (upcomingError) {
-        console.error('❌ Home - Upcoming messages fetch error:', upcomingError);
-      } else {
-        console.log('✅ Home - Successfully fetched upcoming messages:', upcomingData);
-        setUpcomingMessages(upcomingData || []);
-      }
-      setIsLoadingMessages(false);
+    //   if (upcomingError) {
+    //     console.error('❌ Home - Upcoming messages fetch error:', upcomingError);
+    //   } else {
+    //     console.log('✅ Home - Successfully fetched upcoming messages:', upcomingData);
+    //     setUpcomingMessages(upcomingData || []);
+    //   }
+    //   setIsLoadingMessages(false);
 
-      // Fetch recent activity (messages scheduled in the past)
-      setIsLoadingActivity(true);
-      const { data: recentData, error: recentError } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          child:actors!messages_actor_id_fkey(first_name, last_name),
-          message_media(media_url, media_type)
-        `)
-        .eq('director_id', directorId)
-        .lt('scheduled_at', new Date().toISOString())
-        .order('scheduled_at', { ascending: false })
-        .limit(3);
+    //   // Fetch recent activity (messages scheduled in the past)
+    //   setIsLoadingActivity(true);
+    //   const { data: recentData, error: recentError } = await supabase
+    //     .from('messages')
+    //     .select(`
+    //       *,
+    //       child:actors!messages_actor_id_fkey(first_name, last_name),
+    //       message_media(media_url, media_type)
+    //     `)
+    //     .eq('director_id', directorId)
+    //     .lt('scheduled_at', new Date().toISOString())
+    //     .order('scheduled_at', { ascending: false })
+    //     .limit(3);
 
-      if (recentError) {
-        console.error('❌ Home - Recent activity fetch error:', recentError);
-      } else {
-        console.log('✅ Home - Successfully fetched recent activity:', recentData);
-        setRecentActivity(recentData || []);
-      }
-      setIsLoadingActivity(false);
+    //   if (recentError) {
+    //     console.error('❌ Home - Recent activity fetch error:', recentError);
+    //   } else {
+    //     console.log('✅ Home - Successfully fetched recent activity:', recentData);
+    //     setRecentActivity(recentData || []);
+    //   }
+    //   setIsLoadingActivity(false);
 
-    } catch (error) {
-      console.error('💥 Home - Unexpected error fetching messages:', error);
-      setUpcomingMessages([]);
-      setRecentActivity([]);
-      setIsLoadingMessages(false);
-      setIsLoadingActivity(false);
-    }
+    // } catch (error) {
+    //   console.error('💥 Home - Unexpected error fetching messages:', error);
+    //   setUpcomingMessages([]);
+    //   setRecentActivity([]);
+    //   setIsLoadingMessages(false);
+    //   setIsLoadingActivity(false);
+    // }
   };
 
   const handlePlayMessage = async (messageId: string, mediaUrl?: string, messageType?: string) => {
@@ -339,114 +339,114 @@ export default function HomeScreen() {
   };
 
   const handleMoreOptions = (messageId: string) => {
-    const message = [...upcomingMessages, ...recentActivity].find(msg => msg.id === messageId);
-    if (!message) return;
+    // const message = [...upcomingMessages, ...recentActivity].find(msg => msg.id === messageId);
+    // if (!message) return;
 
-    const options: Array<{
-      text: string;
-      onPress?: () => void;
-      style?: 'default' | 'cancel' | 'destructive';
-    }> = [
-        { text: 'Edit Message', onPress: () => handleEditMessage(messageId) },
-        { text: 'View Details', onPress: () => handleViewDetails(messageId) },
-        { text: 'Delete Message', onPress: () => handleDeleteMessage(messageId), style: 'destructive' },
-        { text: 'Cancel', style: 'cancel' },
-      ];
+    // const options: Array<{
+    //   text: string;
+    //   onPress?: () => void;
+    //   style?: 'default' | 'cancel' | 'destructive';
+    // }> = [
+    //     { text: 'Edit Message', onPress: () => handleEditMessage(messageId) },
+    //     { text: 'View Details', onPress: () => handleViewDetails(messageId) },
+    //     { text: 'Delete Message', onPress: () => handleDeleteMessage(messageId), style: 'destructive' },
+    //     { text: 'Cancel', style: 'cancel' },
+    //   ];
 
-    Alert.alert(
-      'Message Options',
-      `Options for message to ${message.child?.first_name}`,
-      options
-    );
+    // Alert.alert(
+    //   'Message Options',
+    //   `Options for message to ${message.child?.first_name}`,
+    //   options
+    // );
   };
 
   const handleSendNow = (messageId: string) => {
-    Alert.alert(
-      'Send Now',
-      'Are you sure you want to send this message immediately?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Send Now',
-          onPress: () => confirmSendNow(messageId)
-        },
-      ]
-    );
+    // Alert.alert(
+    //   'Send Now',
+    //   'Are you sure you want to send this message immediately?',
+    //   [
+    //     { text: 'Cancel', style: 'cancel' },
+    //     {
+    //       text: 'Send Now',
+    //       onPress: () => confirmSendNow(messageId)
+    //     },
+    //   ]
+    // );
   };
 
   const confirmSendNow = async (messageId: string) => {
-    try {
-      // Update the scheduled_at to current time
-      const { error } = await supabase
-        .from('messages')
-        .update({ scheduled_at: new Date().toISOString() })
-        .eq('id', messageId);
+  //   try {
+  //     // Update the scheduled_at to current time
+  //     const { error } = await supabase
+  //       .from('messages')
+  //       .update({ scheduled_at: new Date().toISOString() })
+  //       .eq('id', messageId);
 
-      if (error) {
-        console.error('❌ Home - Send now error:', error);
-        Alert.alert('Error', 'Failed to send message. Please try again.');
-        return;
-      }
+  //     if (error) {
+  //       console.error('❌ Home - Send now error:', error);
+  //       Alert.alert('Error', 'Failed to send message. Please try again.');
+  //       return;
+  //     }
 
-      // Refresh messages to update the UI
-      await fetchMessages();
-      Alert.alert('Success', 'Message sent successfully!');
+  //     // Refresh messages to update the UI
+  //     await fetchMessages();
+  //     Alert.alert('Success', 'Message sent successfully!');
 
-    } catch (error) {
-      console.error('❌ Home - Unexpected send now error:', error);
-      Alert.alert('Error', 'An unexpected error occurred while sending the message.');
-    }
-  };
+  //   } catch (error) {
+  //     console.error('❌ Home - Unexpected send now error:', error);
+  //     Alert.alert('Error', 'An unexpected error occurred while sending the message.');
+  //   }
+  // };
 
-  const handleEditMessage = (messageId: string) => {
-    Alert.alert('Edit Message', `Edit functionality for message ${messageId} coming soon!`);
-  };
+  // const handleEditMessage = (messageId: string) => {
+  //   Alert.alert('Edit Message', `Edit functionality for message ${messageId} coming soon!`);
+  // };
 
-  const handleViewDetails = (messageId: string) => {
-    Alert.alert('View Details', `Details view for message ${messageId} coming soon!`);
-  };
+  // const handleViewDetails = (messageId: string) => {
+  //   Alert.alert('View Details', `Details view for message ${messageId} coming soon!`);
+  // };
 
-  const handleDeleteMessage = (messageId: string) => {
-    Alert.alert(
-      'Delete Message',
-      'Are you sure you want to delete this message? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => confirmDeleteMessage(messageId)
-        },
-      ]
-    );
+  // const handleDeleteMessage = (messageId: string) => {
+  //   Alert.alert(
+  //     'Delete Message',
+  //     'Are you sure you want to delete this message? This action cannot be undone.',
+  //     [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       {
+  //         text: 'Delete',
+  //         style: 'destructive',
+  //         onPress: () => confirmDeleteMessage(messageId)
+  //       },
+  //     ]
+  //   );
   };
 
   const confirmDeleteMessage = async (messageId: string) => {
-    try {
-      // Stop playback if this message is currently playing
-      if (currentPlayingId === messageId) {
-        await stopCurrentPlayback();
-      }
+    // try {
+    //   // Stop playback if this message is currently playing
+    //   if (currentPlayingId === messageId) {
+    //     await stopCurrentPlayback();
+    //   }
 
-      const { error } = await supabase
-        .from('messages')
-        .delete()
-        .eq('id', messageId);
+    //   const { error } = await supabase
+    //     .from('messages')
+    //     .delete()
+    //     .eq('id', messageId);
 
-      if (error) {
-        console.error('❌ Home - Delete error:', error);
-        Alert.alert('Error', 'Failed to delete message. Please try again.');
-        return;
-      }
+    //   if (error) {
+    //     console.error('❌ Home - Delete error:', error);
+    //     Alert.alert('Error', 'Failed to delete message. Please try again.');
+    //     return;
+    //   }
 
-      // Refresh messages to update the UI
-      await fetchMessages();
-      Alert.alert('Success', 'Message deleted successfully.');
+    //   // Refresh messages to update the UI
+    //   await fetchMessages();
+    //   Alert.alert('Success', 'Message deleted successfully.');
 
-    } catch (error) {
-      console.error('❌ Home - Unexpected delete error:', error);
-      Alert.alert('Error', 'An unexpected error occurred while deleting the message.');
-    }
+    // } catch (error) {
+    //   console.error('❌ Home - Unexpected delete error:', error);
+    //   Alert.alert('Error', 'An unexpected error occurred while deleting the message.');
+    // }
   };
 
   const handleCreateMessage = () => {

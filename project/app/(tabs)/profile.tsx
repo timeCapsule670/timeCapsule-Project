@@ -27,7 +27,7 @@ import {
   UserPlus,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 
 interface Director {
   id: string;
@@ -89,166 +89,166 @@ export default function ProfileScreen() {
   }, []);
 
   const fetchProfileData = async () => {
-    try {
-      setIsLoading(true);
+    // try {
+    //   setIsLoading(true);
       
-      // Get the current authenticated user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    //   // Get the current authenticated user
+    //   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session?.user) {
-        console.error('Authentication error:', sessionError);
-        return;
-      }
+    //   if (sessionError || !session?.user) {
+    //     console.error('Authentication error:', sessionError);
+    //     return;
+    //   }
 
-      const authUserId = session.user.id;
+    //   const authUserId = session.user.id;
 
-      // Fetch director profile
-      const { data: directorData, error: directorError } = await supabase
-        .from('directors')
-        .select('id, first_name, last_name, email, director_type, profile_picture_url')
-        .eq('auth_user_id', authUserId)
-        .single();
+    //   // Fetch director profile
+    //   const { data: directorData, error: directorError } = await supabase
+    //     .from('directors')
+    //     .select('id, first_name, last_name, email, director_type, profile_picture_url')
+    //     .eq('auth_user_id', authUserId)
+    //     .single();
 
-      if (directorError) {
-        console.error('Error fetching director:', directorError);
-        return;
-      }
+    //   if (directorError) {
+    //     console.error('Error fetching director:', directorError);
+    //     return;
+    //   }
 
-      setDirector(directorData);
+    //   setDirector(directorData);
 
-      if (directorData) {
-        // Fetch children with message counts
-        await fetchChildren(directorData.id);
+    //   if (directorData) {
+    //     // Fetch children with message counts
+    //     await fetchChildren(directorData.id);
         
-        // Fetch upcoming messages
-        await fetchUpcomingMessages(directorData.id);
+    //     // Fetch upcoming messages
+    //     await fetchUpcomingMessages(directorData.id);
         
-        // Fetch activity stats
-        await fetchActivityStats(directorData.id);
+    //     // Fetch activity stats
+    //     await fetchActivityStats(directorData.id);
         
-        // Fetch family members (placeholder for now)
-        setFamilyMembers([]);
-      }
-    } catch (error) {
-      console.error('Unexpected error fetching profile data:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    //     // Fetch family members (placeholder for now)
+    //     setFamilyMembers([]);
+    //   }
+    // } catch (error) {
+    //   console.error('Unexpected error fetching profile data:', error);
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const fetchChildren = async (directorId: string) => {
-    try {
-      // Get director-actor relationships
-      const { data: relationships, error: relationshipError } = await supabase
-        .from('director_actor')
-        .select('actor_id')
-        .eq('director_id', directorId);
+    // try {
+    //   // Get director-actor relationships
+    //   const { data: relationships, error: relationshipError } = await supabase
+    //     .from('director_actor')
+    //     .select('actor_id')
+    //     .eq('director_id', directorId);
 
-      if (relationshipError) {
-        console.error('Error fetching relationships:', relationshipError);
-        return;
-      }
+    //   if (relationshipError) {
+    //     console.error('Error fetching relationships:', relationshipError);
+    //     return;
+    //   }
 
-      if (!relationships || relationships.length === 0) {
-        setChildren([]);
-        return;
-      }
+    //   if (!relationships || relationships.length === 0) {
+    //     setChildren([]);
+    //     return;
+    //   }
 
-      const actorIds = relationships.map(rel => rel.actor_id);
+    //   const actorIds = relationships.map(rel => rel.actor_id);
 
-      // Fetch children data
-      const { data: childrenData, error: childrenError } = await supabase
-        .from('actors')
-        .select('id, first_name, last_name, date_of_birth, username')
-        .in('id', actorIds);
+    //   // Fetch children data
+    //   const { data: childrenData, error: childrenError } = await supabase
+    //     .from('actors')
+    //     .select('id, first_name, last_name, date_of_birth, username')
+    //     .in('id', actorIds);
 
-      if (childrenError) {
-        console.error('Error fetching children:', childrenError);
-        return;
-      }
+    //   if (childrenError) {
+    //     console.error('Error fetching children:', childrenError);
+    //     return;
+    //   }
 
-      // For each child, get message counts
-      const childrenWithCounts = await Promise.all(
-        (childrenData || []).map(async (child) => {
-          // Get scheduled messages count
-          const { count: scheduledCount } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('actor_id', child.id)
-            .gte('scheduled_at', new Date().toISOString());
+    //   // For each child, get message counts
+    //   const childrenWithCounts = await Promise.all(
+    //     (childrenData || []).map(async (child) => {
+    //       // Get scheduled messages count
+    //       const { count: scheduledCount } = await supabase
+    //         .from('messages')
+    //         .select('*', { count: 'exact', head: true })
+    //         .eq('actor_id', child.id)
+    //         .gte('scheduled_at', new Date().toISOString());
 
-          // For now, set draft count to 0 (would need a drafts table)
-          const draftCount = 0;
+    //       // For now, set draft count to 0 (would need a drafts table)
+    //       const draftCount = 0;
 
-          return {
-            ...child,
-            scheduled_count: scheduledCount || 0,
-            draft_count: draftCount,
-          };
-        })
-      );
+    //       return {
+    //         ...child,
+    //         scheduled_count: scheduledCount || 0,
+    //         draft_count: draftCount,
+    //       };
+    //     })
+    //   );
 
-      setChildren(childrenWithCounts);
-    } catch (error) {
-      console.error('Error in fetchChildren:', error);
-    }
+    //   setChildren(childrenWithCounts);
+    // } catch (error) {
+    //   console.error('Error in fetchChildren:', error);
+    // }
   };
 
   const fetchUpcomingMessages = async (directorId: string) => {
-    try {
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          child:actors!messages_actor_id_fkey(first_name),
-          message_media(media_url, media_type)
-        `)
-        .eq('director_id', directorId)
-        .gte('scheduled_at', new Date().toISOString())
-        .order('scheduled_at', { ascending: true })
-        .limit(3);
+    // try {
+    //   const { data: messagesData, error: messagesError } = await supabase
+    //     .from('messages')
+    //     .select(`
+    //       *,
+    //       child:actors!messages_actor_id_fkey(first_name),
+    //       message_media(media_url, media_type)
+    //     `)
+    //     .eq('director_id', directorId)
+    //     .gte('scheduled_at', new Date().toISOString())
+    //     .order('scheduled_at', { ascending: true })
+    //     .limit(3);
 
-      if (messagesError) {
-        console.error('Error fetching upcoming messages:', messagesError);
-        return;
-      }
+    //   if (messagesError) {
+    //     console.error('Error fetching upcoming messages:', messagesError);
+    //     return;
+    //   }
 
-      setUpcomingMessages(messagesData || []);
-    } catch (error) {
-      console.error('Error in fetchUpcomingMessages:', error);
-    }
+    //   setUpcomingMessages(messagesData || []);
+    // } catch (error) {
+    //   console.error('Error in fetchUpcomingMessages:', error);
+    // }
   };
 
   const fetchActivityStats = async (directorId: string) => {
-    try {
-      // Get total scheduled messages
-      const { count: scheduledCount } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('director_id', directorId);
+    // try {
+    //   // Get total scheduled messages
+    //   const { count: scheduledCount } = await supabase
+    //     .from('messages')
+    //     .select('*', { count: 'exact', head: true })
+    //     .eq('director_id', directorId);
 
-      // Get voice messages count
-      const { count: voiceCount } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('director_id', directorId)
-        .eq('message_type', 'audio');
+    //   // Get voice messages count
+    //   const { count: voiceCount } = await supabase
+    //     .from('messages')
+    //     .select('*', { count: 'exact', head: true })
+    //     .eq('director_id', directorId)
+    //     .eq('message_type', 'audio');
 
-      // Get video messages count
-      const { count: videoCount } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('director_id', directorId)
-        .eq('message_type', 'video');
+    //   // Get video messages count
+    //   const { count: videoCount } = await supabase
+    //     .from('messages')
+    //     .select('*', { count: 'exact', head: true })
+    //     .eq('director_id', directorId)
+    //     .eq('message_type', 'video');
 
-      setActivityStats({
-        scheduled: scheduledCount || 0,
-        voice: voiceCount || 0,
-        video: videoCount || 0,
-      });
-    } catch (error) {
-      console.error('Error fetching activity stats:', error);
-    }
+    //   setActivityStats({
+    //     scheduled: scheduledCount || 0,
+    //     voice: voiceCount || 0,
+    //     video: videoCount || 0,
+    //   });
+    // } catch (error) {
+    //   console.error('Error fetching activity stats:', error);
+    // }
   };
 
   const calculateAge = (dateOfBirth: string): number => {

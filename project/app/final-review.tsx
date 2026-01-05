@@ -17,7 +17,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEvent } from 'expo';
 import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 
 interface Child {
   id: string;
@@ -107,28 +107,28 @@ export default function FinalReviewScreen() {
   }, [recordedUri, messageType]);
 
   const fetchChildData = async () => {
-    try {
-      setIsLoading(true);
+    // try {
+    //   setIsLoading(true);
 
-      const { data, error } = await supabase
-        .from('actors')
-        .select('id, first_name, last_name, date_of_birth, username')
-        .eq('id', childId)
-        .single();
+    //   const { data, error } = await supabase
+    //     .from('actors')
+    //     .select('id, first_name, last_name, date_of_birth, username')
+    //     .eq('id', childId)
+    //     .single();
 
-      if (error) {
-        console.error('Error fetching child:', error);
-        Alert.alert('Error', 'Failed to load child data. Please try again.');
-        return;
-      }
+    //   if (error) {
+    //     console.error('Error fetching child:', error);
+    //     Alert.alert('Error', 'Failed to load child data. Please try again.');
+    //     return;
+    //   }
 
-      setChild(data);
-    } catch (error) {
-      console.error('Unexpected error fetching child:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    //   setChild(data);
+    // } catch (error) {
+    //   console.error('Unexpected error fetching child:', error);
+    //   Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const formatScheduledDate = (scheduledAt: string): string => {
@@ -354,169 +354,169 @@ export default function FinalReviewScreen() {
 
     setIsSaving(true);
 
-    try {
-      console.log('🚀 Final Review - Starting message scheduling process');
+    // try {
+    //   console.log('🚀 Final Review - Starting message scheduling process');
 
-      // Get the current authenticated user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    //   // Get the current authenticated user
+    //   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session?.user) {
-        console.error('❌ Final Review - Authentication error:', sessionError);
-        Alert.alert('Authentication Error', 'Please sign in again to continue.');
-        return;
-      }
+    //   if (sessionError || !session?.user) {
+    //     console.error('❌ Final Review - Authentication error:', sessionError);
+    //     Alert.alert('Authentication Error', 'Please sign in again to continue.');
+    //     return;
+    //   }
 
-      const authUserId = session.user.id;
-      console.log('✅ Final Review - Authenticated user ID:', authUserId);
+    //   const authUserId = session.user.id;
+    //   console.log('✅ Final Review - Authenticated user ID:', authUserId);
 
-      // Get the director record for the current user
-      const { data: directorData, error: directorError } = await supabase
-        .from('directors')
-        .select('id')
-        .eq('auth_user_id', authUserId)
-        .single();
+    //   // Get the director record for the current user
+    //   const { data: directorData, error: directorError } = await supabase
+    //     .from('directors')
+    //     .select('id')
+    //     .eq('auth_user_id', authUserId)
+    //     .single();
 
-      if (directorError || !directorData) {
-        console.error('❌ Final Review - Director fetch error:', directorError);
-        Alert.alert('Error', 'Could not find your profile. Please try again.');
-        return;
-      }
+    //   if (directorError || !directorData) {
+    //     console.error('❌ Final Review - Director fetch error:', directorError);
+    //     Alert.alert('Error', 'Could not find your profile. Please try again.');
+    //     return;
+    //   }
 
-      const directorId = directorData.id;
-      console.log('✅ Final Review - Director ID found:', directorId);
+    //   const directorId = directorData.id;
+    //   console.log('✅ Final Review - Director ID found:', directorId);
 
-      // Prepare scheduled_at timestamp
-      let scheduledAt: string;
-      if (deliveryOption === 'specificDate' && scheduledDate && scheduledTime) {
-        try {
-          const [month, day, year] = (scheduledDate as string).split('/');
-          const [time, period] = (scheduledTime as string).split(' ');
-          const [hours, minutes] = time.split(':');
+    //   // Prepare scheduled_at timestamp
+    //   let scheduledAt: string;
+    //   if (deliveryOption === 'specificDate' && scheduledDate && scheduledTime) {
+    //     try {
+    //       const [month, day, year] = (scheduledDate as string).split('/');
+    //       const [time, period] = (scheduledTime as string).split(' ');
+    //       const [hours, minutes] = time.split(':');
           
-          let hour24 = parseInt(hours, 10);
-          if (period.toUpperCase() === 'PM' && hour24 !== 12) hour24 += 12;
-          if (period.toUpperCase() === 'AM' && hour24 === 12) hour24 = 0;
+    //       let hour24 = parseInt(hours, 10);
+    //       if (period.toUpperCase() === 'PM' && hour24 !== 12) hour24 += 12;
+    //       if (period.toUpperCase() === 'AM' && hour24 === 12) hour24 = 0;
           
-          const scheduledDateTime = new Date(
-            parseInt(year),
-            parseInt(month) - 1,
-            parseInt(day),
-            hour24,
-            parseInt(minutes)
-          );
+    //       const scheduledDateTime = new Date(
+    //         parseInt(year),
+    //         parseInt(month) - 1,
+    //         parseInt(day),
+    //         hour24,
+    //         parseInt(minutes)
+    //       );
           
-          scheduledAt = scheduledDateTime.toISOString();
-        } catch (error) {
-          console.error('❌ Final Review - Date parsing error:', error);
-          scheduledAt = new Date().toISOString();
-        }
-      } else {
-        // For life moments and manual delivery, use current timestamp as placeholder
-        scheduledAt = new Date().toISOString();
-      }
+    //       scheduledAt = scheduledDateTime.toISOString();
+    //     } catch (error) {
+    //       console.error('❌ Final Review - Date parsing error:', error);
+    //       scheduledAt = new Date().toISOString();
+    //     }
+    //   } else {
+    //     // For life moments and manual delivery, use current timestamp as placeholder
+    //     scheduledAt = new Date().toISOString();
+    //   }
 
-      console.log('📅 Final Review - Scheduled at:', scheduledAt);
+    //   console.log('📅 Final Review - Scheduled at:', scheduledAt);
 
-      // Insert message into messages table
-      const messageData = {
-        director_id: directorId,
-        actor_id: childId,
-        message_type: messageType,
-        content: messageType === 'text' ? (promptText as string) : null,
-        scheduled_at: scheduledAt,
-        auth_user_id: authUserId,
-      };
+    //   // Insert message into messages table
+    //   const messageData = {
+    //     director_id: directorId,
+    //     actor_id: childId,
+    //     message_type: messageType,
+    //     content: messageType === 'text' ? (promptText as string) : null,
+    //     scheduled_at: scheduledAt,
+    //     auth_user_id: authUserId,
+    //   };
 
-      console.log('📝 Final Review - Message data to insert:', messageData);
+    //   console.log('📝 Final Review - Message data to insert:', messageData);
 
-      const { data: insertedMessage, error: messageError } = await supabase
-        .from('messages')
-        .insert(messageData)
-        .select()
-        .single();
+    //   const { data: insertedMessage, error: messageError } = await supabase
+    //     .from('messages')
+    //     .insert(messageData)
+    //     .select()
+    //     .single();
 
-      if (messageError) {
-        console.error('❌ Final Review - Message insertion error:', messageError);
-        Alert.alert('Error', 'Failed to save message. Please try again.');
-        return;
-      }
+    //   if (messageError) {
+    //     console.error('❌ Final Review - Message insertion error:', messageError);
+    //     Alert.alert('Error', 'Failed to save message. Please try again.');
+    //     return;
+    //   }
 
-      console.log('✅ Final Review - Message inserted successfully:', insertedMessage);
-      const messageId = insertedMessage.id;
+    //   console.log('✅ Final Review - Message inserted successfully:', insertedMessage);
+    //   const messageId = insertedMessage.id;
 
-      // Insert media if applicable
-      if (recordedUri && (messageType === 'audio' || messageType === 'video' || messageType === 'image')) {
-        const mediaData = {
-          message_id: messageId,
-          media_url: recordedUri as string,
-          media_type: messageType,
-        };
+    //   // Insert media if applicable
+    //   if (recordedUri && (messageType === 'audio' || messageType === 'video' || messageType === 'image')) {
+    //     const mediaData = {
+    //       message_id: messageId,
+    //       media_url: recordedUri as string,
+    //       media_type: messageType,
+    //     };
 
-        console.log('📎 Final Review - Media data to insert:', mediaData);
+    //     console.log('📎 Final Review - Media data to insert:', mediaData);
 
-        const { error: mediaError } = await supabase
-          .from('message_media')
-          .insert(mediaData);
+    //     const { error: mediaError } = await supabase
+    //       .from('message_media')
+    //       .insert(mediaData);
 
-        if (mediaError) {
-          console.error('❌ Final Review - Media insertion error:', mediaError);
-          // Don't fail the entire process for media errors
-          console.log('⚠️ Final Review - Continuing despite media error');
-        } else {
-          console.log('✅ Final Review - Media inserted successfully');
-        }
-      }
+    //     if (mediaError) {
+    //       console.error('❌ Final Review - Media insertion error:', mediaError);
+    //       // Don't fail the entire process for media errors
+    //       console.log('⚠️ Final Review - Continuing despite media error');
+    //     } else {
+    //       console.log('✅ Final Review - Media inserted successfully');
+    //     }
+    //   }
 
-      // Insert categories if applicable
-      if (tags && typeof tags === 'string') {
-        const tagIds = tags.split(',').filter(id => id.trim());
-        if (tagIds.length > 0) {
-          const categoryData = tagIds.map(categoryId => ({
-            message_id: messageId,
-            category_id: categoryId.trim(),
-          }));
+    //   // Insert categories if applicable
+    //   if (tags && typeof tags === 'string') {
+    //     const tagIds = tags.split(',').filter(id => id.trim());
+    //     if (tagIds.length > 0) {
+    //       const categoryData = tagIds.map(categoryId => ({
+    //         message_id: messageId,
+    //         category_id: categoryId.trim(),
+    //       }));
 
-          console.log('🏷️ Final Review - Category data to insert:', categoryData);
+    //       console.log('🏷️ Final Review - Category data to insert:', categoryData);
 
-          const { error: categoryError } = await supabase
-            .from('message_categories')
-            .insert(categoryData);
+    //       const { error: categoryError } = await supabase
+    //         .from('message_categories')
+    //         .insert(categoryData);
 
-          if (categoryError) {
-            console.error('❌ Final Review - Category insertion error:', categoryError);
-            // Don't fail the entire process for category errors
-            console.log('⚠️ Final Review - Continuing despite category error');
-          } else {
-            console.log('✅ Final Review - Categories inserted successfully');
-          }
-        }
-      }
+    //       if (categoryError) {
+    //         console.error('❌ Final Review - Category insertion error:', categoryError);
+    //         // Don't fail the entire process for category errors
+    //         console.log('⚠️ Final Review - Continuing despite category error');
+    //       } else {
+    //         console.log('✅ Final Review - Categories inserted successfully');
+    //       }
+    //     }
+    //   }
 
-      console.log('🎉 Final Review - Message scheduling completed successfully');
+    //   console.log('🎉 Final Review - Message scheduling completed successfully');
 
-      // Show success message and navigate
-      Alert.alert(
-        'Message Scheduled!',
-        'Your message has been saved and will be delivered at the right moment.',
-        [
-          {
-            text: 'View My Messages',
-            onPress: () => router.push('/(tabs)/vault'),
-          },
-          {
-            text: 'Go Home',
-            onPress: () => router.push('/(tabs)'),
-            style: 'default',
-          },
-        ]
-      );
+    //   // Show success message and navigate
+    //   Alert.alert(
+    //     'Message Scheduled!',
+    //     'Your message has been saved and will be delivered at the right moment.',
+    //     [
+    //       {
+    //         text: 'View My Messages',
+    //         onPress: () => router.push('/(tabs)/vault'),
+    //       },
+    //       {
+    //         text: 'Go Home',
+    //         onPress: () => router.push('/(tabs)'),
+    //         style: 'default',
+    //       },
+    //     ]
+    //   );
 
-    } catch (error) {
-      console.error('💥 Final Review - Unexpected error during scheduling:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
+    // } catch (error) {
+    //   console.error('💥 Final Review - Unexpected error during scheduling:', error);
+    //   Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    // } finally {
+    //   setIsSaving(false);
+    // }
   };
 
   if (isLoading) {

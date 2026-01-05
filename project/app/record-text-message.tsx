@@ -17,7 +17,7 @@ import {
 import { ArrowLeft, Edit3, ArrowRight, ImageIcon, X, Camera, Image as ImageIconSolid } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 
 interface Child {
   id: string;
@@ -68,28 +68,28 @@ export default function RecordTextMessageScreen() {
   }, []);
 
   const fetchChildData = async () => {
-    try {
-      setIsLoading(true);
+    // try {
+    //   setIsLoading(true);
       
-      const { data, error } = await supabase
-        .from('actors')
-        .select('id, first_name, last_name, date_of_birth, username')
-        .eq('id', childId)
-        .single();
+    //   const { data, error } = await supabase
+    //     .from('actors')
+    //     .select('id, first_name, last_name, date_of_birth, username')
+    //     .eq('id', childId)
+    //     .single();
 
-      if (error) {
-        console.error('Error fetching child:', error);
-        Alert.alert('Error', 'Failed to load child data. Please try again.');
-        return;
-      }
+    //   if (error) {
+    //     console.error('Error fetching child:', error);
+    //     Alert.alert('Error', 'Failed to load child data. Please try again.');
+    //     return;
+    //   }
 
-      setChild(data);
-    } catch (error) {
-      console.error('Unexpected error fetching child:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    //   setChild(data);
+    // } catch (error) {
+    //   console.error('Unexpected error fetching child:', error);
+    //   Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const checkPermissions = async () => {

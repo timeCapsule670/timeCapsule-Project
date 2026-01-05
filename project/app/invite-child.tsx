@@ -15,7 +15,7 @@ import { ArrowLeft, Copy, Mail, MessageSquare, RotateCcw, ArrowRight, Trash2 } f
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 import { apiService, InviteCode } from '@/libs/api';
 
 export default function InviteChildScreen() {

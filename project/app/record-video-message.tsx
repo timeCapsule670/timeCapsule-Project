@@ -17,7 +17,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 
 interface Child {
   id: string;
@@ -120,28 +120,28 @@ export default function RecordVideoMessageScreen() {
   }, [recordedUri, player]);
 
   const fetchChildData = async () => {
-    try {
-      setIsLoading(true);
+    // try {
+    //   setIsLoading(true);
       
-      const { data, error } = await supabase
-        .from('actors')
-        .select('id, first_name, last_name, date_of_birth, username')
-        .eq('id', childId)
-        .single();
+    //   const { data, error } = await supabase
+    //     .from('actors')
+    //     .select('id, first_name, last_name, date_of_birth, username')
+    //     .eq('id', childId)
+    //     .single();
 
-      if (error) {
-        console.error('Error fetching child:', error);
-        Alert.alert('Error', 'Failed to load child data. Please try again.');
-        return;
-      }
+    //   if (error) {
+    //     console.error('Error fetching child:', error);
+    //     Alert.alert('Error', 'Failed to load child data. Please try again.');
+    //     return;
+    //   }
 
-      setChild(data);
-    } catch (error) {
-      console.error('Unexpected error fetching child:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    //   setChild(data);
+    // } catch (error) {
+    //   console.error('Unexpected error fetching child:', error);
+    //   Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const calculateAge = (dateOfBirth: string): number => {
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backdropFilter: 'blur(10px)',
+    // backdropFilter: 'blur(10px)',
   },
   childOverlayAvatar: {
     width: 50,

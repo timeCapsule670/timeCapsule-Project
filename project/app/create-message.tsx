@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { ArrowLeft, Video, Mic, MessageSquare, Check } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 
 interface Child {
   id: string;
@@ -75,78 +75,78 @@ export default function CreateMessageScreen() {
   }, [promptTags]);
 
   const fetchChildren = async () => {
-    try {
-      setIsLoading(true);
+    // try {
+    //   setIsLoading(true);
       
-      // Get the current authenticated user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    //   // Get the current authenticated user
+    //   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session?.user) {
-        console.error('Authentication error:', sessionError);
-        Alert.alert('Authentication Error', 'Please sign in again to continue.');
-        return;
-      }
+    //   if (sessionError || !session?.user) {
+    //     console.error('Authentication error:', sessionError);
+    //     Alert.alert('Authentication Error', 'Please sign in again to continue.');
+    //     return;
+    //   }
 
-      const authUserId = session.user.id;
+    //   const authUserId = session.user.id;
 
-      // Get the director record for the current user
-      const { data: directorData, error: directorError } = await supabase
-        .from('directors')
-        .select('id')
-        .eq('auth_user_id', authUserId)
-        .single();
+    //   // Get the director record for the current user
+    //   const { data: directorData, error: directorError } = await supabase
+    //     .from('directors')
+    //     .select('id')
+    //     .eq('auth_user_id', authUserId)
+    //     .single();
 
-      if (directorError || !directorData) {
-        console.error('Error fetching director:', directorError);
-        Alert.alert('Error', 'Could not find your profile. Please try again.');
-        return;
-      }
+    //   if (directorError || !directorData) {
+    //     console.error('Error fetching director:', directorError);
+    //     Alert.alert('Error', 'Could not find your profile. Please try again.');
+    //     return;
+    //   }
 
-      const directorId = directorData.id;
+    //   const directorId = directorData.id;
 
-      // Get the actor IDs associated with this director
-      const { data: relationshipData, error: relationshipError } = await supabase
-        .from('director_actor')
-        .select('actor_id')
-        .eq('director_id', directorId);
+    //   // Get the actor IDs associated with this director
+    //   const { data: relationshipData, error: relationshipError } = await supabase
+    //     .from('director_actor')
+    //     .select('actor_id')
+    //     .eq('director_id', directorId);
 
-      if (relationshipError) {
-        console.error('Error fetching director-actor relationships:', relationshipError);
-        Alert.alert('Error', 'Failed to load your children. Please try again.');
-        return;
-      }
+    //   if (relationshipError) {
+    //     console.error('Error fetching director-actor relationships:', relationshipError);
+    //     Alert.alert('Error', 'Failed to load your children. Please try again.');
+    //     return;
+    //   }
 
-      if (!relationshipData || relationshipData.length === 0) {
-        console.log('No children found for this director');
-        setChildren([]);
-        return;
-      }
+    //   if (!relationshipData || relationshipData.length === 0) {
+    //     console.log('No children found for this director');
+    //     setChildren([]);
+    //     return;
+    //   }
 
-      // Extract actor IDs
-      const actorIds = relationshipData.map(rel => rel.actor_id);
+    //   // Extract actor IDs
+    //   const actorIds = relationshipData.map(rel => rel.actor_id);
 
-      // Fetch the detailed actor (children) data
-      const { data: childrenData, error: childrenError } = await supabase
-        .from('actors')
-        .select('id, first_name, last_name, date_of_birth, username')
-        .in('id', actorIds)
-        .order('first_name');
+    //   // Fetch the detailed actor (children) data
+    //   const { data: childrenData, error: childrenError } = await supabase
+    //     .from('actors')
+    //     .select('id, first_name, last_name, date_of_birth, username')
+    //     .in('id', actorIds)
+    //     .order('first_name');
 
-      if (childrenError) {
-        console.error('Error fetching children data:', childrenError);
-        Alert.alert('Error', 'Failed to load children details. Please try again.');
-        return;
-      }
+    //   if (childrenError) {
+    //     console.error('Error fetching children data:', childrenError);
+    //     Alert.alert('Error', 'Failed to load children details. Please try again.');
+    //     return;
+    //   }
 
-      console.log('Successfully fetched children:', childrenData);
-      setChildren(childrenData || []);
+    //   console.log('Successfully fetched children:', childrenData);
+    //   setChildren(childrenData || []);
       
-    } catch (error) {
-      console.error('Unexpected error fetching children:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    // } catch (error) {
+    //   console.error('Unexpected error fetching children:', error);
+    //   Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const calculateAge = (dateOfBirth: string): number => {

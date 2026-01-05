@@ -17,7 +17,7 @@ import { ArrowLeft, Camera, Upload, X, Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 
 // Avatar options for users who skip photo upload
 const avatarOptions = [
@@ -196,72 +196,72 @@ export default function UploadProfilePictureScreen() {
   };
 
   const uploadImageToSupabase = async (imageUri: string): Promise<string | null> => {
-    try {
-      // Read the image file as base64
-      const base64 = await FileSystem.readAsStringAsync(imageUri, {
-        encoding: 'base64',
-      });
+    // try {
+    //   // Read the image file as base64
+    //   const base64 = await FileSystem.readAsStringAsync(imageUri, {
+    //     encoding: 'base64',
+    //   });
 
-      // Convert base64 to Uint8Array
-      const byteCharacters = atob(base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
+    //   // Convert base64 to Uint8Array
+    //   const byteCharacters = atob(base64);
+    //   const byteNumbers = new Array(byteCharacters.length);
+    //   for (let i = 0; i < byteCharacters.length; i++) {
+    //     byteNumbers[i] = byteCharacters.charCodeAt(i);
+    //   }
+    //   const byteArray = new Uint8Array(byteNumbers);
 
-      // Generate unique filename using timestamp
-      const fileExt = 'jpg';
-      const fileName = `profile-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+    //   // Generate unique filename using timestamp
+    //   const fileExt = 'jpg';
+    //   const fileName = `profile-${Date.now()}.${fileExt}`;
+    //   const filePath = `avatars/${fileName}`;
 
-      // Upload to Supabase Storage without authentication
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, byteArray, {
-          contentType: 'image/jpeg',
-          upsert: true,
-        });
+    //   // Upload to Supabase Storage without authentication
+    //   const { data: uploadData, error: uploadError } = await supabase.storage
+    //     .from('avatars')
+    //     .upload(filePath, byteArray, {
+    //       contentType: 'image/jpeg',
+    //       upsert: true,
+    //     });
 
-      if (uploadError) {
-        throw uploadError;
-      }
+    //   if (uploadError) {
+    //     throw uploadError;
+    //   }
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+    //   // Get public URL
+    //   const { data: urlData } = supabase.storage
+    //     .from('avatars')
+    //     .getPublicUrl(filePath);
 
-      return urlData.publicUrl;
-    } catch (error) {
-      console.error('Error uploading image:', error);
+    //   return urlData.publicUrl;
+    // } catch (error) {
+    //   console.error('Error uploading image:', error);
       return null;
-    }
+    // }
   };
 
   const saveProfilePicture = async (imageUrl: string) => {
-    try {
-      // Get current user
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) {
-        throw new Error('User not authenticated');
-      }
+    // try {
+    //   // Get current user
+    //   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    //   if (sessionError || !session?.user) {
+    //     throw new Error('User not authenticated');
+    //   }
 
-      // Update director profile with image URL
-      const { error: updateError } = await supabase
-        .from('directors')
-        .update({ profile_picture_url: imageUrl })
-        .eq('auth_user_id', session.user.id);
+    //   // Update director profile with image URL
+    //   const { error: updateError } = await supabase
+    //     .from('directors')
+    //     .update({ profile_picture_url: imageUrl })
+    //     .eq('auth_user_id', session.user.id);
 
-      if (updateError) {
-        throw updateError;
-      }
+    //   if (updateError) {
+    //     throw updateError;
+    //   }
 
-      console.log('Profile picture saved successfully');
-    } catch (error) {
-      console.error('Error saving profile picture:', error);
-      throw error;
-    }
+    //   console.log('Profile picture saved successfully');
+    // } catch (error) {
+    //   console.error('Error saving profile picture:', error);
+    //   throw error;
+    // }
   };
 
   const handleNext = async () => {

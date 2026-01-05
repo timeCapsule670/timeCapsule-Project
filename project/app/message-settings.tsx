@@ -30,7 +30,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEvent } from 'expo';
 import { useAudioPlayer } from 'expo-audio';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
 
 interface Child {
   id: string;
@@ -131,51 +131,51 @@ export default function MessageSettingsScreen() {
   }, [recordedUri, messageType]);
 
   const fetchData = async () => {
-    try {
-      setIsLoading(true);
+    // try {
+    //   setIsLoading(true);
 
-      // Fetch child data
-      const { data: childData, error: childError } = await supabase
-        .from('actors')
-        .select('id, first_name, last_name, date_of_birth, username')
-        .eq('id', childId)
-        .single();
+    //   // Fetch child data
+    //   const { data: childData, error: childError } = await supabase
+    //     .from('actors')
+    //     .select('id, first_name, last_name, date_of_birth, username')
+    //     .eq('id', childId)
+    //     .single();
 
-      if (childError) {
-        console.error('Error fetching child:', childError);
-        Alert.alert('Error', 'Failed to load child data. Please try again.');
-        return;
-      }
+    //   if (childError) {
+    //     console.error('Error fetching child:', childError);
+    //     Alert.alert('Error', 'Failed to load child data. Please try again.');
+    //     return;
+    //   }
 
-      setChild(childData);
+    //   setChild(childData);
 
-      // Fetch categories for tags
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('id, name')
-        .order('name');
+    //   // Fetch categories for tags
+    //   const { data: categoriesData, error: categoriesError } = await supabase
+    //     .from('categories')
+    //     .select('id, name')
+    //     .order('name');
 
-      if (categoriesError) {
-        console.error('Error fetching categories:', categoriesError);
-        Alert.alert('Error', 'Failed to load categories. Please try again.');
-        return;
-      }
+    //   if (categoriesError) {
+    //     console.error('Error fetching categories:', categoriesError);
+    //     Alert.alert('Error', 'Failed to load categories. Please try again.');
+    //     return;
+    //   }
 
-      // Transform categories with emojis
-      const transformedCategories: Category[] = (categoriesData || []).map(category => ({
-        id: category.id,
-        name: category.name,
-        emoji: getCategoryEmoji(category.name),
-      }));
+    //   // Transform categories with emojis
+    //   const transformedCategories: Category[] = (categoriesData || []).map(category => ({
+    //     id: category.id,
+    //     name: category.name,
+    //     emoji: getCategoryEmoji(category.name),
+    //   }));
 
-      setCategories(transformedCategories);
+    //   setCategories(transformedCategories);
 
-    } catch (error) {
-      console.error('Unexpected error fetching data:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    // } catch (error) {
+    //   console.error('Unexpected error fetching data:', error);
+    //   Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const calculateAge = (dateOfBirth: string): number => {

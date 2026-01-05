@@ -14,9 +14,15 @@ import {
 } from 'react-native';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/libs/superbase';
+// import { supabase } from '@/libs/superbase';
+import * as AuthSession from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
+import { authConfig } from '@/config/auth-config';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function IndexScreen() {
+  
   const router = useRouter();
   const slideAnim = useRef(new Animated.Value(50)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -84,89 +90,86 @@ export default function IndexScreen() {
     }
   };
 
-  const handleSignIn = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    
-    try {
-      // Attempt to sign in with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (error) {
-        console.error('Supabase sign-in error:', error);
-        
-        // Check if the error is due to user not found
-        if (error.message.includes('Invalid login credentials') || 
-            error.message.includes('Email not confirmed') ||
-            error.message.includes('User not found')) {
-          
-          // Navigate to create account with pre-filled data
-          router.push({
-            pathname: '/create-account',
-            params: {
-              email: formData.email,
-              password: formData.password,
-            }
-          });
-          return;
-        }
-        
-        setErrors(prev => ({
-          ...prev,
-          general: error.message || 'Invalid email or password. Please try again.',
-        }));
-        return;
+  
+    const handleSignIn = async () => {
+      // if (!validateForm()) {
+      //   return;
+      // }
+  
+      console.log('Attempting to sign in with email:', formData.email);
+  
+      try {
+        const { accessToken } = await signIn();
+        console.log("Access token acquired");
+        setIsLoading(false);
+        // Proceed with authenticated requests using the access token
+        Alert.alert('Login Successful', 'You have been signed in successfully.'); 
+      } catch (err) {
+        console.error("Login failed", err);
+        setErrors(prev => ({ ...prev, general: 'Sign-in failed. Please check your credentials and try again.' }));
+        setIsLoading(false);
       }
-
-      if (data.user) {
-        // Get the director profile for this user
-        const { data: directorData, error: directorError } = await supabase
-          .from('directors')
-          .select('first_name')
-          .eq('auth_user_id', data.user.id)
-          .single();
-
-        if (directorError) {
-          console.error('Error fetching director profile:', directorError);
-          // Still proceed to home, but without the first name
-          router.push({
-            pathname: '/(tabs)',
-            params: { firstName: 'there' }
-          });
-          return;
-        }
-
-        // Extract the user's first name from the director profile
-        const firstName = directorData?.first_name || 'there';
-        
-        // Navigate to home tab with the user's name as a parameter
-        router.push({
-          pathname: '/(tabs)',
-          params: { firstName }
-        });
-      } else {
-        setErrors(prev => ({
-          ...prev,
-          general: 'Login failed. Please try again.',
-        }));
-      }
-
-    } catch (error) {
-      console.error('Unexpected error during sign-in:', error);
-      setErrors(prev => ({
-        ...prev,
-        general: 'Network error. Please check your connection and try again.',
-      }));
-    } finally {
-      setIsLoading(false);
+    };
+  
+    async function signIn(): Promise<{
+    accessToken: string;
+    idToken?: string;
+    expiresIn: number;
+  }> {
+    console.info("🔐 Starting sign-in flow");
+  
+    const request = new AuthSession.AuthRequest({
+      clientId: authConfig.clientId,
+      scopes: authConfig.scopes,
+      redirectUri: authConfig.redirectUri,
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
+    });
+  
+    console.debug("📡 Building auth request");
+    await request.makeAuthUrlAsync(authConfig.discovery);
+  
+    console.info("🌐 Opening system browser for authentication");
+    const result = await request.promptAsync(authConfig.discovery);
+  
+    if (result.type !== "success") {
+      const message = `Authentication cancelled or failed: ${result.type}`;
+      console.warn(message);
+      throw new Error(message);
     }
-  };
+  
+    console.info("✅ Authorization code received");
+  
+    if (!request.codeVerifier) {
+      throw new Error("Missing PKCE code verifier");
+    }
+  
+    console.info("🔁 Exchanging code for tokens");
+  
+    const tokenResponse = await AuthSession.exchangeCodeAsync(
+      {
+        clientId: authConfig.clientId,
+        code: result.params.code,
+        redirectUri: authConfig.redirectUri,
+        extraParams: {
+          code_verifier: request.codeVerifier,
+        },
+      },
+      authConfig.discovery
+    );
+  
+    console.info("🎉 Sign-in successful");
+  
+    if (!tokenResponse.accessToken) {
+      throw new Error("Access token missing from token response");
+    }
+  
+    return {
+      accessToken: tokenResponse.accessToken,
+      idToken: tokenResponse.idToken,
+      expiresIn: tokenResponse.expiresIn ?? 0,
+    };
+  }
 
   const handleSignUp = () => {
     router.push('/create-account');
@@ -230,57 +233,6 @@ export default function IndexScreen() {
                 <Text style={styles.generalErrorText}>{errors.general}</Text>
               </View>
             ) : null}
-
-            {/* Email Input */}
-            <View style={styles.inputContainer}>
-              <View style={[styles.inputWrapper, errors.email ? styles.inputError : null]}>
-                <Mail size={20} color="#64748B" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Email Address"
-                  placeholderTextColor="#94A3B8"
-                  value={formData.email}
-                  onChangeText={(value) => handleInputChange('email', value)}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-              {errors.email ? (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              ) : null}
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <View style={[styles.inputWrapper, errors.password ? styles.inputError : null]}>
-                <Lock size={20} color="#64748B" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Password"
-                  placeholderTextColor="#94A3B8"
-                  value={formData.password}
-                  onChangeText={(value) => handleInputChange('password', value)}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                  activeOpacity={0.7}
-                >
-                  {showPassword ? (
-                    <EyeOff size={20} color="#64748B" />
-                  ) : (
-                    <Eye size={20} color="#64748B" />
-                  )}
-                </TouchableOpacity>
-              </View>
-              {errors.password ? (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              ) : null}
-            </View>
 
             {/* Sign In Button */}
             <TouchableOpacity
