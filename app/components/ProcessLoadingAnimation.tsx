@@ -104,7 +104,7 @@ export default function ProcessLoadingAnimation({
   };
 
   return (
-    <View className="flex-1 bg-white items-center justify-center">
+    <View style={{ flex: 1 }} className="flex-1 bg-white items-center justify-center">
       <Animated.View
         className="items-center justify-center w-full px-10"
         style={{ opacity: fadeAnim }}

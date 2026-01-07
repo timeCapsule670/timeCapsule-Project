@@ -112,15 +112,15 @@ export default function Pricing() {
   };
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView style={{ flex: 1 }}>
       <LinearGradient
         colors={["#d1e2f9", "#c28fef"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
         <ScrollView
-          className="flex-1"
+          style={{ flex: 1 }}
           contentContainerStyle={{ padding: 20, paddingTop: 54, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
@@ -146,8 +146,7 @@ export default function Pricing() {
               <TouchableOpacity
                 onPress={() => setBillingPeriod("month")}
                 activeOpacity={0.8}
-                className={`flex-1 py-4 px-4 rounded-[16px] ${billingPeriod === "month" ? "" : ""
-                  }`}
+                className={`flex-1 py-4 px-4 rounded-[16px] ${billingPeriod === "month" ? "" : ""}`}
               >
                 <Text
                   style={{ fontFamily: "Poppins_400Regular" }}
@@ -160,8 +159,7 @@ export default function Pricing() {
               <TouchableOpacity
                 onPress={() => setBillingPeriod("year")}
                 activeOpacity={0.8}
-                className={`flex-1 py-4 px-4 rounded-[16px] ${billingPeriod === "year" ? "bg-[#4a5b87]" : ""
-                  }`}
+                className={`flex-1 py-4 px-4 rounded-[16px] ${billingPeriod === "year" ? "bg-[#4a5b87]" : ""}`}
               >
                 <Text
                   style={{ fontFamily: "Poppins_400Regular" }}

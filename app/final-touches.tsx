@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { profileIllustration } from "./_constants/assets";
+import { profileIllustration } from "../constants/assets";
 
 export default function FinalTouches() {
   const router = useRouter();

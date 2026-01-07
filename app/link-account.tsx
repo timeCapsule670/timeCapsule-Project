@@ -16,12 +16,12 @@ export default function LinkAccount() {
 
   const handleSkip = () => {
     // Navigate to next screen (home/dashboard)
-    // router.replace("/home");
-    console.log("Skip linking pressed");
+     router.replace("/push-notifications");
+   
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1 }} className="bg-white">
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 40 }}
@@ -34,7 +34,7 @@ export default function LinkAccount() {
               colors={["#c28fef", "#1d6ee1"]}
               start={{ x: 0, y: 0.19 }}
               end={{ x: 0, y: 1.74 }}
-              className="w-[60px] h-[60px] items-center justify-center"
+              className="w-[80px] h-[80px] p-4 items-center justify-center"
               style={{
                 borderRadius: 30,
                 transform: [{ rotate: "45deg" }],

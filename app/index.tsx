@@ -20,7 +20,7 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView style={{ flex: 1 }}>
       <Hero />
     </SafeAreaView>
   );

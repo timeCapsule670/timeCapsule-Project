@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { cakeIcon, carIcon, openBookIcon, schoolIcon, trophyIcon } from "./_constants/assets";
+import { cakeIcon, carIcon, openBookIcon, schoolIcon, trophyIcon } from "../constants/assets";
 
 type SchedulingMethod = "date-time" | "open-when" | "send-now" | "save-later";
 

@@ -14,7 +14,7 @@ export default function SuccessConfirmation() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1 }} className="bg-white">
       <ScrollView 
         className="flex-1" 
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 40, paddingBottom: 40 }}

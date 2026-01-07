@@ -1,6 +1,6 @@
 import React from "react";
 import { useRouter } from "expo-router";
-import { onboarding5Bg } from "./_constants/assets";
+import { onboarding5Bg } from "../constants/assets";
 import OnboardingLayout from "./components/OnboardingLayout";
 
 export default function Onboarding5() {

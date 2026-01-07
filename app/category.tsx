@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface CategoryOption {
   id: string;
@@ -73,7 +73,7 @@ export default function Category() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1 }} className="bg-white">
       {/* Header */}
       <View className="bg-white border-b border-[#f3f4f6] pt-10 pb-4 px-4">
         <View className="flex-row items-center gap-[42px] px-2">
@@ -116,9 +116,7 @@ export default function Category() {
                   key={category.id}
                   onPress={() => toggleCategory(category.id)}
                   activeOpacity={0.7}
-                  className={`rounded-[8px] px-4 py-4 flex-row items-center gap-4 ${
-                    isSelected ? "bg-white" : "bg-[#f5f5f5]"
-                  }`}
+                  className={`rounded-[8px] px-4 py-4 flex-row items-center gap-4 ${isSelected ? "bg-white" : "bg-[#f5f5f5]"}`}
                   style={{
                     borderWidth: 1,
                     borderColor: isSelected ? category.iconColor : "#e0e0e0",

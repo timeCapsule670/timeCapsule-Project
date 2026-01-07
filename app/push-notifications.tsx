@@ -87,7 +87,7 @@ export default function PushNotificationsSetup() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1 }} className="bg-white">
       {/* Header */}
       <View className="px-4 pt-10 pb-4">
         <View className="flex-row items-center justify-between mb-4">

@@ -43,7 +43,7 @@ export default function OnboardingLayout({
   };
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView style={{ flex: 1 }}>
       <ImageBackground
         source={{ uri: backgroundImage }}
         resizeMode="cover"

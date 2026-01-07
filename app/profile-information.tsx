@@ -7,7 +7,7 @@ import { Alert, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, 
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   profileIllustration,
-} from "./_constants/assets";
+} from "../constants/assets";
 
 export default function ProfileInformation() {
   const router = useRouter();
@@ -91,7 +91,7 @@ export default function ProfileInformation() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1 }} className="bg-white">
       {/* Header */}
       <View className="bg-white border-b border-[#f3f4f6] pt-10 pb-4 px-4">
         <View className="flex-row items-center gap-[42px] px-2">

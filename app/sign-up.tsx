@@ -18,7 +18,7 @@ export default function SignUp() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1 }} className="bg-white">
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         className="flex-1"

@@ -1,14 +1,13 @@
 import { useRouter } from "expo-router";
 import React from "react";
 import { ImageBackground, Text, TouchableOpacity, View } from "react-native";
-import { heroBg } from "../_constants/assets";
 
 export default function Hero() {
   const router = useRouter();
 
   return (
     <ImageBackground
-      source={{ uri: heroBg }}
+      source={{ uri: "https://res.cloudinary.com/dhagsapm2/image/upload/v1767792912/mom-and-child_t27uoe.png" }}
       resizeMode="cover"
       className="flex-1 w-full"
     >

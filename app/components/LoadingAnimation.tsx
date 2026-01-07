@@ -139,7 +139,7 @@ export default function LoadingAnimation({
   };
 
   return (
-    <View className="flex-1 bg-white items-center justify-center">
+    <View style={{ flex: 1 }} className="bg-white items-center justify-center">
       <Animated.View
         className="items-center justify-center"
         style={{ opacity: fadeAnim }}
