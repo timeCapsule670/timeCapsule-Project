@@ -1,26 +1,29 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { profileIllustration } from "../constants/assets";
+import { backArrowIcon, profileIllustration } from "../constants/assets";
 
 export default function FinalTouches() {
   const router = useRouter();
   const { type, uri } = useLocalSearchParams<{ type: string; uri: string }>();
-  
+
   const [title, setTitle] = useState("");
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
+  const [photoUri, setPhotoUri] = useState<string | null>(uri || null);
+
+  const MAX_CHARS = 500;
+
+  useEffect(() => {
+    if (uri && (type === "image" || !type)) {
+      setPhotoUri(uri);
+    }
+  }, [uri, type]);
 
   const handleBack = () => {
-    // @ts-ignore
-    const canGoBack = typeof router.canGoBack === "function" ? (router as any).canGoBack() : false;
-    if (canGoBack) {
-      router.back();
-    } else {
-      router.replace("/summary");
-    }
+    router.back();
   };
 
   const handleTakePhoto = async () => {
@@ -66,20 +69,25 @@ export default function FinalTouches() {
     }
   };
 
+  const handleRemovePhoto = () => {
+    setPhotoUri(null);
+  };
+
   const handleNext = () => {
     if (!title.trim()) {
       Alert.alert("Title Required", "Please give your message a title before proceeding.");
       return;
     }
-    
+
     // Navigate to scheduling page
     router.push({
       pathname: "/schedule-message",
-      params: { 
-        type: type || "", 
-        uri: uri || "", 
-        title, 
-        photoUri: photoUri || "" 
+      params: {
+        type: type || "",
+        uri: uri || "",
+        title,
+        photoUri: photoUri || "",
+        description
       },
     });
   };
@@ -90,118 +98,157 @@ export default function FinalTouches() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1 }} className="bg-white">
       {/* Header */}
-      <View className="px-4 pt-10 pb-4 border-b border-[#f3f4f6]">
+      <View className="px-5 pt-4 pb-4">
         <View className="flex-row items-center justify-between mb-4">
           <TouchableOpacity
             onPress={handleBack}
             activeOpacity={0.7}
-            className="w-6 h-6 justify-center items-center"
+            className="w-10 h-10 justify-center items-start"
           >
-            <Ionicons name="arrow-back" size={24} color="#777" />
+            <Image
+              source={{ uri: backArrowIcon }}
+              style={{ width: 24, height: 24 }}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
           <Text
             style={{ fontFamily: "Poppins_700Bold" }}
-            className="text-[#5a5a5a] text-[22px] leading-[33px] text-center flex-1 pr-6"
+            className="text-[#5a5a5a] text-[20px] text-center flex-1 pr-10"
           >
             Final Touches
           </Text>
         </View>
-        {/* Progress Bar (75%) */}
+
+        {/* Progress Bar (80%) */}
         <View className="bg-[#2f3a561a] h-[2px] rounded-full overflow-hidden w-full">
-          <View className="bg-[#2f3a56] h-full w-[75%]" />
+          <View className="bg-[#2f3a56] h-full w-[80%]" />
         </View>
       </View>
 
       <ScrollView
-        className="flex-1 px-4"
-        contentContainerStyle={{ paddingTop: 24, paddingBottom: 120 }}
+        className="flex-1"
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="gap-10">
+        <View className="gap-8">
           <Text
             style={{ fontFamily: "Poppins_400Regular" }}
-            className="text-[#606060] text-[16px] leading-[21px] text-center px-4"
+            className="text-[#606060] text-[16px] leading-[24px] text-center"
           >
             You just did something great! Now let’s add some finishing touches.
           </Text>
 
           {/* Title Section */}
-          <View className="gap-2">
+          <View className="gap-3">
             <Text
-              style={{ fontFamily: "Poppins_500Medium" }}
-              className="text-black text-[18px] leading-[27px]"
+              style={{ fontFamily: "Poppins_600SemiBold" }}
+              className="text-black text-[18px]"
             >
               Let’s give this message a title.
             </Text>
-            <View className="border border-[#79747e] rounded-[4px] h-[56px] px-4 justify-center">
+            <View className="border border-[#79747e] rounded-[10px] h-[58px] px-4 justify-center">
               <TextInput
                 value={title}
                 onChangeText={setTitle}
                 placeholder="Message Title"
                 placeholderTextColor="#49454f"
-                style={{ fontFamily: "Poppins_400Regular", fontSize: 16, color: "#49454f" }}
+                style={{ fontFamily: "Poppins_400Regular", fontSize: 16, color: "#1a1f36" }}
                 className="w-full"
               />
             </View>
           </View>
 
-          {/* Photo Section */}
+          {/* Photo Section (Conditional) */}
+          {type === "image" && (
+            <View className="gap-4">
+              <Text
+                style={{ fontFamily: "Poppins_600SemiBold" }}
+                className="text-black text-[18px]"
+              >
+                Make it unforgettable with a photo
+              </Text>
+
+              <View className="items-center">
+                {/* Image Preview */}
+                <View className="w-full aspect-[4/3] rounded-[24px] overflow-hidden bg-[#f5f5f5]">
+                  <Image
+                    source={{ uri: photoUri || profileIllustration }}
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode="cover"
+                  />
+                </View>
+
+                {/* Action Buttons */}
+                <View className="flex-row gap-4 mt-6">
+                  <TouchableOpacity
+                    onPress={handleChoosePhoto}
+                    activeOpacity={0.7}
+                    className="bg-[#ffe8c3] px-10 py-3 rounded-[10px]"
+                  >
+                    <Text
+                      style={{ fontFamily: "Poppins_600SemiBold" }}
+                      className="text-[#2f3a56] text-[16px]"
+                    >
+                      Replace
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleRemovePhoto}
+                    activeOpacity={0.7}
+                    className="bg-[#ffc1c1] px-10 py-3 rounded-[10px]"
+                  >
+                    <Text
+                      style={{ fontFamily: "Poppins_600SemiBold" }}
+                      className="text-[#2f3a56] text-[16px]"
+                    >
+                      Remove
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Description Section (Always visible) */}
           <View className="gap-4">
             <Text
-              style={{ fontFamily: "Poppins_500Medium" }}
-              className="text-black text-[18px] leading-[27px]"
+              style={{ fontFamily: "Poppins_600SemiBold" }}
+              className="text-black text-[18px]"
             >
-              Spice it up with a photo.
+              Add a few words to capture the moment.
             </Text>
-            <View className="gap-6">
-              {/* Image Preview */}
-              <View className="h-[232px] overflow-hidden items-center justify-center relative">
-                {photoUri ? (
-                  <Image
-                    source={{ uri: photoUri }}
-                    style={{ width: "150%", height: "150%" }}
-                    resizeMode="contain"
-                  />
-                ) : (
-                  <View className="items-center">
-                    <Image
-                      source={{ uri: profileIllustration }}
-                      style={{ width: 200, height: 200 }}
-                      resizeMode="contain"
-                    />
-                    
-                  </View>
-                )}
-              </View>
 
-              {/* Upload Buttons */}
-              <View className="flex-row gap-6 justify-center">
-                <TouchableOpacity
-                  onPress={handleTakePhoto}
-                  activeOpacity={0.7}
-                  className="bg-[#a3c4f3] rounded-[8px] px-6 py-3"
+            <View className="bg-[#f5f5f5] rounded-[24px] p-6">
+              <TextInput
+                value={description}
+                onChangeText={(text) => {
+                  if (text.length <= MAX_CHARS) {
+                    setDescription(text);
+                  }
+                }}
+                multiline
+                placeholder="Dear Future Child,
+                
+If you're having a tough day, I want you to know that I'm here for you..."
+                placeholderTextColor="#7a7a7a"
+                style={{
+                  fontFamily: "Poppins_400Regular",
+                  fontSize: 16,
+                  color: "#4a4a4a",
+                  textAlignVertical: "top",
+                  minHeight: 300,
+                }}
+                className="w-full"
+              />
+              <View className="flex-row justify-end mt-2">
+                <Text
+                  style={{ fontFamily: "Poppins_400Regular" }}
+                  className={`text-[12px] ${description.length >= MAX_CHARS ? "text-red-500" : "text-[#7a7a7a]"}`}
                 >
-                  <Text
-                    style={{ fontFamily: "Poppins_500Medium" }}
-                    className="text-black text-[16px]"
-                  >
-                    Take a Photo
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleChoosePhoto}
-                  activeOpacity={0.7}
-                  className="bg-[#a3c4f3] rounded-[8px] px-6 py-3"
-                >
-                  <Text
-                    style={{ fontFamily: "Poppins_500Medium" }}
-                    className="text-black text-[16px]"
-                  >
-                    Choose a Photo
-                  </Text>
-                </TouchableOpacity>
+                  {description.length}/{MAX_CHARS}
+                </Text>
               </View>
             </View>
           </View>
@@ -209,16 +256,15 @@ export default function FinalTouches() {
       </ScrollView>
 
       {/* Footer */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-4 py-6 gap-4">
+      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-5 py-6 gap-4">
         <TouchableOpacity
           onPress={handleNext}
           activeOpacity={0.9}
-          className={`h-[60px] rounded-[8px] flex-row items-center justify-center gap-4 w-full ${
-            title.trim() ? "bg-[#2f3a56]" : "bg-[#2f3a5680]"
-          }`}
+          className={`h-[60px] rounded-[12px] flex-row items-center justify-center gap-4 w-full ${title.trim() ? "bg-[#2f3a56]" : "bg-[#2f3a5680]"
+            }`}
         >
           <Text
-            style={{ fontFamily: "Poppins_500Medium" }}
+            style={{ fontFamily: "Poppins_600SemiBold" }}
             className="text-white text-[16px]"
           >
             Next, Schedule Message
@@ -228,7 +274,7 @@ export default function FinalTouches() {
 
         <TouchableOpacity onPress={handleSaveForLater} activeOpacity={0.7}>
           <Text
-            style={{ fontFamily: "Poppins_400Regular" }}
+            style={{ fontFamily: "Poppins_500Medium" }}
             className="text-[#6099ea] text-[16px] text-center"
           >
             Save For Later
@@ -238,4 +284,3 @@ export default function FinalTouches() {
     </SafeAreaView>
   );
 }
-

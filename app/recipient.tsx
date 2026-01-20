@@ -17,7 +17,8 @@ const mockRecipients: Recipient[] = [];
 
 export default function RecipientSelection() {
   const router = useRouter();
-  const { type } = useLocalSearchParams<{ type: string }>();
+  const params = useLocalSearchParams<{ messageType: string; type: string }>();
+  const messageType = params.messageType || params.type;
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
 
   const hasLinkedAccounts = mockRecipients.length > 0;
@@ -46,16 +47,25 @@ export default function RecipientSelection() {
 
   const handleNext = () => {
     if (selectedRecipientId) {
-      console.log("Recipient selected:", selectedRecipientId, "Message type:", type);
-      
-      if (type === "text") {
+      console.log("Recipient selected:", selectedRecipientId, "Message type:", messageType);
+
+      if (messageType === "text") {
         // Skip permissions for text messages
-        router.push("/create-text");
+        router.push({
+          pathname: "/create-text",
+          params: { prompt: params.prompt }
+        });
+      } else if (messageType === "image") {
+        // Navigate to upload image screen
+        router.push({
+          pathname: "/upload-image",
+          params: { messageType: "image" }
+        });
       } else {
         // Navigate to unified permissions page for other media types
         router.push({
           pathname: "/media-permissions",
-          params: { type: type || "video" }
+          params: { type: messageType || "video" }
         });
       }
     }
@@ -113,11 +123,10 @@ export default function RecipientSelection() {
             <TouchableOpacity
               onPress={() => setSelectedRecipientId("vault")}
               activeOpacity={0.8}
-              className={`rounded-[8px] px-[18px] py-[15px] flex-row items-center gap-4 ${
-                selectedRecipientId === "vault"
-                  ? "bg-[#1fc16b1a] border-[#1fc16b]"
-                  : "bg-[#1fc16b0d] border-[#1fc16b]"
-              }`}
+              className={`rounded-[8px] px-[18px] py-[15px] flex-row items-center gap-4 ${selectedRecipientId === "vault"
+                ? "bg-[#1fc16b1a] border-[#1fc16b]"
+                : "bg-[#1fc16b0d] border-[#1fc16b]"
+                }`}
               style={{
                 borderWidth: 2,
                 borderStyle: "dashed",
@@ -153,9 +162,8 @@ export default function RecipientSelection() {
                     key={recipient.id}
                     onPress={() => setSelectedRecipientId(recipient.id)}
                     activeOpacity={0.8}
-                    className={`h-[81px] rounded-[8px] px-[18px] py-[15px] flex-row items-center gap-4 ${
-                      isSelected ? "bg-white border-[#2f3a56]" : "bg-[#f5f5f5] border-transparent"
-                    }`}
+                    className={`h-[81px] rounded-[8px] px-[18px] py-[15px] flex-row items-center gap-4 ${isSelected ? "bg-white border-[#2f3a56]" : "bg-[#f5f5f5] border-transparent"
+                      }`}
                     style={{
                       borderWidth: isSelected ? 1.5 : 0,
                     }}
@@ -187,7 +195,7 @@ export default function RecipientSelection() {
               })
             ) : (
               /* No Linked Accounts State */
-              <View 
+              <View
                 className="bg-[#8a5fcc0d] border border-[#8a5fcc] border-dashed rounded-[8px] px-6 py-4 items-center gap-4"
               >
                 <View className="items-center gap-3">
@@ -197,14 +205,14 @@ export default function RecipientSelection() {
                   >
                     <Ionicons name="people" size={30} color="white" />
                   </LinearGradient>
-                  
+
                   <Text
                     style={{ fontFamily: "Poppins_500Medium" }}
                     className="text-black text-[18px] text-center"
                   >
                     No Linked accounts yet
                   </Text>
-                  
+
                   <Text
                     style={{ fontFamily: "Poppins_400Regular" }}
                     className="text-[#606060] text-[16px] text-center px-2"
@@ -220,7 +228,7 @@ export default function RecipientSelection() {
                   >
                     Linking unlocks:
                   </Text>
-                  
+
                   <View className="gap-4">
                     {/* Feature 1 */}
                     <View className="flex-row items-center gap-3">
@@ -287,15 +295,14 @@ export default function RecipientSelection() {
           onPress={handleNext}
           activeOpacity={0.9}
           disabled={!selectedRecipientId}
-          className={`h-[60px] rounded-[8px] flex-row items-center justify-center gap-4 w-full ${
-            selectedRecipientId ? "bg-[#2f3a56]" : "bg-[#2f3a5680]"
-          }`}
+          className={`h-[60px] rounded-[8px] flex-row items-center justify-center gap-4 w-full ${selectedRecipientId ? "bg-[#2f3a56]" : "bg-[#2f3a5680]"
+            }`}
         >
           <Text
             style={{ fontFamily: "Poppins_500Medium" }}
             className="text-white text-[16px]"
           >
-            Next, Record Message
+            {messageType === "image" ? "Next, Upload Image" : "Next, Record Message"}
           </Text>
           <Ionicons name="arrow-forward" size={24} color="white" />
         </TouchableOpacity>

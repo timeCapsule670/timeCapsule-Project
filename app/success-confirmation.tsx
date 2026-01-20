@@ -99,7 +99,11 @@ export default function SuccessConfirmation() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleAction}
+              onPress={() => {
+                // Navigate to tabs home
+                // In Expo Router, route groups use parentheses in the path
+                router.replace("/(tabs)" as any);
+              }}
               activeOpacity={0.9}
               className="bg-[#4a5b87] h-[60px] rounded-[8px] items-center justify-center w-full"
             >
@@ -107,7 +111,7 @@ export default function SuccessConfirmation() {
                 style={{ fontFamily: "Poppins_500Medium" }}
                 className="text-white text-[16px]"
               >
-                Home
+                Go to Home
               </Text>
             </TouchableOpacity>
           </View>

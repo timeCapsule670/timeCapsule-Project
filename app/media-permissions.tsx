@@ -101,8 +101,10 @@ export default function MediaPermissions() {
       // All necessary permissions granted, navigate to creation page
       if (type === "audio") {
         router.push("/create-audio");
+      } else if (type === "image") {
+        router.push("/upload-image");
       } else {
-        router.push(`/create-${type || "video"}` as any);
+        router.push("/create-video");
       }
     } catch (error) {
       console.error("Error requesting permissions:", error);
@@ -178,9 +180,9 @@ export default function MediaPermissions() {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowExplanation(true)}
-                activeOpacity={0.7} 
+                activeOpacity={0.7}
                 className="items-center"
               >
                 <Text
@@ -202,7 +204,7 @@ export default function MediaPermissions() {
         visible={showExplanation}
         onRequestClose={() => setShowExplanation(false)}
       >
-        <Pressable 
+        <Pressable
           className="flex-1 bg-black/50 justify-center items-center px-6"
           onPress={() => setShowExplanation(false)}
         >
@@ -215,7 +217,7 @@ export default function MediaPermissions() {
                 <Ionicons name="close" size={24} color="#777" />
               </TouchableOpacity>
             </View>
-            
+
             <View className="gap-4">
               {config.needsCamera && (
                 <View className="flex-row gap-3">

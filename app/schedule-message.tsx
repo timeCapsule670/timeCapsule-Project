@@ -61,6 +61,7 @@ export default function ScheduleMessage() {
   const params = useLocalSearchParams<{
     type: string;
     uri: string;
+    description: string;
     title: string;
     photoUri: string;
   }>();
@@ -72,12 +73,12 @@ export default function ScheduleMessage() {
   const [expandedSection, setExpandedSection] = useState<
     "date-time" | "open-when" | null
   >(null);
-  
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  
+
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("milestones");
   const [reminderEnabled, setReminderEnabled] = useState(false);
@@ -221,7 +222,7 @@ export default function ScheduleMessage() {
               </TouchableOpacity>
 
               {expandedSection === "date-time" && (
-                <View 
+                <View
                   className="mt-2 p-6 bg-[#f9fafb] rounded-[16px] gap-6 shadow-sm"
                   style={{
                     elevation: 2,
@@ -280,8 +281,8 @@ export default function ScheduleMessage() {
                   {/* Timezone Info Box */}
                   <View className="bg-[#f5f5f580] p-2 rounded-[8px] flex-row items-center gap-2">
                     <Ionicons name="time-outline" size={16} color="#4a5b87" />
-                    <Text 
-                      style={{ fontFamily: "Poppins_400Regular" }} 
+                    <Text
+                      style={{ fontFamily: "Poppins_400Regular" }}
                       className="text-[12px] text-[#606060] flex-1"
                     >
                       Time will be sent according on recipient’s local timezone
@@ -323,7 +324,7 @@ export default function ScheduleMessage() {
                             className="py-3 border-b border-[#f5f5f5]"
                           >
                             <Text
-                              style={{ 
+                              style={{
                                 fontFamily: "Poppins_400Regular",
                                 color: selectedReminderInterval === interval.id ? "#4a5b87" : "black"
                               }}
@@ -405,7 +406,7 @@ export default function ScheduleMessage() {
               </TouchableOpacity>
 
               {expandedSection === "open-when" && (
-                <View 
+                <View
                   className="mt-2 p-6 bg-[#f9fafb] rounded-[16px] gap-6 shadow-sm"
                   style={{
                     elevation: 2,
@@ -439,9 +440,8 @@ export default function ScheduleMessage() {
                               key={category.id}
                               onPress={() => setActiveCategory(category.id)}
                               activeOpacity={0.7}
-                              className={`flex-row items-center gap-2 px-4 py-3 rounded-[8px] ${
-                                isActive ? "bg-[#4a5b87]" : "bg-white border border-[#e5e7eb]"
-                              }`}
+                              className={`flex-row items-center gap-2 px-4 py-3 rounded-[8px] ${isActive ? "bg-[#4a5b87]" : "bg-white border border-[#e5e7eb]"
+                                }`}
                             >
                               <Text className="text-[14px]">{category.emoji}</Text>
                               <Text
@@ -476,9 +476,8 @@ export default function ScheduleMessage() {
                             key={tag.id}
                             onPress={() => setSelectedScenario(tag.id)}
                             activeOpacity={0.7}
-                            className={`w-[47%] bg-white border-2 rounded-[16px] p-3 items-center justify-center gap-2 shadow-sm ${
-                              isSelected ? "border-[#4a5b87]" : "border-[#e8e8e8]"
-                            }`}
+                            className={`w-[47%] bg-white border-2 rounded-[16px] p-3 items-center justify-center gap-2 shadow-sm ${isSelected ? "border-[#4a5b87]" : "border-[#e8e8e8]"
+                              }`}
                             style={{
                               elevation: 2,
                               shadowColor: "#000",
@@ -615,9 +614,8 @@ export default function ScheduleMessage() {
           onPress={handleNext}
           activeOpacity={0.9}
           disabled={!selectedMethod}
-          className={`h-[60px] rounded-[8px] flex-row items-center justify-center gap-4 w-full ${
-            selectedMethod ? "bg-[#2f3a56]" : "bg-[#2f3a5680]"
-          }`}
+          className={`h-[60px] rounded-[8px] flex-row items-center justify-center gap-4 w-full ${selectedMethod ? "bg-[#2f3a56]" : "bg-[#2f3a5680]"
+            }`}
         >
           <Text
             style={{ fontFamily: "Poppins_500Medium" }}

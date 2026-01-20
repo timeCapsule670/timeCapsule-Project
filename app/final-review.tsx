@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTimeCapsules } from "../context/TimeCapsuleContext";
 
 // Mock data for recipient - in a real app this would come from a global state or API
 const mockRecipients = [
@@ -33,6 +34,7 @@ export default function FinalReview() {
   const params = useLocalSearchParams<{
     type: string;
     uri: string;
+    description: string;
     title: string;
     photoUri: string;
     method: string;
@@ -48,9 +50,7 @@ export default function FinalReview() {
 
   useEffect(() => {
     return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
+      if (sound) { sound.unloadAsync(); }
     };
   }, [sound]);
 
@@ -74,7 +74,6 @@ export default function FinalReview() {
 
   const handlePlayPause = async () => {
     if (!params.uri) return;
-
     if (sound) {
       if (isPlaying) {
         await sound.pauseAsync();
@@ -85,7 +84,6 @@ export default function FinalReview() {
       }
       return;
     }
-
     try {
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: params.uri },
@@ -93,7 +91,6 @@ export default function FinalReview() {
       );
       setSound(newSound);
       setIsPlaying(true);
-      
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           setIsPlaying(false);
@@ -105,8 +102,26 @@ export default function FinalReview() {
     }
   };
 
-  const handleSchedule = () => {
+  const { addTimeCapsule } = useTimeCapsules();
+
+  const handleSchedule = async () => {
     console.log("Message Scheduled!");
+
+    // Construct the new capsule object
+    const newCapsule = {
+      title: params.title || "Untitled Message",
+      recipient: recipient.name,
+      date: params.method === "date-time"
+        ? formatDate(params.date)
+        : params.method === "open-when"
+          ? `Open When: ${params.scenario}`
+          : "Scheduled Soon",
+      type: params.type || "Message",
+      photoUri: params.photoUri,
+      description: params.description,
+    };
+
+    await addTimeCapsule(newCapsule);
     router.push("/processing-message");
   };
 
@@ -131,19 +146,12 @@ export default function FinalReview() {
   return (
     <SafeAreaView style={{ flex: 1 }} className="bg-white">
       {/* Header */}
-      <View className="px-4 pt-10 pb-4 border-b border-[#f3f4f6]">
+      <View className="px-5 pt-4 pb-4">
         <View className="flex-row items-center justify-between mb-4">
-          <TouchableOpacity
-            onPress={handleBack}
-            activeOpacity={0.7}
-            className="w-6 h-6 justify-center items-center"
-          >
+          <TouchableOpacity onPress={handleBack} activeOpacity={0.7} className="w-10 h-10 justify-center items-start">
             <Ionicons name="arrow-back" size={24} color="#777" />
           </TouchableOpacity>
-          <Text
-            style={{ fontFamily: "Poppins_700Bold" }}
-            className="text-[#5a5a5a] text-[22px] leading-[33px] text-center flex-1 pr-6"
-          >
+          <Text style={{ fontFamily: "Poppins_700Bold" }} className="text-[#5a5a5a] text-[20px] text-center flex-1 pr-10">
             Final Review
           </Text>
         </View>
@@ -153,60 +161,48 @@ export default function FinalReview() {
       </View>
 
       <ScrollView
-        className="flex-1 px-4"
-        contentContainerStyle={{ paddingTop: 24, paddingBottom: 120 }}
+        className="flex-1"
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 150 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="gap-10">
-          {/* Success Section */}
-          <View className="items-center gap-6">
+        <View className="gap-8">
+          {/* Status Section */}
+          <View className="items-center gap-4">
             <LinearGradient
               colors={["#c28fef", "#1d6ee1"]}
-              start={{ x: 0, y: 0.19 }}
-              end={{ x: 0, y: 1.74 }}
-              className="w-[92px] h-[92px] items-center justify-center"
-              style={{
-                borderRadius: 46,
-              }}  
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              className="w-[84px] h-[84px] items-center justify-center rounded-full"
             >
-              <Ionicons name="mail-open" size={45} color="white" />
+              <Ionicons name="mail-open" size={40} color="white" />
             </LinearGradient>
-            <View className="items-center gap-2">
-              <Text
-                style={{ fontFamily: "Poppins_500Medium" }}
-                className="text-black text-[18px]"
-              >
+            <View className="items-center gap-1">
+              <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-black text-[18px]">
                 Your Message is Ready
               </Text>
-              <Text
-                style={{ fontFamily: "Poppins_400Regular" }}
-                className="text-[#606060] text-[16px] text-center px-4"
-              >
+              <Text style={{ fontFamily: "Poppins_400Regular" }} className="text-[#606060] text-[14px] text-center">
                 We’ve saved your message securely and privately.
               </Text>
             </View>
           </View>
 
           {/* Review Sections */}
-          <View className="gap-8">
+          <View className="gap-6">
             {/* Sending to */}
             <View className="gap-2">
               <View className="flex-row justify-between items-center">
-                <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-black text-[18px]">Sending to</Text>
+                <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-black text-[16px]">Sending to</Text>
                 <TouchableOpacity onPress={() => router.push("/recipient")}>
-                  <Ionicons name="create-outline" size={20} color="#777" />
+                  <Ionicons name="create-outline" size={20} color="#6d7faf" />
                 </TouchableOpacity>
               </View>
-              <View className="bg-[#4a5b87] h-[84px] rounded-[8px] px-4 flex-row items-center gap-4">
-                <Image
-                  source={recipient.image}
-                  className="w-12 h-12 rounded-full"
-                />
+              <View className="bg-[#4a5b87] h-[80px] rounded-[12px] px-4 flex-row items-center gap-4 shadow-sm">
+                <Image source={recipient.image} className="w-12 h-12 rounded-full border border-white/20" />
                 <View>
-                  <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-white text-[18px]">
+                  <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-white text-[16px]">
                     {recipient.name}
                   </Text>
-                  <Text style={{ fontFamily: "Poppins_400Regular" }} className="text-white opacity-80 text-[16px]">
+                  <Text style={{ fontFamily: "Poppins_400Regular" }} className="text-white/80 text-[14px]">
                     Age {calculateAge(recipient.birthday)}
                   </Text>
                 </View>
@@ -216,12 +212,12 @@ export default function FinalReview() {
             {/* Message Title */}
             <View className="gap-2">
               <View className="flex-row justify-between items-center">
-                <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-black text-[18px]">Message Title</Text>
+                <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-black text-[16px]">Message Title</Text>
                 <TouchableOpacity onPress={() => router.push("/final-touches")}>
-                  <Ionicons name="create-outline" size={20} color="#777" />
+                  <Ionicons name="create-outline" size={20} color="#6d7faf" />
                 </TouchableOpacity>
               </View>
-              <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-[#2f3a56] text-[18px]">
+              <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-[#2f3a56] text-[16px]">
                 {params.title}
               </Text>
             </View>
@@ -229,12 +225,12 @@ export default function FinalReview() {
             {/* Preview Media */}
             <View className="gap-2">
               <View className="flex-row justify-between items-center">
-                <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-black text-[18px]">Preview Media</Text>
-                <TouchableOpacity onPress={() => router.push("/create-audio")}>
-                  <Ionicons name="create-outline" size={20} color="#777" />
+                <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-black text-[16px]">Preview Media</Text>
+                <TouchableOpacity onPress={() => router.push("/upload-image")}>
+                  <Ionicons name="create-outline" size={20} color="#6d7faf" />
                 </TouchableOpacity>
               </View>
-              <View className="h-[215px] rounded-[16px] overflow-hidden bg-[#f3f4f6] relative shadow-md" style={{ elevation: 4 }}>
+              <View className="aspect-video rounded-[20px] overflow-hidden bg-[#f3f4f6] shadow-sm">
                 {params.photoUri ? (
                   <Image source={{ uri: params.photoUri }} className="w-full h-full" resizeMode="cover" />
                 ) : (
@@ -243,58 +239,64 @@ export default function FinalReview() {
                   </View>
                 )}
                 {params.type === "audio" && (
-                  <View className="absolute inset-0 items-center justify-center">
-                    <View className="bg-white/20 p-4 rounded-full">
-                      <TouchableOpacity 
-                        onPress={handlePlayPause}
-                        className="w-16 h-16 bg-[#ff6b6b] rounded-full items-center justify-center"
-                      >
-                        <Ionicons name={isPlaying ? "pause" : "play"} size={32} color="white" />
-                      </TouchableOpacity>
-                    </View>
+                  <View className="absolute inset-0 items-center justify-center bg-black/10">
+                    <TouchableOpacity
+                      onPress={handlePlayPause}
+                      className="w-14 h-14 bg-white rounded-full items-center justify-center shadow-lg"
+                    >
+                      <Ionicons name={isPlaying ? "pause" : "play"} size={28} color="#2f3a56" />
+                    </TouchableOpacity>
                   </View>
                 )}
+              </View>
+            </View>
+
+            {/* Description */}
+            <View className="gap-2">
+              <View className="flex-row justify-between items-center">
+                <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-black text-[16px]">Description</Text>
+                <TouchableOpacity onPress={() => router.push({ pathname: "/final-touches", params: { ...params } })}>
+                  <Ionicons name="create-outline" size={20} color="#6d7faf" />
+                </TouchableOpacity>
+              </View>
+              <View className="bg-[#f5f5f5] rounded-[16px] p-4 min-h-[100px]">
+                <Text style={{ fontFamily: "Poppins_400Regular" }} className="text-[#4a4a4a] text-[14px] leading-[22px]">
+                  {params.description || "No description provided."}
+                </Text>
               </View>
             </View>
 
             {/* Scheduled Delivery */}
             <View className="gap-2">
               <View className="flex-row justify-between items-center">
-                <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-black text-[18px]">Scheduled Delivery</Text>
+                <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-black text-[16px]">Scheduled Delivery</Text>
                 <TouchableOpacity onPress={() => router.push("/schedule-message")}>
-                  <Ionicons name="create-outline" size={20} color="#777" />
+                  <Ionicons name="create-outline" size={20} color="#6d7faf" />
                 </TouchableOpacity>
               </View>
-              <View className="bg-[#f5f5f580] p-4 rounded-[16px] gap-4">
-                <View className="flex-row gap-4 items-center">
-                  <View className="bg-[#4a5b871a] p-2 rounded-full">
-                    <Ionicons name="calendar" size={20} color="#4a5b87" />
+              <View className="bg-[#f5f5f5] p-5 rounded-[16px] gap-4">
+                <View className="flex-row gap-3 items-center">
+                  <View className="bg-[#2f3a561a] p-2.5 rounded-full">
+                    <Ionicons name="calendar-outline" size={20} color="#2f3a56" />
                   </View>
                   <View>
-                    <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-black text-[16px]">Scheduled Delivery</Text>
-                    <Text style={{ fontFamily: "Poppins_400Regular" }} className="text-[#4a4a4a] text-[12px]">
-                      {params.method === "date-time" ? "Send by Date & Time" : `Open When: ${params.scenario}`}
+                    <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-[#2f3a56] text-[15px]">Scheduled Delivery</Text>
+                    <Text style={{ fontFamily: "Poppins_400Regular" }} className="text-[#606060] text-[12px]">
+                      {params.method === "date-time" ? "Send by Date & Time" : params.method === "open-when" ? `Open When: ${params.scenario}` : params.method === "send-now" ? "Send Immediately" : "Saved as Draft"}
                     </Text>
                   </View>
                 </View>
-                
-                {params.method === "date-time" && (
-                  <View className="gap-2">
-                    <View className="flex-row justify-between">
-                      <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-[#2f3a56]">Date:</Text>
-                      <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-[#2f3a56]">{formatDate(params.date)}</Text>
-                    </View>
-                    <View className="flex-row justify-between">
-                      <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-[#2f3a56]">Time:</Text>
-                      <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-[#2f3a56]">{formatTime(params.time)}</Text>
-                    </View>
-                  </View>
-                )}
 
-                {params.reminder && (
-                  <View className="flex-row justify-between pt-2 border-t border-[#f5f5f5]">
-                    <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-[#2f3a56]">Reminder</Text>
-                    <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-[#2f3a56]">{params.reminder.replace("-", " ")}</Text>
+                {params.method === "date-time" && (
+                  <View className="gap-3 pt-2">
+                    <View className="flex-row justify-between items-center">
+                      <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-[#606060] text-[14px]">Date:</Text>
+                      <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-black text-[14px]">{formatDate(params.date)}</Text>
+                    </View>
+                    <View className="flex-row justify-between items-center">
+                      <Text style={{ fontFamily: "Poppins_500Medium" }} className="text-[#606060] text-[14px]">Time:</Text>
+                      <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-black text-[14px]">{formatTime(params.time)}</Text>
+                    </View>
                   </View>
                 )}
               </View>
@@ -304,21 +306,18 @@ export default function FinalReview() {
       </ScrollView>
 
       {/* Footer */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-4 py-6">
+      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-5 py-6">
         <TouchableOpacity
           onPress={handleSchedule}
           activeOpacity={0.9}
-          className="bg-[#2f3a56] h-[60px] rounded-[8px] items-center justify-center w-full"
+          className="bg-[#2f3a56] h-[60px] rounded-[14px] flex-row items-center justify-center gap-3 w-full"
         >
-          <Text
-            style={{ fontFamily: "Poppins_500Medium" }}
-            className="text-white text-[16px]"
-          >
+          <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-white text-[17px]">
             Schedule
           </Text>
+          <Ionicons name="arrow-forward" size={20} color="white" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
-

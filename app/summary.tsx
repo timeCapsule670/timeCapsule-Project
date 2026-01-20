@@ -63,18 +63,24 @@ export default function SummaryPage() {
 
   const handleUsePrompt = () => {
     console.log("Using prompt:", prompts[currentPromptIndex]);
-    // Navigate to text message creation with the prompt as initial content
-    // router.push({ pathname: "/create-text", params: { prompt: prompts[currentPromptIndex] } });
+    // Navigate to recipient selection page first, passing the messageType and prompt
+    router.push({
+      pathname: "/recipient",
+      params: {
+        messageType: "text",
+        prompt: prompts[currentPromptIndex]
+      }
+    });
   };
 
   const handleMessageType = (route: string) => {
     // Extract type from route (e.g., "/create-video" -> "video")
     const type = route.replace("/create-", "");
     console.log("Navigating to recipient selection for:", type);
-    // Navigate to recipient selection page first, passing the type
+    // Navigate to recipient selection page first, passing the messageType
     router.push({
       pathname: "/recipient",
-      params: { type }
+      params: { messageType: type }
     });
   };
 

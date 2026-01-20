@@ -23,8 +23,7 @@ export default function Hero() {
         </Text>
 
         <TouchableOpacity
-            onPress={() => router.push("/onboarding-2")}
-            // onPress={() => router.push("/final-touches")}
+          onPress={() => router.push("/onboarding-2")}
           activeOpacity={0.9}
           className="bg-[#4a5b87] h-14 rounded-md items-center justify-center w-full"
         >
