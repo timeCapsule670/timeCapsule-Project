@@ -18,6 +18,8 @@ import { useRouter } from 'expo-router';
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { authConfig } from '@/config/auth-config';
+import { saveAccessToken, saveIdToken } from "./tokenstorage";
+
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -111,69 +113,77 @@ export default function IndexScreen() {
       }
     };
   
-    async function signIn(): Promise<{
-    accessToken: string;
-    idToken?: string;
-    expiresIn: number;
-  }> {
-    console.info("🔐 Starting sign-in flow");
-  
-    const request = new AuthSession.AuthRequest({
-      clientId: authConfig.clientId,
-      scopes: authConfig.scopes,
-      redirectUri: authConfig.redirectUri,
-      responseType: AuthSession.ResponseType.Code,
-      usePKCE: true,
-    });
-  
-    console.debug("📡 Building auth request");
-    await request.makeAuthUrlAsync(authConfig.discovery);
-  
-    console.info("🌐 Opening system browser for authentication");
-    const result = await request.promptAsync(authConfig.discovery);
-  
-    if (result.type !== "success") {
-      const message = `Authentication cancelled or failed: ${result.type}`;
-      console.warn(message);
-      throw new Error(message);
-    }
-  
-    console.info("✅ Authorization code received");
-  
-    if (!request.codeVerifier) {
-      throw new Error("Missing PKCE code verifier");
-    }
-  
-    console.info("🔁 Exchanging code for tokens");
-  
-    const tokenResponse = await AuthSession.exchangeCodeAsync(
-      {
-        clientId: authConfig.clientId,
-        code: result.params.code,
-        redirectUri: authConfig.redirectUri,
-        extraParams: {
-          code_verifier: request.codeVerifier,
-        },
-      },
-      authConfig.discovery
-    );
-  
-    console.info("🎉 Sign-in successful");
-  
-    if (!tokenResponse.accessToken) {
-      throw new Error("Access token missing from token response");
-    }
-  
-    return {
-      accessToken: tokenResponse.accessToken,
-      idToken: tokenResponse.idToken,
-      expiresIn: tokenResponse.expiresIn ?? 0,
-    };
+  async function signIn(): Promise<{
+  accessToken: string;
+  idToken?: string;
+  expiresIn: number;
+}> {
+  console.info("🔐 Starting sign-in flow");
+
+  const request = new AuthSession.AuthRequest({
+    clientId: authConfig.clientId,
+    scopes: authConfig.scopes,
+    redirectUri: authConfig.redirectUri,
+    responseType: AuthSession.ResponseType.Code,
+    usePKCE: true,
+  });
+
+  console.debug("📡 Building auth request");
+  await request.makeAuthUrlAsync(authConfig.discovery);
+
+  console.info("🌐 Opening system browser for authentication");
+  const result = await request.promptAsync(authConfig.discovery);
+
+  if (result.type !== "success") {
+    const message = `Authentication cancelled or failed: ${result.type}`;
+    console.warn(message);
+    throw new Error(message);
   }
 
-  const handleSignUp = () => {
-    router.push('/create-account');
+  console.info("✅ Authorization code received");
+
+  if (!request.codeVerifier) {
+    throw new Error("Missing PKCE code verifier");
+  }
+
+  console.info("🔁 Exchanging authorization code for tokens");
+
+  const tokenResponse = await AuthSession.exchangeCodeAsync(
+    {
+      clientId: authConfig.clientId,
+      code: result.params.code,
+      redirectUri: authConfig.redirectUri,
+      extraParams: {
+        code_verifier: request.codeVerifier,
+      },
+    },
+    authConfig.discovery
+  );
+
+  if (!tokenResponse.accessToken) {
+    throw new Error("Access token missing from token response");
+  }
+
+  console.info("💾 Storing access token");
+
+  await saveAccessToken(
+    tokenResponse.accessToken,
+    tokenResponse.expiresIn
+  );
+
+  if (tokenResponse.idToken) {
+    await saveIdToken?.(tokenResponse.idToken);
+  }
+
+  console.info("🎉 Sign-in successful");
+
+  return {
+    accessToken: tokenResponse.accessToken,
+    idToken: tokenResponse.idToken,
+    expiresIn: tokenResponse.expiresIn ?? 0,
   };
+}
+  
 
   const handleIHaveACode = () => {
     // Navigate to teen interface or code entry screen
@@ -242,7 +252,7 @@ export default function IndexScreen() {
               activeOpacity={0.8}
             >
               <Text style={styles.signInButtonText}>
-                {isLoading ? 'Signing In...' : 'Sign In'}
+                {isLoading ? 'Signing In...' : 'Sign In/Sign up'}
               </Text>
             </TouchableOpacity>
 
@@ -261,23 +271,7 @@ export default function IndexScreen() {
             >
               <Text style={styles.codeButtonText}>I Have a Code</Text>
             </TouchableOpacity>
-
-            {/* Sign Up Link */}
-            <View style={styles.signUpContainer}>
-              <Text style={styles.signUpText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={handleSignUp} activeOpacity={0.7}>
-                <Text style={styles.signUpLink}>Sign up</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Forgot Password Link */}
-            <TouchableOpacity
-              style={styles.forgotPasswordContainer}
-              onPress={handleForgotPassword}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
-            </TouchableOpacity>
+                  
           </View>
 
           {/* Footer */}

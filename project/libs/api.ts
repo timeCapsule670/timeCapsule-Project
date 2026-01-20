@@ -1,5 +1,7 @@
 const BASE_URL = 'https://timecapsule-backend-z21v.onrender.com/api';
 
+import { getAccessToken } from "../app/tokenstorage";
+
 export interface SignUpRequest {
   email: string;
   password: string;
@@ -343,87 +345,71 @@ class ApiService {
     requiresAuth: boolean = false
   ): Promise<T> {
     const url = `${BASE_URL}${endpoint}`;
-    
-    // Start with basic headers
+
     const headers: Record<string, string> = {};
-    
-    // Check if we're sending FormData
     const isFormData = options.body instanceof FormData;
-    
-    // Only set Content-Type if NOT sending FormData
-    // For FormData, let the system set the correct multipart/form-data with boundary
+
     if (!isFormData) {
-      headers['Content-Type'] = 'application/json';
-    }
-    
-    // Merge with any custom headers (but don't override Content-Type for FormData)
-    if (options.headers) {
-      if (typeof options.headers === 'object') {
-        Object.assign(headers, options.headers);
-      }
-    }
-    
-    // For FormData, ensure we don't have a conflicting Content-Type
-    if (isFormData && headers['Content-Type']) {
-      delete headers['Content-Type'];
+      headers["Content-Type"] = "application/json";
     }
 
-    const defaultOptions: RequestInit = {
-      headers,
+    if (options.headers && typeof options.headers === "object") {
+      Object.assign(headers, options.headers);
+    }
+
+    if (isFormData && headers["Content-Type"]) {
+      delete headers["Content-Type"];
+    }
+
+    // 🔐 Attach access token if required
+    if (requiresAuth) {
+      const token = await this.resolveAccessToken();
+
+      if (!token) {
+        throw new Error("Authentication required but no access token found");
+      }
+
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const requestOptions: RequestInit = {
       ...options,
+      headers,
     };
 
-    // Add authorization header if required
-    if (requiresAuth) {
-      const token = await this.getAuthToken();
-      if (token) {
-        defaultOptions.headers = {
-          ...defaultOptions.headers,
-          'Authorization': `Bearer ${token}`,
-        };
-      }
-    }
-
     try {
-      const response = await fetch(url, defaultOptions);
+      const response = await fetch(url, requestOptions);
+
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          data?.error ||
+            data?.message ||
+            `HTTP ${response.status} ${response.statusText}`
+        );
       }
 
-      return data;
+      return data as T;
     } catch (error) {
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Network error occurred');
+      throw new Error("Network error occurred");
     }
   }
 
-  private async getAuthToken(): Promise<string | null> {
+  /**
+   * Centralized access token resolution
+   */
+  private async resolveAccessToken(): Promise<string | null> {
     try {
-      // Import storage utility to get the stored JWT token
-      const { storage } = await import('@/utils/storage');
-      const token = await storage.getToken();
+      const token = await getAccessToken();
       return token;
     } catch (error) {
+      console.warn("Failed to retrieve access token", error);
       return null;
     }
-  }
-
-  async signUp(userData: SignUpRequest): Promise<AuthResponse> {
-    return this.makeRequest<AuthResponse>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
-  }
-
-  async signIn(credentials: SignInRequest): Promise<AuthResponse> {
-    return this.makeRequest<AuthResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
   }
 
   // Test backend connectivity
