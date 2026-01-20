@@ -3,16 +3,16 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Image,
-  Platform,
-  ScrollView,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    Platform,
+    ScrollView,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { cakeIcon, carIcon, openBookIcon, schoolIcon, trophyIcon } from "./_constants/assets";
+import { cakeIcon, carIcon, openBookIcon, schoolIcon, trophyIcon } from "./constants/assets";
 
 type SchedulingMethod = "date-time" | "open-when" | "send-now" | "save-later";
 

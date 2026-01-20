@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Alert, Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -48,6 +47,15 @@ export default function PushNotificationsSetup() {
 
   const handleEnableNotifications = async () => {
     try {
+      // Skip notifications on web platform
+      if (Platform.OS === "web") {
+        router.replace("/summary");
+        return;
+      }
+
+      // Dynamically import expo-notifications only on native platforms
+      const Notifications = await import("expo-notifications");
+
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
 

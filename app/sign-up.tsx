@@ -1,6 +1,6 @@
-import React from "react";
-import { View, Text, TouchableOpacity, Image, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
+import React from "react";
+import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Toast } from "toastify-react-native";
 
@@ -55,63 +55,11 @@ export default function SignUp() {
 
             {/* Sign Up Buttons */}
             <View className="gap-4 w-full">
-              {/* Google Sign Up */}
-              <TouchableOpacity
-                onPress={handleSignUpSuccess}
-                activeOpacity={0.9}
-                className="bg-white rounded-[8px] px-10 py-4 flex-row items-center justify-center gap-2"
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 2,
-                  elevation: 8,
-                }}
-              >
-                <Image
-                  source={require("../assets/images/google.png")}
-                  style={{ width: 29.4, height: 29.4 }}
-                  resizeMode="contain"
-                />
-                <Text
-                  style={{ fontFamily: "Poppins_500Medium" }}
-                  className="text-black text-[16px]"
-                >
-                  Sign Up With Google
-                </Text>
-              </TouchableOpacity>
-
-              {/* Apple Sign Up */}
-              <TouchableOpacity
-                onPress={handleSignUpSuccess}
-                activeOpacity={0.9}
-                className="bg-white rounded-[8px] px-10 py-4 flex-row items-center justify-center gap-4"
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 2,
-                  elevation: 8,
-                }}
-              >
-                <Image
-                  source={require("../assets/images/microsoft.png")}
-                  style={{ width: 28, height: 28 }}
-                  resizeMode="contain"
-                />
-                <Text
-                  style={{ fontFamily: "Poppins_500Medium" }}
-                  className="text-black text-[16px]"
-                >
-                  Sign Up With Microsoft
-                </Text>
-              </TouchableOpacity>
-
               {/* Email Sign Up */}
               <TouchableOpacity
                 onPress={handleSignUpSuccess}
                 activeOpacity={0.9}
-                className="bg-white rounded-[8px] px-10 py-4 flex-row items-center justify-center gap-2"
+                className="bg-white rounded-[8px] px-10 py-4 flex-row items-center justify-center"
                 style={{
                   shadowColor: "#000",
                   shadowOffset: { width: 0, height: 1 },
@@ -129,7 +77,7 @@ export default function SignUp() {
                   style={{ fontFamily: "Poppins_500Medium" }}
                   className="text-black text-[16px]"
                 >
-                  Sign Up With Email
+                  Sign Up
                 </Text>
               </TouchableOpacity>
             </View>

@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import React from "react";
 import { ImageBackground, Text, TouchableOpacity, View } from "react-native";
-import { heroBg } from "../_constants/assets";
+import { heroBg } from "../constants/assets";
 
 export default function Hero() {
   const router = useRouter();

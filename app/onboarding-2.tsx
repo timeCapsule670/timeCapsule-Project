@@ -1,7 +1,7 @@
-import React from "react";
 import { useRouter } from "expo-router";
-import { onboarding2Bg } from "./_constants/assets";
+import React from "react";
 import OnboardingLayout from "./components/OnboardingLayout";
+import { onboarding2Bg } from "./constants/assets";
 
 export default function Onboarding2() {
   const router = useRouter();
