@@ -96,6 +96,7 @@ const timelineItems: TimelineItem[] = [
 export default function Pricing() {
   const router = useRouter();
   const [billingPeriod, setBillingPeriod] = useState<"month" | "year">("year");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleBack = () => {
     // @ts-ignore
@@ -108,6 +109,8 @@ export default function Pricing() {
   };
 
   const handleStartTrial = () => {
+    if (isLoading) return;
+    setIsLoading(true);
     router.push("/creating-account");
   };
 

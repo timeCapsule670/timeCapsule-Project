@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useState } from "react";
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +15,10 @@ export default function FinalTouches() {
   const [description, setDescription] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(uri || null);
 
+  const player = useVideoPlayer(uri || "", (player) => {
+    player.loop = false;
+  });
+
   const MAX_CHARS = 500;
 
   useEffect(() => {
@@ -24,6 +29,11 @@ export default function FinalTouches() {
 
   const handleBack = () => {
     router.back();
+  };
+
+  const handleReplay = () => {
+    player.seekBy(-player.currentTime);
+    player.play();
   };
 
   const handleTakePhoto = async () => {
@@ -207,6 +217,44 @@ export default function FinalTouches() {
                     </Text>
                   </TouchableOpacity>
                 </View>
+              </View>
+            </View>
+          )}
+
+          {/* Video Section (Conditional) */}
+          {type === "video" && uri && (
+            <View className="gap-4">
+              <Text
+                style={{ fontFamily: "Poppins_600SemiBold" }}
+                className="text-black text-[18px]"
+              >
+                Review your video message
+              </Text>
+
+              <View className="items-center">
+                <View className="w-full aspect-[3/4] rounded-[24px] overflow-hidden bg-[#f5f5f5] shadow-sm">
+                  <VideoView
+                    player={player}
+                    style={{ width: "100%", height: "100%" }}
+                    nativeControls
+                    contentFit="cover"
+                  />
+                </View>
+
+                {/* Replay Button */}
+                <TouchableOpacity
+                  onPress={handleReplay}
+                  activeOpacity={0.7}
+                  className="bg-[#ffe8c3] px-12 py-4 rounded-[16px] mt-6 flex-row items-center gap-2"
+                >
+                  <Ionicons name="refresh" size={20} color="#2f3a56" />
+                  <Text
+                    style={{ fontFamily: "Poppins_600SemiBold" }}
+                    className="text-[#2f3a56] text-[16px]"
+                  >
+                    Replay Video
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}

@@ -35,13 +35,13 @@ export default function SuccessConfirmation() {
           <View className="items-center gap-2">
             <Text
               style={{ fontFamily: "Poppins_700Bold" }}
-              className="text-[22px] leading-[33px] text-[#2f3a56] text-center"
+              className="text-[20px] leading-[33px] text-[#2f3a56] text-center"
             >
               That was a powerful thing you just did.
             </Text>
             <Text
               style={{ fontFamily: "Poppins_400Regular" }}
-              className="text-[16px] leading-[21px] text-[#9b9b9b] text-center px-4"
+              className="text-[13px] leading-[21px] text-[#9b9b9b] text-center px-4"
             >
               One day, this may mean everything to them.
             </Text>

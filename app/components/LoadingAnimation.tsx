@@ -1,10 +1,10 @@
 import LottieView from "lottie-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Animated,
-    Image,
-    Text,
-    View,
+  Animated,
+  Image,
+  Text,
+  View,
 } from "react-native";
 
 interface LoadingAnimationProps {
@@ -76,7 +76,10 @@ export default function LoadingAnimation({
         if (prevIndex < messages.length - 1) {
           return prevIndex + 1;
         } else {
-          // All messages shown, show success animation
+          // All messages shown, stop interval
+          clearInterval(messageTimer);
+
+          // Show success animation
           if (showSuccess) {
             setShowSuccessAnimation(true);
             Animated.parallel([
@@ -114,8 +117,11 @@ export default function LoadingAnimation({
               }, 200);
             });
           } else {
-             // If no success animation, complete now
-             onComplete?.();
+            // If no success animation, complete now
+            if (!hasNavigated) {
+              setHasNavigated(true);
+              onComplete?.();
+            }
           }
           return prevIndex;
         }
@@ -130,12 +136,13 @@ export default function LoadingAnimation({
 
   const handleSuccessAnimationFinish = () => {
     // Allow Lottie animation to play for a bit before calling onComplete
-    setTimeout(() => {
-      if (!hasNavigated) {
-        setHasNavigated(true);
+    // Use the state check to prevent multiple triggers
+    if (!hasNavigated) {
+      setHasNavigated(true);
+      setTimeout(() => {
         onComplete?.();
-      }
-    }, 2000);
+      }, 1500); // Reduced slightly as Lottie finish is already a delay
+    }
   };
 
   return (

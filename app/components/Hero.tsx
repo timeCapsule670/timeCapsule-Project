@@ -9,7 +9,7 @@ export default function Hero() {
     <ImageBackground
       source={{ uri: "https://res.cloudinary.com/dhagsapm2/image/upload/v1767792912/mom-and-child_t27uoe.png" }}
       resizeMode="cover"
-      className="flex-1 w-full"
+      className="flex-1 h-[600px] w-full"
     >
       <View className="absolute inset-0 bg-black opacity-50" />
 

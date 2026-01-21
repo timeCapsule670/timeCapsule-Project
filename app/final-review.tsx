@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useState } from "react";
 import {
   Image,
@@ -47,6 +48,15 @@ export default function FinalReview() {
 
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  const player = useVideoPlayer(params.uri || "", (player) => {
+    player.loop = false;
+  });
+
+  const handleReplay = () => {
+    player.seekBy(-player.currentTime);
+    player.play();
+  };
 
   useEffect(() => {
     return () => {
@@ -231,8 +241,17 @@ export default function FinalReview() {
                 </TouchableOpacity>
               </View>
               <View className="aspect-video rounded-[20px] overflow-hidden bg-[#f3f4f6] shadow-sm">
-                {params.photoUri ? (
-                  <Image source={{ uri: params.photoUri }} className="w-full h-full" resizeMode="cover" />
+                {params.type === "video" && params.uri ? (
+                  <View className="flex-1">
+                    <VideoView
+                      player={player}
+                      style={{ width: "100%", height: "100%" }}
+                      nativeControls
+                      contentFit="cover"
+                    />
+                  </View>
+                ) : params.photoUri || params.uri ? (
+                  <Image source={{ uri: params.photoUri || params.uri }} className="w-full h-full" resizeMode="cover" />
                 ) : (
                   <View className="w-full h-full bg-[#2f3a561a] items-center justify-center">
                     <Ionicons name="image-outline" size={48} color="#2f3a56" />
@@ -249,6 +268,18 @@ export default function FinalReview() {
                   </View>
                 )}
               </View>
+              {params.type === "video" && (
+                <TouchableOpacity
+                  onPress={handleReplay}
+                  activeOpacity={0.7}
+                  className="bg-[#ffe8c3] px-6 py-3 rounded-[12px] mt-2 flex-row items-center justify-center gap-2"
+                >
+                  <Ionicons name="refresh" size={18} color="#2f3a56" />
+                  <Text style={{ fontFamily: "Poppins_600SemiBold" }} className="text-[#2f3a56] text-[14px]">
+                    Replay Video
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Description */}

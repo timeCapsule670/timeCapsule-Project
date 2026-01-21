@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -15,7 +15,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  bookmarkIcon,
   messageCardBg,
   plusIcon,
   profilePicture,
@@ -267,7 +266,7 @@ export default function HomeTab() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -417,108 +416,141 @@ export default function HomeTab() {
                 <TouchableOpacity
                   key={capsule.id}
                   style={styles.capsuleCard}
+                  activeOpacity={0.9}
                 >
                   <ImageBackground
                     source={{ uri: capsule.photoUri || messageCardBg }}
                     style={styles.capsuleImageBg}
-                    resizeMode="cover"
                   >
-                    <View className="flex-1 items-center justify-center bg-black/10">
+                    <LinearGradient
+                      colors={["rgba(0,0,0,0.3)", "transparent", "rgba(0,0,0,0.4)"]}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+
+                    {/* Floating Type Badge */}
+                    <View style={styles.floatingTypeBadge}>
+                      <Ionicons
+                        name={capsule.type?.toLowerCase() === "audio" ? "mic" : capsule.type?.toLowerCase() === "image" ? "image" : capsule.type?.toLowerCase() === "video" ? "videocam" : "document-text"}
+                        size={12}
+                        color="white"
+                      />
+                      <Text style={styles.floatingTypeText}>
+                        {capsule.type ? capsule.type.charAt(0).toUpperCase() + capsule.type.slice(1) : ""}
+                      </Text>
+                    </View>
+
+                    <View className="flex-1 items-center justify-center">
                       {capsule.type?.toLowerCase() === "audio" && (
-                        <>
-                          {/* Audio Waveform Placeholder */}
-                          <View className="flex-row items-center gap-1 mb-2">
-                            {[1, 2, 3, 4, 5].map((i) => (
+                        <View className="items-center">
+                          <View className="flex-row items-center gap-1 mb-4">
+                            {[1, 2, 3, 4, 5, 4, 3, 2].map((h, i) => (
                               <View
                                 key={i}
                                 style={{
                                   backgroundColor: "white",
-                                  borderRadius: 9999,
-                                  width: 2,
-                                  height: 20 + i * 2,
+                                  borderRadius: 2,
+                                  width: 3,
+                                  height: 12 + h * 4,
+                                  opacity: 0.8
                                 }}
                               />
                             ))}
                           </View>
                           <TouchableOpacity style={styles.playButton}>
-                            <Ionicons name="play" size={24} color="white" />
+                            <Ionicons name="play" size={24} color="white" style={{ marginLeft: 3 }} />
                           </TouchableOpacity>
-                        </>
+                        </View>
                       )}
                       {capsule.type?.toLowerCase() === "video" && (
                         <TouchableOpacity style={styles.playButton}>
-                          <Ionicons name="play" size={24} color="white" />
+                          <Ionicons name="play" size={24} color="white" style={{ marginLeft: 3 }} />
                         </TouchableOpacity>
                       )}
                       {(capsule.type?.toLowerCase() === "image" || capsule.type?.toLowerCase() === "text") && !capsule.photoUri && (
-                        <Ionicons
-                          name={capsule.type?.toLowerCase() === "image" ? "image-outline" : "document-text-outline"}
-                          size={40}
-                          color="white"
-                        />
+                        <View style={styles.placeholderIconContainer}>
+                          <Ionicons
+                            name={capsule.type?.toLowerCase() === "image" ? "image-outline" : "document-text-outline"}
+                            size={32}
+                            color="white"
+                          />
+                        </View>
                       )}
                     </View>
                   </ImageBackground>
-                  <View className="p-2 bg-white">
+
+                  <View style={styles.capsuleDetails}>
                     <View className="flex-row items-center justify-between mb-1">
-                      <View className="flex-row items-center gap-1">
-                        <View style={[styles.audioIconBg, { backgroundColor: capsule.type?.toLowerCase() === "audio" ? "#eef2ff" : capsule.type?.toLowerCase() === "image" ? "#fff7ed" : "#f5f3ff" }]}>
-                          <Ionicons
-                            name={capsule.type?.toLowerCase() === "audio" ? "mic" : capsule.type?.toLowerCase() === "image" ? "image" : "document-text"}
-                            size={12}
-                            color={capsule.type?.toLowerCase() === "audio" ? "#1d4ed8" : capsule.type?.toLowerCase() === "image" ? "#c2410c" : "#7c3aed"}
-                          />
-                        </View>
-                        <View style={[styles.audioBadge, { backgroundColor: capsule.type?.toLowerCase() === "audio" ? "#eef2ff" : capsule.type?.toLowerCase() === "image" ? "#fff7ed" : "#f5f3ff" }]}>
-                          <Text
-                            style={{
-                              fontFamily: "Poppins_400Regular",
-                              color: capsule.type?.toLowerCase() === "audio" ? "#1d4ed8" : capsule.type?.toLowerCase() === "image" ? "#c2410c" : "#7c3aed",
-                              fontSize: 10
-                            }}
-                          >
-                            {capsule.type ? capsule.type.charAt(0).toUpperCase() + capsule.type.slice(1) : ""}
-                          </Text>
-                        </View>
-                      </View>
-                      <Image
-                        source={{ uri: bookmarkIcon }}
-                        style={styles.bookmarkIcon}
-                        resizeMode="contain"
-                      />
+                      <Text
+                        numberOfLines={1}
+                        style={{ fontFamily: "Poppins_600SemiBold" }}
+                        className="text-[#1a1f36] text-[15px] flex-1 mr-2"
+                      >
+                        {capsule.title}
+                      </Text>
+                      <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <Ionicons name="bookmark-outline" size={18} color="#6b7280" />
+                      </TouchableOpacity>
                     </View>
-                    <Text
-                      style={{ fontFamily: "Poppins_500Medium" }}
-                      className="text-black text-[14px] leading-[21px] mb-1"
-                    >
-                      {capsule.title}
-                    </Text>
-                    <View className="flex-row items-center justify-between">
+
+                    <View className="flex-row items-center gap-1 mb-2">
+                      <Ionicons name="person-circle-outline" size={14} color="#6b7280" />
                       <Text
+                        numberOfLines={1}
                         style={{ fontFamily: "Poppins_400Regular" }}
-                        className="text-black text-[13px]"
+                        className="text-[#6b7280] text-[12px] flex-1"
                       >
-                        <Text style={{ fontFamily: "Poppins_700Bold" }}>For</Text>: {capsule.recipient}
+                        For {capsule.recipient}
                       </Text>
-                      <View style={styles.dot} />
-                      <Text
-                        style={{ fontFamily: "Poppins_400Regular" }}
-                        className="text-black text-[13px]"
-                      >
-                        {capsule.date}
-                      </Text>
+                    </View>
+
+                    <View className="flex-row items-center justify-between pt-2 border-t border-[#f3f4f6]">
+                      <View className="flex-row items-center gap-1">
+                        <Ionicons name="calendar-outline" size={12} color="#9ca3af" />
+                        <Text
+                          style={{ fontFamily: "Poppins_500Medium" }}
+                          className="text-[#9ca3af] text-[11px]"
+                        >
+                          {capsule.date}
+                        </Text>
+                      </View>
+                      <View style={styles.statusDot} />
                     </View>
                   </View>
                 </TouchableOpacity>
               ))}
+
               {/* Create New Card */}
               <Link href="/recipient" asChild>
-                <TouchableOpacity style={styles.createNewCard}>
-                  <Ionicons name="add-circle" size={48} color="#6738af" />
+                <TouchableOpacity style={styles.createNewCard} activeOpacity={0.8}>
+                  <LinearGradient
+                    colors={["#f5f3ff", "#ede9fe"]}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <View style={styles.addIconContainer}>
+                    <Ionicons name="add" size={32} color="#6738af" />
+                  </View>
                   <Text
-                    style={{ fontFamily: "Poppins_400Regular", color: "#48277b", fontSize: 16, textAlign: "center", paddingHorizontal: 16 }}
+                    style={{
+                      fontFamily: "Poppins_600SemiBold",
+                      color: "#48277b",
+                      fontSize: 14,
+                      textAlign: "center",
+                      marginTop: 8,
+                      paddingHorizontal: 16
+                    }}
                   >
-                    Create a New Timecapsule
+                    Create New
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: "Poppins_400Regular",
+                      color: "#6d28d9",
+                      fontSize: 11,
+                      textAlign: "center",
+                      opacity: 0.6
+                    }}
+                  >
+                    Capture a memory
                   </Text>
                 </TouchableOpacity>
               </Link>
@@ -656,63 +688,94 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   capsuleCard: {
-    width: 180,
-    borderRadius: 20,
+    width: 190,
+    borderRadius: 24,
     overflow: "hidden",
     backgroundColor: "white",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#f3f4f6",
   },
   capsuleImageBg: {
-    height: 166,
-    padding: 8,
+    height: 180,
+    padding: 12,
+  },
+  floatingTypeBadge: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    zIndex: 10,
+  },
+  floatingTypeText: {
+    color: "white",
+    fontSize: 10,
+    fontFamily: "Poppins_600SemiBold",
   },
   playButton: {
-    backgroundColor: "#ff6b6b",
-    width: 69,
-    height: 69,
-    borderRadius: 34.5,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "white",
   },
-  audioIconBg: {
-    backgroundColor: "#a3c4f3",
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+  placeholderIconContainer: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
-  audioBadge: {
-    backgroundColor: "#d1e2f9",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 9999,
+  capsuleDetails: {
+    padding: 14,
+    backgroundColor: "white",
   },
-  bookmarkIcon: {
-    width: 24,
-    height: 24,
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    backgroundColor: "black",
-    borderRadius: 2,
+  statusDot: {
+    width: 6,
+    height: 6,
+    backgroundColor: "#34c759",
+    borderRadius: 3,
   },
   createNewCard: {
-    width: 180,
-    height: 252,
-    borderRadius: 20,
+    width: 190,
+    height: 290, // Match total height of capsule card approximately
+    borderRadius: 24,
     borderWidth: 2,
     borderStyle: "dashed",
-    borderColor: "#8b5cf6",
-    backgroundColor: "rgba(139, 92, 246, 0.05)",
+    borderColor: "#e9d5ff",
+    backgroundColor: "#f5f3ff",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 4,
+    overflow: "hidden",
+  },
+  addIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#6738af",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   templateCard: {
     width: "48%",

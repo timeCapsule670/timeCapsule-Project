@@ -16,8 +16,8 @@ export default function LinkAccount() {
 
   const handleSkip = () => {
     // Navigate to next screen (home/dashboard)
-     router.replace("/push-notifications");
-   
+    router.replace("/push-notifications");
+
   };
 
   return (
@@ -55,7 +55,7 @@ export default function LinkAccount() {
           {/* Features Card */}
           <View
             className="p-6 w-full gap-6"
-            
+
           >
             <Text
               style={{ fontFamily: "Poppins_700Bold" }}
@@ -68,7 +68,7 @@ export default function LinkAccount() {
               {/* Feature 1 */}
               <View className="flex-row items-center gap-4">
                 <View className="w-10 h-10 rounded-full bg-[#6099EA] items-center justify-center">
-                 <Ionicons name="calendar" size={20} color="white" />
+                  <Ionicons name="calendar" size={20} color="white" />
                 </View>
                 <Text
                   style={{ fontFamily: "Poppins_400Regular" }}
@@ -81,7 +81,7 @@ export default function LinkAccount() {
               {/* Feature 2 */}
               <View className="flex-row items-center gap-4">
                 <View className="w-10 h-10 rounded-full bg-[#FF2828] items-center justify-center">
-                 <Ionicons name="mic-outline" size={20} color="white" />
+                  <Ionicons name="mic-outline" size={20} color="white" />
                 </View>
                 <Text
                   style={{ fontFamily: "Poppins_400Regular" }}
@@ -94,7 +94,7 @@ export default function LinkAccount() {
               {/* Feature 3 */}
               <View className="flex-row items-center gap-4">
                 <View className="w-10 h-10 rounded-full bg-[#8A5FCC] items-center justify-center">
-                 <Ionicons name="chatbox-ellipses-outline" size={20} color="white" />
+                  <Ionicons name="chatbox-ellipses-outline" size={20} color="white" />
                 </View>
                 <Text
                   style={{ fontFamily: "Poppins_400Regular" }}
