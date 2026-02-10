@@ -6,7 +6,7 @@ import React, { useState } from "react";
 import { Alert, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-    profileIllustration,
+  profileIllustration,
 } from "./constants/assets";
 
 export default function ProfileInformation() {
@@ -26,6 +26,13 @@ export default function ProfileInformation() {
     } else {
       router.replace("/sign-up");
     }
+  };
+
+  const handleNext = () => {
+    // Navigate to the next screen or perform any action
+
+    
+    router.push("/category");
   };
 
   const handleTakePhoto = async () => {
@@ -254,7 +261,7 @@ export default function ProfileInformation() {
             activeOpacity={0.9}
             className="bg-[#2f3a56] h-[60px] rounded-[8px] flex-row items-center justify-center gap-4 px-4"
             onPress={() => {
-              router.push("/category");
+              // router.push("/category");
             }}
           >
             <Text

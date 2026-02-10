@@ -1,13 +1,88 @@
+import * as AuthSession from "expo-auth-session";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Toast } from "toastify-react-native";
+import { AuthUserResponse } from "./models/auth-user-reponse";
+import { authConfig } from "./utils/auth-config";
+import { saveAccessToken, saveIdToken } from "./utils/token-storage";
 
 export default function SignUp() {
   const router = useRouter();
 
-  const handleSignUpSuccess = () => {
+
+  const handleSignIn = async () =>
+  {
+    console.info("🔐 Starting sign-in flow");
+
+    const request = new AuthSession.AuthRequest({
+      clientId: authConfig.clientId,
+      scopes: authConfig.scopes,
+      redirectUri: authConfig.redirectUri,
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
+    });
+
+    console.debug("📡 Building auth request");
+    await request.makeAuthUrlAsync(authConfig.discovery);
+
+    console.info("🌐 Opening system browser for authentication");
+    const result = await request.promptAsync(authConfig.discovery);
+
+
+    if (result.type !== "success") {
+      const message = `Authentication cancelled or failed: ${result.type}`;
+      console.warn(message);
+      AuthSession.dismiss();
+      throw new Error(message);
+    }
+
+    console.info("✅ Authorization code received");
+
+    if (!request.codeVerifier) {
+      throw new Error("Missing PKCE code verifier");
+    }
+
+    console.info("🔁 Exchanging authorization code for tokens");
+
+    const tokenResponse = await AuthSession.exchangeCodeAsync(
+      {
+        clientId: authConfig.clientId,
+        code: result.params.code,
+        redirectUri: authConfig.redirectUri,
+        extraParams: {
+          code_verifier: request.codeVerifier,
+        },
+      },
+      authConfig.discovery
+    );
+
+    if (!tokenResponse.accessToken) {
+      handleSignUpFauilure(new Error("Access token missing from token response"));
+    }
+
+    console.info("💾 Storing access token");
+
+    await saveAccessToken(
+      tokenResponse.accessToken,
+      tokenResponse.expiresIn
+    );
+
+    if (tokenResponse.idToken) {
+      await saveIdToken?.(tokenResponse.idToken);
+    }
+
+    console.info("🎉 Sign-in successful");
+
+    handleSignUpSuccess(new AuthUserResponse(
+      tokenResponse.accessToken,
+      tokenResponse.expiresIn!,
+      tokenResponse.idToken
+    ));
+  };
+
+  const handleSignUpSuccess = (authResponse: AuthUserResponse) => {
     // Show success toast at the bottom
     Toast.success("Login successful!", "bottom");
 
@@ -15,6 +90,11 @@ export default function SignUp() {
     setTimeout(() => {
       router.replace("/profile-information");
     }, 2500);
+  };
+
+  const handleSignUpFauilure = (error: Error) => {
+    // Show error toast at the bottom
+    Toast.error(`Login failed: ${error.message}`, "bottom");
   };
 
   return (
@@ -57,7 +137,7 @@ export default function SignUp() {
             <View className="gap-4 w-full">
               {/* Email Sign Up */}
               <TouchableOpacity
-                onPress={handleSignUpSuccess}
+                onPress={() => handleSignIn()}
                 activeOpacity={0.9}
                 className="bg-white rounded-[8px] px-10 py-4 flex-row items-center justify-center"
                 style={{
@@ -77,7 +157,7 @@ export default function SignUp() {
                   style={{ fontFamily: "Poppins_500Medium" }}
                   className="text-black text-[16px]"
                 >
-                  Sign Up
+                  Sign In/Sign Up
                 </Text>
               </TouchableOpacity>
             </View>
@@ -99,7 +179,7 @@ export default function SignUp() {
 
             {/* Have a code Button */}
             <TouchableOpacity
-              onPress={handleSignUpSuccess}
+              onPress={() => handleSignUpSuccess}
               activeOpacity={0.9}
               className="bg-[#fcb32b] h-[60px] rounded-[8px] items-center justify-center w-full px-4"
             >
@@ -108,25 +188,6 @@ export default function SignUp() {
                 className="text-black text-[16px]"
               >
                 Have a code? Enter it here
-              </Text>
-            </TouchableOpacity>
-
-            {/* Sign In Link */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => {
-                // Navigate to sign in page when available
-                // router.push("/sign-in");
-              }}
-            >
-              <Text
-                style={{ fontFamily: "Poppins_400Regular" }}
-                className="text-black text-[16px] text-center"
-              >
-                Already have an account?{" "}
-                <Text style={{ fontFamily: "Poppins_700Bold" }} className="text-[#6099ea]">
-                  Sign In
-                </Text>
               </Text>
             </TouchableOpacity>
 
