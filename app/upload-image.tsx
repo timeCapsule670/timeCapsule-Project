@@ -5,9 +5,11 @@ import React, { useState } from "react";
 import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { backArrowIcon, profileIllustration } from "../constants/assets";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 export default function UploadImageScreen() {
     const router = useRouter();
+    const { scrollContentPadding } = useTabBarHeight();
     const { messageType } = useLocalSearchParams<{ messageType: string }>();
     const [photoUri, setPhotoUri] = useState<string | null>(null);
 
@@ -106,7 +108,7 @@ export default function UploadImageScreen() {
 
             <ScrollView
                 className="flex-1"
-                contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 120 }}
+                contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: scrollContentPadding(120) }}
                 showsVerticalScrollIndicator={false}
             >
                 <Text

@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { cakeIcon, carIcon, openBookIcon, schoolIcon, trophyIcon } from "../constants/assets";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 type SchedulingMethod = "date-time" | "open-when" | "send-now" | "save-later";
 
@@ -58,6 +59,7 @@ const OPEN_WHEN_TAGS: Record<string, { id: string; label: string; emoji?: string
 
 export default function ScheduleMessage() {
   const router = useRouter();
+  const { scrollContentPadding, bottomInset } = useTabBarHeight();
   const params = useLocalSearchParams<{
     type: string;
     uri: string;
@@ -162,7 +164,7 @@ export default function ScheduleMessage() {
 
       <ScrollView
         className="flex-1 px-4"
-        contentContainerStyle={{ paddingTop: 24, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingTop: 24, paddingBottom: scrollContentPadding(140) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-8">
@@ -609,7 +611,10 @@ export default function ScheduleMessage() {
       </ScrollView>
 
       {/* Footer */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-4 py-6">
+      <View
+        className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-4 py-6"
+        style={{ paddingBottom: 24 + bottomInset }}
+      >
         <TouchableOpacity
           onPress={handleNext}
           activeOpacity={0.9}

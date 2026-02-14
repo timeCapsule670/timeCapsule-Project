@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 const relationshipOptions = [
   { id: "mom", label: "Mom", icon: require("../assets/images/hug.png") },
@@ -13,6 +14,7 @@ const relationshipOptions = [
 
 export default function FamilySpaceSetup() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
   const [selectedRelationship, setSelectedRelationship] = useState<string | null>(null);
 
   const handleBack = () => {
@@ -60,7 +62,7 @@ export default function FamilySpaceSetup() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingTop: 24, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 16, paddingTop: 24, paddingBottom: scrollContentPadding(40) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-10">

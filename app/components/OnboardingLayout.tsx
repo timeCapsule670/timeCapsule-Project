@@ -44,7 +44,7 @@ export default function OnboardingLayout({
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <ImageBackground
         source={{ uri: backgroundImage }}
         resizeMode="cover"

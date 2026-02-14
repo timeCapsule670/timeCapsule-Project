@@ -1,9 +1,11 @@
 import { useRouter } from "expo-router";
 import React from "react";
 import { ImageBackground, Text, TouchableOpacity, View } from "react-native";
+import { useTabBarHeight } from "../../hooks/useTabBarHeight";
 
 export default function Hero() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
 
   return (
     <ImageBackground
@@ -13,7 +15,7 @@ export default function Hero() {
     >
       <View className="absolute inset-0 bg-black opacity-50" />
 
-      <View className="flex-1 justify-end px-4 pb-10">
+      <View className="flex-1 justify-end px-4" style={{ paddingBottom: scrollContentPadding(40) }}>
         <Text style={{ fontFamily: "Poppins_700Bold" }} className="text-white text-3xl leading-9 mb-2">
           Capture Memories That Last Forever
         </Text>

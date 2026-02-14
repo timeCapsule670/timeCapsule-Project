@@ -1,18 +1,22 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Home, Lock, Plus, X, FileText, User } from "lucide-react-native";
 import { Tabs } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import { Platform, View } from "react-native";
 import MessageTypeSheet from "../../components/MessageTypeModal";
+import { useTabBarHeight } from "../../hooks/useTabBarHeight";
+import { usePromptSheet } from "../../context/PromptContext";
 
 export default function TabLayout() {
-  const [showMessageTypeSheet, setShowMessageTypeSheet] = useState(false);
+  const { showSheet, selectedPrompt, closeSheet, toggleSheet } = usePromptSheet();
+  const { bottomInset } = useTabBarHeight();
 
   return (
     <View style={{ flex: 1 }}>
       {/* Message Type Sheet - positioned behind tab bar */}
       <MessageTypeSheet
-        visible={showMessageTypeSheet}
-        onClose={() => setShowMessageTypeSheet(false)}
+        visible={showSheet}
+        onClose={closeSheet}
+        selectedPrompt={selectedPrompt}
       />
 
       <Tabs
@@ -22,16 +26,21 @@ export default function TabLayout() {
           tabBarInactiveTintColor: "#49454f",
           tabBarStyle: {
             backgroundColor: "#ffffff",
-            borderTopWidth: 0,
+            borderTopWidth: 1,
+            borderTopColor: "#f3f4f6",
             elevation: 8,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            height: Platform.OS === "ios" ? 88 : 64,
-            paddingBottom: Platform.OS === "ios" ? 24 : 8,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            height: (Platform.OS === "ios" ? 64 : 56) + bottomInset,
+            paddingBottom: (Platform.OS === "ios" ? 24 : 12) + bottomInset,
             paddingTop: 8,
-            zIndex: 200,
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
           },
           tabBarLabelStyle: {
             fontFamily: "Poppins_400Regular",
@@ -44,10 +53,10 @@ export default function TabLayout() {
           options={{
             title: "Home",
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? "home" : "home-outline"}
+              <Home
                 size={24}
                 color={focused ? "#1d1b20" : color}
+                strokeWidth={focused ? 2.5 : 1.5}
               />
             ),
           }}
@@ -57,10 +66,10 @@ export default function TabLayout() {
           options={{
             title: "Vault",
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? "lock-closed" : "lock-closed-outline"}
+              <Lock
                 size={24}
                 color={focused ? "#1d1b20" : color}
+                strokeWidth={focused ? 2.5 : 1.5}
               />
             ),
           }}
@@ -81,11 +90,11 @@ export default function TabLayout() {
                   marginTop: -8,
                 }}
               >
-                <Ionicons
-                  name={showMessageTypeSheet ? "close" : "add"}
-                  size={28}
-                  color="white"
-                />
+                {showSheet ? (
+                  <X size={28} color="white" strokeWidth={2.5} />
+                ) : (
+                  <Plus size={28} color="white" strokeWidth={2.5} />
+                )}
               </View>
             ),
             tabBarLabel: "",
@@ -93,7 +102,7 @@ export default function TabLayout() {
           listeners={{
             tabPress: (e) => {
               e.preventDefault();
-              setShowMessageTypeSheet(!showMessageTypeSheet);
+              toggleSheet();
             },
           }}
         />
@@ -102,10 +111,10 @@ export default function TabLayout() {
           options={{
             title: "Prompts",
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? "document-text" : "document-text-outline"}
+              <FileText
                 size={24}
                 color={focused ? "#1d1b20" : color}
+                strokeWidth={focused ? 2.5 : 1.5}
               />
             ),
           }}
@@ -115,10 +124,10 @@ export default function TabLayout() {
           options={{
             title: "Profile",
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? "person" : "person-outline"}
+              <User
                 size={24}
                 color={focused ? "#1d1b20" : color}
+                strokeWidth={focused ? 2.5 : 1.5}
               />
             ),
           }}

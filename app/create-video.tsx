@@ -4,9 +4,11 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 export default function CreateVideoMessage() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
@@ -122,7 +124,7 @@ export default function CreateVideoMessage() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: scrollContentPadding(40) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-1 px-6 pt-10 items-center">

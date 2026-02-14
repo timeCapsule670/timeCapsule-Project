@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTimeCapsules } from "../context/TimeCapsuleContext";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 // Mock data for recipient - in a real app this would come from a global state or API
 const mockRecipients = [
@@ -32,6 +33,7 @@ const mockRecipients = [
 
 export default function FinalReview() {
   const router = useRouter();
+  const { scrollContentPadding, bottomInset } = useTabBarHeight();
   const params = useLocalSearchParams<{
     type: string;
     uri: string;
@@ -172,7 +174,7 @@ export default function FinalReview() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 150 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: scrollContentPadding(170) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-8">
@@ -337,7 +339,10 @@ export default function FinalReview() {
       </ScrollView>
 
       {/* Footer */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-5 py-6">
+      <View
+        className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-5 py-6"
+        style={{ paddingBottom: 24 + bottomInset }}
+      >
         <TouchableOpacity
           onPress={handleSchedule}
           activeOpacity={0.9}

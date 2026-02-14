@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 const prompts = [
   "How do you think your childhood shaped who you are today?",
@@ -51,6 +52,7 @@ const messageTypes = [
 
 export default function SummaryPage() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
 
   const handleRefreshPrompt = () => {
@@ -92,7 +94,7 @@ export default function SummaryPage() {
     <SafeAreaView style={{ flex: 1 }} className="bg-white">
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 40, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 40, paddingBottom: scrollContentPadding(40) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="items-center gap-10">

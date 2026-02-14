@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import {
     Animated,
     Dimensions,
@@ -25,10 +26,12 @@ interface MessageTypeOption {
 interface MessageTypeSheetProps {
     visible: boolean;
     onClose: () => void;
+    selectedPrompt?: string | null;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SHEET_HEIGHT = 480;
+const SHEET_HEIGHT_WITH_PROMPT = 580;
 
 const messageTypes: MessageTypeOption[] = [
     {
@@ -60,15 +63,17 @@ const messageTypes: MessageTypeOption[] = [
         title: "Upload an Image",
         subtitle: "Upload your favorite memory",
         icon: "image",
-        iconBg: "#f0f0f0",
-        iconColor: "#666666",
+        iconBg: "#f3f4f6",
+        iconColor: "#6b7280",
     },
 ];
 
-export default function MessageTypeSheet({ visible, onClose }: MessageTypeSheetProps) {
+export default function MessageTypeSheet({ visible, onClose, selectedPrompt }: MessageTypeSheetProps) {
     const router = useRouter();
+    const { tabBarHeight } = useTabBarHeight();
     const [selectedType, setSelectedType] = useState<MessageType | null>(null);
-    const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
+    const sheetHeight = selectedPrompt ? SHEET_HEIGHT_WITH_PROMPT : SHEET_HEIGHT;
+    const translateY = useRef(new Animated.Value(SHEET_HEIGHT_WITH_PROMPT)).current;
     const overlayOpacity = useRef(new Animated.Value(0)).current;
     const buttonOpacity = useRef(new Animated.Value(0)).current;
 
@@ -92,7 +97,7 @@ export default function MessageTypeSheet({ visible, onClose }: MessageTypeSheetP
         } else {
             Animated.parallel([
                 Animated.spring(translateY, {
-                    toValue: SHEET_HEIGHT,
+                    toValue: SHEET_HEIGHT_WITH_PROMPT,
                     useNativeDriver: true,
                     damping: 20,
                     stiffness: 150,
@@ -124,7 +129,10 @@ export default function MessageTypeSheet({ visible, onClose }: MessageTypeSheetP
         onClose();
         router.push({
             pathname: "/recipient",
-            params: { messageType: selectedType },
+            params: {
+                messageType: selectedType,
+                ...(selectedPrompt ? { prompt: selectedPrompt } : {}),
+            },
         });
     };
 
@@ -146,14 +154,14 @@ export default function MessageTypeSheet({ visible, onClose }: MessageTypeSheetP
                 className="absolute left-0 right-0 bg-white rounded-t-3xl"
                 style={{
                     bottom: 0,
-                    height: SHEET_HEIGHT,
+                    height: sheetHeight,
                     transform: [{ translateY }],
-                    paddingBottom: 90, // Space for tab bar
+                    paddingBottom: tabBarHeight,
                 }}
                 pointerEvents="box-none"
             >
                 {/* Header */}
-                <View className="flex-row items-center justify-between px-5 pt-5 mb-4">
+                <View className="flex-row items-center justify-between px-5 pt-4 mb-3">
                     <Text
                         style={{ fontFamily: "Poppins_600SemiBold" }}
                         className="text-[#1a1f36] text-lg"
@@ -162,24 +170,53 @@ export default function MessageTypeSheet({ visible, onClose }: MessageTypeSheetP
                     </Text>
                     <TouchableOpacity
                         onPress={onClose}
-                        className="w-8 h-8 rounded-full bg-[#f0f0f0] items-center justify-center"
+                        className="w-9 h-9 rounded-full bg-[#f3f4f6] items-center justify-center"
                     >
-                        <Ionicons name="close" size={24} color="#666" />
+                        <Ionicons name="close" size={20} color="#6b7280" />
                     </TouchableOpacity>
                 </View>
 
-                {/* Scrollable Message Type Options */}
+                {/* Scrollable Content */}
                 <ScrollView
                     className="flex-1 px-5"
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ gap: 12, paddingBottom: 16 }}
                 >
+                    {/* Selected Prompt Card */}
+                    {selectedPrompt && (
+                        <View
+                            style={{
+                                borderWidth: 1.5,
+                                borderColor: "rgba(138,95,204,0.4)",
+                                borderStyle: "dashed",
+                                borderRadius: 14,
+                                padding: 16,
+                                backgroundColor: "rgba(214,199,237,0.1)",
+                            }}
+                        >
+                            <Text
+                                style={{ fontFamily: "Poppins_600SemiBold" }}
+                                className="text-[#1a1f36] text-[15px] mb-1"
+                            >
+                                Your Selected Prompt
+                            </Text>
+                            <Text
+                                style={{ fontFamily: "Poppins_400Regular" }}
+                                className="text-[#6b7280] text-[14px] leading-[20px]"
+                                numberOfLines={2}
+                            >
+                                {selectedPrompt}
+                            </Text>
+                        </View>
+                    )}
+
+                    {/* Message Type Options */}
                     {messageTypes.map((option) => {
                         const isSelected = selectedType === option.id;
                         return (
                             <TouchableOpacity
                                 key={option.id}
-                                className={`flex-row items-center rounded-[14px] p-4 gap-3.5 ${isSelected ? "bg-[#4a5b87]" : "bg-[#f8f8f8]"
+                                className={`flex-row items-center rounded-[14px] p-4 gap-3.5 ${isSelected ? "bg-[#4a5b87]" : "bg-[#f3f4f6]"
                                     }`}
                                 onPress={() => handleSelectType(option.id)}
                                 activeOpacity={0.7}
@@ -198,7 +235,7 @@ export default function MessageTypeSheet({ visible, onClose }: MessageTypeSheetP
                                 </View>
                                 <View className="flex-1">
                                     <Text
-                                        style={{ fontFamily: "Poppins_500Medium" }}
+                                        style={{ fontFamily: isSelected ? "Poppins_600SemiBold" : "Poppins_500Medium" }}
                                         className={`text-[15px] mb-0.5 ${isSelected ? "text-white" : "text-[#1a1f36]"
                                             }`}
                                     >
@@ -219,7 +256,7 @@ export default function MessageTypeSheet({ visible, onClose }: MessageTypeSheetP
 
                 {/* Next Button - Only visible when option selected */}
                 <Animated.View
-                    className="px-5 pb-4"
+                    className="px-5 pb-3"
                     style={{ opacity: buttonOpacity }}
                     pointerEvents={selectedType ? "auto" : "none"}
                 >

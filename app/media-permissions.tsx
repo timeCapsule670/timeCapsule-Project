@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 type MessageType = "video" | "audio" | "image" | "text";
 
@@ -49,6 +50,7 @@ const messageTypeConfig = {
 
 export default function MediaPermissions() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
   const { type } = useLocalSearchParams<{ type: MessageType }>();
   const config = messageTypeConfig[type || "video"];
   const [showExplanation, setShowExplanation] = useState(false);
@@ -139,7 +141,7 @@ export default function MediaPermissions() {
 
       <ScrollView
         className="flex-1 px-4"
-        contentContainerStyle={{ paddingTop: 24, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingTop: 24, paddingBottom: scrollContentPadding(40) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-10 items-center">

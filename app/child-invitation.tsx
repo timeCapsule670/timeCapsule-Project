@@ -5,9 +5,11 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 export default function ChildInvitation() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
   const [inviteCode, setInviteCode] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
 
@@ -81,7 +83,7 @@ export default function ChildInvitation() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingTop: 24, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 16, paddingTop: 24, paddingBottom: scrollContentPadding(40) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-10">

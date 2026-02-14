@@ -58,50 +58,50 @@ export default function SignUp() {
               {/* Google Sign Up */}
               <TouchableOpacity
                 onPress={handleSignUpSuccess}
-                activeOpacity={0.9}
-                className="bg-white rounded-[8px] px-10 py-4 flex-row items-center justify-center gap-2"
+                activeOpacity={0.7}
+                className="bg-white rounded-[12px] h-[56px] flex-row items-center justify-center gap-3 border border-gray-100"
                 style={{
                   shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 2,
-                  elevation: 8,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 3,
                 }}
               >
                 <Image
                   source={require("../assets/images/google.png")}
-                  style={{ width: 29.4, height: 29.4 }}
+                  style={{ width: 24, height: 24 }}
                   resizeMode="contain"
                 />
                 <Text
-                  style={{ fontFamily: "Poppins_500Medium" }}
-                  className="text-black text-[16px]"
+                  style={{ fontFamily: "Poppins_600SemiBold" }}
+                  className="text-[#1a1a1a] text-[16px]"
                 >
                   Sign Up With Google
                 </Text>
               </TouchableOpacity>
 
-              {/* Apple Sign Up */}
+              {/* Microsoft Sign Up */}
               <TouchableOpacity
                 onPress={handleSignUpSuccess}
-                activeOpacity={0.9}
-                className="bg-white rounded-[8px] px-10 py-4 flex-row items-center justify-center gap-4"
+                activeOpacity={0.7}
+                className="bg-white rounded-[12px] h-[56px] flex-row items-center justify-center gap-3 border border-gray-100"
                 style={{
                   shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 2,
-                  elevation: 8,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 3,
                 }}
               >
                 <Image
                   source={require("../assets/images/microsoft.png")}
-                  style={{ width: 28, height: 28 }}
+                  style={{ width: 24, height: 24 }}
                   resizeMode="contain"
                 />
                 <Text
-                  style={{ fontFamily: "Poppins_500Medium" }}
-                  className="text-black text-[16px]"
+                  style={{ fontFamily: "Poppins_600SemiBold" }}
+                  className="text-[#1a1a1a] text-[16px]"
                 >
                   Sign Up With Microsoft
                 </Text>
@@ -110,24 +110,24 @@ export default function SignUp() {
               {/* Email Sign Up */}
               <TouchableOpacity
                 onPress={handleSignUpSuccess}
-                activeOpacity={0.9}
-                className="bg-white rounded-[8px] px-10 py-4 flex-row items-center justify-center gap-2"
+                activeOpacity={0.7}
+                className="bg-white rounded-[12px] h-[56px] flex-row items-center justify-center gap-3 border border-gray-100"
                 style={{
                   shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 2,
-                  elevation: 8,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 3,
                 }}
               >
                 <Image
                   source={require("../assets/images/email.png")}
-                  style={{ width: 29.4, height: 29.4 }}
+                  style={{ width: 24, height: 24 }}
                   resizeMode="contain"
                 />
                 <Text
-                  style={{ fontFamily: "Poppins_500Medium" }}
-                  className="text-black text-[16px]"
+                  style={{ fontFamily: "Poppins_600SemiBold" }}
+                  className="text-[#1a1a1a] text-[16px]"
                 >
                   Sign Up With Email
                 </Text>
@@ -152,11 +152,18 @@ export default function SignUp() {
             {/* Have a code Button */}
             <TouchableOpacity
               onPress={handleSignUpSuccess}
-              activeOpacity={0.9}
-              className="bg-[#fcb32b] h-[60px] rounded-[8px] items-center justify-center w-full px-4"
+              activeOpacity={0.85}
+              className="bg-[#fcb32b] h-[60px] rounded-[12px] items-center justify-center w-full px-4"
+              style={{
+                shadowColor: "#fcb32b",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 5,
+              }}
             >
               <Text
-                style={{ fontFamily: "Poppins_500Medium" }}
+                style={{ fontFamily: "Poppins_600SemiBold" }}
                 className="text-black text-[16px]"
               >
                 Have a code? Enter it here
@@ -165,15 +172,16 @@ export default function SignUp() {
 
             {/* Sign In Link */}
             <TouchableOpacity
-              activeOpacity={0.7}
+              activeOpacity={0.6}
               onPress={() => {
                 // Navigate to sign in page when available
                 // router.push("/sign-in");
               }}
+              className="py-2"
             >
               <Text
                 style={{ fontFamily: "Poppins_400Regular" }}
-                className="text-black text-[16px] text-center"
+                className="text-[#5a5a5a] text-[16px] text-center"
               >
                 Already have an account?{" "}
                 <Text style={{ fontFamily: "Poppins_700Bold" }} className="text-[#6099ea]">

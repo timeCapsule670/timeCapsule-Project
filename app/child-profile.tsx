@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 interface Child {
   id: string;
@@ -15,6 +16,7 @@ interface Child {
 
 export default function ChildProfileSetup() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
   const [children, setChildren] = useState<Child[]>([
     {
       id: Math.random().toString(36).substr(2, 9),
@@ -84,6 +86,21 @@ export default function ChildProfileSetup() {
     }
   };
 
+  // Validate form - check if all children have name and birthday filled
+  const isFormValid = () => {
+    return children.every(child => 
+      child.name.trim().length > 0 && 
+      child.birthday.trim().length > 0
+    );
+  };
+
+  const handleNext = () => {
+    if (isFormValid()) {
+      router.push("/family-space");
+      console.log("Next pressed", { children });
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }} className="bg-white">
       {/* Header */}
@@ -109,56 +126,77 @@ export default function ChildProfileSetup() {
         </View>
       </View>
 
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingTop: 24, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
+      <View className="flex-1">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ padding: 16, paddingTop: 24, paddingBottom: scrollContentPadding(24) }}
+          showsVerticalScrollIndicator={false}
+        >
         <View className="gap-10">
           {children.map((child, index) => (
             <View key={child.id} className="gap-8">
               {index > 0 && (
-                <View className="flex-row items-center justify-between border-t border-[#f3f4f6] pt-8">
+                <View className="flex-row items-center justify-between border-t border-[#f3f4f6] pt-6 pb-2">
                   <Text style={{ fontFamily: "Poppins_700Bold" }} className="text-[#2f3a56] text-[18px]">
                     Child {index + 1}
                   </Text>
-                  <TouchableOpacity onPress={() => handleRemoveChild(index)}>
-                    <Ionicons name="close-circle-outline" size={24} color="#FF2828" />
+                  <TouchableOpacity 
+                    onPress={() => handleRemoveChild(index)}
+                    activeOpacity={0.7}
+                    className="p-2"
+                  >
+                    <Ionicons name="close-circle" size={28} color="#ef4444" />
                   </TouchableOpacity>
                 </View>
               )}
               
               {/* Name Field */}
-              <View className="gap-4">
+              <View className="gap-3">
                 <Text
-                  style={{ fontFamily: "Poppins_500Medium" }}
-                  className="text-black text-[18px] leading-[27px]"
+                  style={{ fontFamily: "Poppins_600SemiBold" }}
+                  className="text-[#1a1a1a] text-[18px] leading-[27px]"
                 >
                   What’s Your Child’s Name?
                 </Text>
-                <View className="border border-[#79747e] rounded-[4px] h-[56px] px-4 flex-row items-center gap-3">
-                  <Ionicons name="person-outline" size={24} color="#49454f" />
+                <View className={`border ${child.name.trim().length > 0 ? 'border-[#6099ea]' : 'border-[#79747e]'} rounded-[12px] h-[56px] px-4 flex-row items-center gap-3 bg-white`}
+                  style={{
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: child.name.trim().length > 0 ? 0.1 : 0.05,
+                    shadowRadius: 2,
+                    elevation: child.name.trim().length > 0 ? 2 : 1,
+                  }}
+                >
+                  <Ionicons name="person-outline" size={24} color={child.name.trim().length > 0 ? "#6099ea" : "#9ca3af"} />
                   <TextInput
                     value={child.name}
                     onChangeText={(text) => updateChild(index, { name: text })}
                     placeholder="Child’s Name"
-                    placeholderTextColor="#49454f"
-                    style={{ fontFamily: "Poppins_400Regular", fontSize: 16, color: "#49454f" }}
+                    placeholderTextColor="#9ca3af"
+                    style={{ fontFamily: "Poppins_400Regular", fontSize: 16, color: "#1a1a1a" }}
                     className="flex-1"
                   />
                 </View>
               </View>
 
               {/* Birthday Field */}
-              <View className="gap-4">
+              <View className="gap-3">
                 <Text
-                  style={{ fontFamily: "Poppins_500Medium" }}
-                  className="text-black text-[18px] leading-[27px]"
+                  style={{ fontFamily: "Poppins_600SemiBold" }}
+                  className="text-[#1a1a1a] text-[18px] leading-[27px]"
                 >
                   What’s Your Child Birthday?
                 </Text>
-                <View className="flex-row gap-4 items-center">
-                  <View className="flex-1 border border-[#79747e] rounded-[4px] h-[56px] px-4 justify-center">
+                <View className="flex-row gap-3 items-center">
+                  <View className={`flex-1 border ${child.birthday.trim().length > 0 ? 'border-[#6099ea]' : 'border-[#79747e]'} rounded-[12px] h-[56px] px-4 justify-center bg-white`}
+                    style={{
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: child.birthday.trim().length > 0 ? 0.1 : 0.05,
+                      shadowRadius: 2,
+                      elevation: child.birthday.trim().length > 0 ? 2 : 1,
+                    }}
+                  >
                     <TextInput
                       value={child.birthday}
                       onChangeText={(text) => updateChild(index, { birthday: text })}
@@ -171,16 +209,16 @@ export default function ChildProfileSetup() {
                   <TouchableOpacity
                     onPress={() => handleOpenDatePicker(index)}
                     activeOpacity={0.7}
-                    className="bg-white rounded-[8px] p-4 items-center justify-center"
+                    className="bg-white rounded-[12px] h-[56px] w-[56px] items-center justify-center border border-gray-200"
                     style={{
                       shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 3,
-                      elevation: 4,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 3,
                     }}
                   >
-                    <Ionicons name="calendar-outline" size={24} color="#49454f" />
+                    <Ionicons name="calendar-outline" size={24} color="#6099ea" />
                   </TouchableOpacity>
                 </View>
 
@@ -201,50 +239,64 @@ export default function ChildProfileSetup() {
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleAddChild}
-            className="flex-row items-center gap-3"
+            className="flex-row items-center gap-3 py-3 px-2"
           >
-            <Ionicons
-              name="radio-button-off"
-              size={24}
-              color="black"
-            />
+            <View className="w-6 h-6 rounded-full border-2 border-[#6099ea] items-center justify-center">
+              <Ionicons
+                name="add"
+                size={18}
+                color="#6099ea"
+              />
+            </View>
             <Text
-              style={{ fontFamily: "Poppins_500Medium" }}
-              className="text-black text-[18px] leading-[27px]"
+              style={{ fontFamily: "Poppins_600SemiBold" }}
+              className="text-[#6099ea] text-[18px] leading-[27px]"
             >
               Add another child
             </Text>
           </TouchableOpacity>
 
-          {/* Next Button and Footer Section */}
-          <View className="gap-6 mt-10">
-            <TouchableOpacity
-              activeOpacity={0.9}
-              className="bg-[#2f3a56] h-[60px] rounded-[8px] flex-row items-center justify-center gap-4 px-4 w-full"
-              onPress={() => {
-                // Navigate to family space setup
-                router.push("/family-space");
-                console.log("Next pressed", { children });
-              }}
-            >
-              <Text
-                style={{ fontFamily: "Poppins_500Medium" }}
-                className="text-white text-[16px]"
-              >
-                Next
-              </Text>
-              <Ionicons name="arrow-forward" size={24} color="white" />
-            </TouchableOpacity>
-
-            <Text
-              style={{ fontFamily: "Poppins_400Regular" }}
-              className="text-[#5a5a5a] text-[14px] leading-[21px] text-center"
-            >
-              These questions will help us personalize your experience and suggest meaningful messages to create.
-            </Text>
-          </View>
         </View>
       </ScrollView>
+
+      {/* Next Button Fixed at Bottom */}
+      <View className="px-4 pb-6 pt-4 bg-white border-t border-[#f3f4f6]">
+        <View className="gap-4">
+          <TouchableOpacity
+            activeOpacity={isFormValid() ? 0.85 : 1}
+            disabled={!isFormValid()}
+            className={`${isFormValid() ? 'bg-[#2f3a56]' : 'bg-gray-300'} h-[60px] rounded-[12px] flex-row items-center justify-center gap-3 px-4 w-full`}
+            onPress={handleNext}
+            style={isFormValid() ? {
+              shadowColor: "#2f3a56",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 5,
+            } : {}}
+          >
+            <Text
+              style={{ fontFamily: "Poppins_600SemiBold" }}
+              className={`${isFormValid() ? 'text-white' : 'text-gray-500'} text-[16px]`}
+            >
+              Next
+            </Text>
+            <Ionicons 
+              name="arrow-forward" 
+              size={24} 
+              color={isFormValid() ? "white" : "#9ca3af"} 
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={{ fontFamily: "Poppins_400Regular" }}
+            className="text-[#5a5a5a] text-[14px] leading-[21px] text-center"
+          >
+            These questions will help us personalize your experience and suggest meaningful messages to create.
+          </Text>
+        </View>
+      </View>
+      </View>
     </SafeAreaView>
   );
 }

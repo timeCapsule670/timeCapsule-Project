@@ -4,9 +4,11 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 export default function LinkAccount() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
 
   const handleLink = () => {
     // Navigate to next screen or linking flow
@@ -24,7 +26,7 @@ export default function LinkAccount() {
     <SafeAreaView style={{ flex: 1 }} className="bg-white">
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 40, paddingBottom: scrollContentPadding(40) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="items-center gap-10">

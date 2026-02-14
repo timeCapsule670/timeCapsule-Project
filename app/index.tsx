@@ -6,7 +6,7 @@ import Hero from "./components/Hero";
 export default function OnboardingScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "black" }} edges={["top"]}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <Hero />
     </SafeAreaView>
   );

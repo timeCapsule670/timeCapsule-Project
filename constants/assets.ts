@@ -17,6 +17,12 @@ export const calendarIcon = "https://www.figma.com/api/mcp/asset/8314fe92-7d63-4
 export const forwardArrowIcon = "https://www.figma.com/api/mcp/asset/18b40d38-8c33-434f-bd73-60c3c76222ed";
 export const creatingAccountIcon = "https://www.figma.com/api/mcp/asset/550e8400-e29b-41d4-a716-446655440000"; // Placeholder, update with real asset URL
 
+// Prompts Page Assets
+export const promptsLightbulbIcon = "https://www.figma.com/api/mcp/asset/7f0c44b4-092f-482b-ba06-0ccd1f454227";
+export const promptsRefreshIcon = "https://www.figma.com/api/mcp/asset/d0041fc3-68a1-466f-af07-f8abfa137b0f";
+export const promptsCategoryIcon = "https://www.figma.com/api/mcp/asset/94868f43-2367-476f-9bea-eae73c90137b";
+export const promptsCardIcon = "https://www.figma.com/api/mcp/asset/e8190ab7-2e43-421a-ad23-926f993cc643";
+
 // Link Account Assets
 export const linkIcon = "https://www.figma.com/api/mcp/asset/b006322e-ed73-4afe-a7ea-2dcbcfd2f3ad";
 export const linkFeatureCalendar = "https://www.figma.com/api/mcp/asset/c9c9287c-5a84-47e2-8151-3e704ae48224";
@@ -30,19 +36,19 @@ export const openBookIcon = require("../assets/images/open-book.png");
 export const schoolIcon = require("../assets/images/school.png");
 export const trophyIcon = require("../assets/images/trophy-cup.png");
 
-// Homepage Assets
-export const profilePicture = "https://www.figma.com/api/mcp/asset/dd2a636e-5ebf-4a27-be9e-3e9930750e0f";
-export const messageCardBg = "https://www.figma.com/api/mcp/asset/5ce2bb52-524a-4970-af73-45173fc7a89f";
+// Homepage Assets (using working URLs - replace with your own assets when ready)
+export const profilePicture = "https://i.pravatar.cc/150?img=12";
+export const messageCardBg = "https://picsum.photos/seed/memory/400/300";
 export const bookmarkIcon = "https://www.figma.com/api/mcp/asset/182a5392-60cf-43e6-8b11-d2a0f07680c5";
 export const plusIcon = "https://www.figma.com/api/mcp/asset/4da3af04-14f2-4d8a-a65e-246566b8f399";
 export const wavingHandEmoji = "https://www.figma.com/api/mcp/asset/2d6081e1-22a9-4890-802d-a8afc84885d6";
 
-// Message Template Images
-export const templateFirstHeartbreak = "https://www.figma.com/api/mcp/asset/3c9cb5c7-a1f2-4ef0-8f68-6d758695e772";
-export const templateFirstHeartbreakOverlay = "https://www.figma.com/api/mcp/asset/db21c6d1-5b3b-4a71-9580-86f79b631ae2";
-export const templateGraduation = "https://www.figma.com/api/mcp/asset/84dfde27-6aa8-41b8-8761-df20b60dc475";
-export const templateGraduationOverlay = "https://www.figma.com/api/mcp/asset/5ec237e8-f666-4ece-8464-ed15a53d033a";
-export const templateWedding = "https://www.figma.com/api/mcp/asset/fbfa4e22-c78f-45d4-8013-b7775c06644d";
-export const templateFirstJob = "https://www.figma.com/api/mcp/asset/cb71c76b-f819-4780-afbb-c6e043fd37b2";
-export const templateFirstJobOverlay = "https://www.figma.com/api/mcp/asset/b8519a94-7b96-428f-93c3-6c29f5b7c6fa";
+// Message Template Images (contextually relevant - replace with your own assets when ready)
+export const templateFirstHeartbreak = "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=400&h=300&fit=crop"; // heart / emotional
+export const templateFirstHeartbreakOverlay = "";
+export const templateGraduation = "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=300&fit=crop"; // graduation cap
+export const templateGraduationOverlay = "";
+export const templateWedding = "https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=300&fit=crop"; // wedding rings
+export const templateFirstJob = "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&h=300&fit=crop"; // office / professional
+export const templateFirstJobOverlay = "";
 

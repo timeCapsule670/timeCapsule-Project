@@ -6,9 +6,11 @@ import React, { useEffect, useState } from "react";
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { backArrowIcon, profileIllustration } from "../constants/assets";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 export default function FinalTouches() {
   const router = useRouter();
+  const { scrollContentPadding, bottomInset } = useTabBarHeight();
   const { type, uri } = useLocalSearchParams<{ type: string; uri: string }>();
 
   const [title, setTitle] = useState("");
@@ -139,7 +141,7 @@ export default function FinalTouches() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: scrollContentPadding(140) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-8">
@@ -304,7 +306,10 @@ If you're having a tough day, I want you to know that I'm here for you..."
       </ScrollView>
 
       {/* Footer */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-5 py-6 gap-4">
+      <View
+        className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-5 py-6 gap-4"
+        style={{ paddingBottom: 24 + bottomInset }}
+      >
         <TouchableOpacity
           onPress={handleNext}
           activeOpacity={0.9}

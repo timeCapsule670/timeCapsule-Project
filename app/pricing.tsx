@@ -1,9 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import React, { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
+
+// Stripe Payment Links for each plan + billing period combination
+const PAYMENT_LINKS: Record<string, Record<string, string>> = {
+  premium: {
+    month: "https://buy.stripe.com/test_fZu9AT9ym0tp7KW2Eq1Jm00",
+    year: "https://buy.stripe.com/test_4gM14nbGu4JFghs4My1Jm01",
+  },
+  family: {
+    month: "https://buy.stripe.com/test_fZu9AT6ma1xt3uGfrc1Jm02",
+    year: "https://buy.stripe.com/test_6oU28rfWK5NJd5g92O1Jm03",
+  },
+};
 
 interface PricingPlan {
   id: string;
@@ -18,47 +32,55 @@ interface PricingPlan {
 
 const pricingPlans: PricingPlan[] = [
   {
-    id: "12months",
-    label: "12 Months",
-    monthlyPrice: "$5.99/mo",
-    yearlyPrice: "$4.17/mo",
+    id: "premium",
+    label: "Premium",
+    monthlyPrice: "$14.99/mo",
+    yearlyPrice: "$11.99/mo",
     monthlyBilling: "Cancel anytime",
-    yearlyBilling: "billed $49.99 upfront",
-    badge: "Best Value - 30% off",
+    yearlyBilling: "billed $143.88 upfront",
+    badge: "Save 20%",
+  },
+  {
+    id: "family",
+    label: "Family Plan",
+    monthlyPrice: "$19.99/mo",
+    yearlyPrice: "$15.99/mo",
+    monthlyBilling: "Cancel anytime",
+    yearlyBilling: "billed $191.88 upfront",
+    badge: "Best Value - 20% off",
     isRecommended: true,
-  },
-  {
-    id: "6months",
-    label: "6 Months",
-    monthlyPrice: "$5.99/mo",
-    yearlyPrice: "$5.00/mo",
-    monthlyBilling: "Cancel anytime",
-    yearlyBilling: "billed $29.99 upfront",
-    badge: "Save 17%",
-  },
-  {
-    id: "1month",
-    label: "1 Month",
-    monthlyPrice: "$5.99/mo",
-    yearlyPrice: "$5.99/mo",
-    monthlyBilling: "Cancel anytime",
-    yearlyBilling: "Cancel anytime",
   },
 ];
 
 interface Feature {
   label: string;
-  free: boolean;
-  premium: boolean;
+  free: string | boolean;
+  premium: string | boolean;
+  family: string | boolean;
 }
 
 const features: Feature[] = [
-  { label: "View Memories", free: true, premium: true },
-  { label: "Create and Schedule Messages", free: false, premium: true },
-  { label: 'Use "Open When" Delivery', free: false, premium: true },
-  { label: "Link Family Accounts", free: false, premium: true },
-  { label: "Add comments & Replies", free: false, premium: true },
-  { label: "Daily Prompt Inspiration", free: false, premium: true },
+  { label: "Capsules", free: "Limited", premium: "Unlimited", family: "Unlimited" },
+  {
+    label: "Scheduling",
+    free: "Basic (video, audio, text, image)",
+    premium: "Advanced",
+    family: "Advanced",
+  },
+  { label: "Storage", free: "Limited", premium: "Unlimited", family: "Shared vault" },
+  { label: "Prompts", free: "Limited", premium: "AI memory", family: "AI memory" },
+  {
+    label: "Open-When triggers",
+    free: false,
+    premium: "Advanced",
+    family: "Advanced",
+  },
+  {
+    label: "Family linking",
+    free: false,
+    premium: "1 linked experience",
+    family: "Parent + teen, multiple children",
+  },
 ];
 
 interface TimelineItem {
@@ -95,7 +117,9 @@ const timelineItems: TimelineItem[] = [
 
 export default function Pricing() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
   const [billingPeriod, setBillingPeriod] = useState<"month" | "year">("year");
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("family");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleBack = () => {
@@ -108,11 +132,41 @@ export default function Pricing() {
     }
   };
 
-  const handleStartTrial = () => {
+  const getPaymentLink = () => {
+    return PAYMENT_LINKS[selectedPlanId]?.[billingPeriod] || "";
+  };
+
+  const openPaymentLink = async () => {
+    const url = getPaymentLink();
+    if (!url) {
+      Alert.alert("Error", "Payment link not found for the selected plan.");
+      return;
+    }
     if (isLoading) return;
     setIsLoading(true);
-    router.push("/creating-account");
+    try {
+      // Open Stripe checkout in external browser
+      await Linking.openURL(url);
+      // Navigate forward immediately — user completes payment in the browser
+      // and returns to the app on the next screen
+      router.push({
+        pathname: "/creating-account",
+        params: { plan: selectedPlanId, billing: billingPeriod },
+      });
+    } catch (error) {
+      Alert.alert("Error", "Unable to open payment page. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleStartTrial = () => {
+    openPaymentLink();
+  };
+
+  // const handleSetupPayment = () => {
+  //   openPaymentLink();
+  // };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -124,7 +178,7 @@ export default function Pricing() {
       >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 20, paddingTop: 54, paddingBottom: 40 }}
+          contentContainerStyle={{ padding: 20, paddingTop: 54, paddingBottom: scrollContentPadding(40) }}
           showsVerticalScrollIndicator={false}
         >
           <View className="items-center gap-6">
@@ -177,7 +231,7 @@ export default function Pricing() {
             {/* Pricing Plans */}
             <View className="gap-4 w-full">
               {pricingPlans.map((plan) => {
-                const isRecommended = plan.isRecommended && billingPeriod === "year";
+                const isSelected = selectedPlanId === plan.id;
                 const price =
                   billingPeriod === "year" ? plan.yearlyPrice : plan.monthlyPrice;
                 const billing =
@@ -200,41 +254,53 @@ export default function Pricing() {
                     {/* Card */}
                     <TouchableOpacity
                       activeOpacity={0.9}
-                      className={`rounded-[16px] px-4 py-5 flex-row items-center justify-between ${isRecommended
-                        ? "bg-[#4a5b87] border-[3px] border-[#4a5b87]"
-                        : "bg-white"
+                      onPress={() => setSelectedPlanId(plan.id)}
+                      className={`rounded-[16px] px-4 py-5 flex-row items-center justify-between border-[3px] ${isSelected
+                        ? "bg-[#4a5b87] border-[#4a5b87]"
+                        : "bg-white border-transparent"
                         }`}
                     >
                       {/* Left Content */}
-                      <View className="gap-1">
-                        <Text
-                          style={{ fontFamily: "Poppins_700Bold" }}
-                          className={`text-[18px] leading-[27px] ${isRecommended ? "text-[#f5f5f5]" : "text-[#4a5b87]"
+                      <View className="flex-row items-center gap-3">
+                        <View
+                          className={`rounded-full border-2 items-center justify-center ${isSelected ? "border-white bg-white/20" : "border-[#5a5a5a]"
                             }`}
+                          style={{ width: 24, height: 24 }}
                         >
-                          {plan.label}
-                        </Text>
-                        <Text
-                          style={{ fontFamily: "Poppins_400Regular" }}
-                          className={`text-[12px] leading-[18px] ${isRecommended ? "text-[#f5f5f5]" : "text-[#5a5a5a]"
-                            }`}
-                        >
-                          30-day free trial
-                        </Text>
+                          {isSelected && (
+                            <Ionicons name="checkmark" size={16} color="white" />
+                          )}
+                        </View>
+                        <View className="gap-1">
+                          <Text
+                            style={{ fontFamily: "Poppins_700Bold" }}
+                            className={`text-[18px] leading-[27px] ${isSelected ? "text-[#f5f5f5]" : "text-[#4a5b87]"
+                              }`}
+                          >
+                            {plan.label}
+                          </Text>
+                          <Text
+                            style={{ fontFamily: "Poppins_400Regular" }}
+                            className={`text-[12px] leading-[18px] ${isSelected ? "text-[#f5f5f5]" : "text-[#5a5a5a]"
+                              }`}
+                          >
+                            30-day free trial
+                          </Text>
+                        </View>
                       </View>
 
                       {/* Right Content */}
                       <View className="gap-1 items-end">
                         <Text
                           style={{ fontFamily: "Poppins_700Bold" }}
-                          className={`text-[18px] leading-[27px] ${isRecommended ? "text-[#f5f5f5]" : "text-[#4a5b87]"
+                          className={`text-[18px] leading-[27px] ${isSelected ? "text-[#f5f5f5]" : "text-[#4a5b87]"
                             }`}
                         >
                           {price}
                         </Text>
                         <Text
                           style={{ fontFamily: "Poppins_400Regular" }}
-                          className={`text-[12px] leading-[18px] ${isRecommended ? "text-[#f5f5f5]" : "text-[#5a5a5a]"
+                          className={`text-[12px] leading-[18px] ${isSelected ? "text-[#f5f5f5]" : "text-[#5a5a5a]"
                             }`}
                         >
                           {billing}
@@ -257,38 +323,101 @@ export default function Pricing() {
               </Text>
 
               {/* Header Row */}
-              <View className="flex-row justify-end gap-[30px] mb-2">
-                <Text
-                  style={{ fontFamily: "Poppins_400Regular" }}
-                  className="text-black text-[12px] leading-[18px]"
-                >
-                  Free
-                </Text>
-                <Text
-                  style={{ fontFamily: "Poppins_400Regular" }}
-                  className="text-black text-[12px] leading-[18px]"
-                >
-                  Premium
-                </Text>
+              <View className="flex-row mb-2">
+                <View className="flex-1" />
+                <View className="flex-row flex-1 justify-between">
+                  <Text
+                    style={{ fontFamily: "Poppins_400Regular" }}
+                    className="text-black text-[12px] leading-[18px] flex-1 text-center"
+                  >
+                    Free
+                  </Text>
+                  <Text
+                    style={{ fontFamily: "Poppins_400Regular" }}
+                    className="text-black text-[12px] leading-[18px] flex-1 text-center"
+                  >
+                    Premium
+                  </Text>
+                  <Text
+                    style={{ fontFamily: "Poppins_400Regular" }}
+                    className="text-black text-[12px] leading-[18px] flex-1 text-center"
+                  >
+                    Family
+                  </Text>
+                </View>
               </View>
 
               {/* Features List */}
               <View className="gap-2">
                 {features.map((feature, index) => (
-                  <View key={index} className="flex-row items-center justify-between">
+                  <View key={index} className="flex-row items-center">
                     <Text
                       style={{ fontFamily: "Poppins_400Regular" }}
-                      className="flex-1 text-black text-[12px] leading-[18px]"
+                      className="flex-1 text-black text-[12px] leading-[18px] pr-2"
                     >
                       {feature.label}
                     </Text>
-                    <View className="flex-row items-center justify-between w-[114px]">
-                      {feature.free ? (
-                        <Ionicons name="checkmark-circle" size={24} color="#34C759" />
+                    <View className="flex-row flex-1 justify-between">
+                      {typeof feature.free === "string" ? (
+                        <View className="items-center flex-1">
+                          <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                          <Text
+                            style={{ fontFamily: "Poppins_400Regular" }}
+                            className="text-[#5a5a5a] text-[10px] leading-[14px] text-center"
+                            numberOfLines={2}
+                          >
+                            {feature.free}
+                          </Text>
+                        </View>
+                      ) : feature.free ? (
+                        <View className="flex-1 items-center">
+                          <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                        </View>
                       ) : (
-                        <Ionicons name="lock-closed" size={19} color="#5a5a5a" />
+                        <View className="flex-1 items-center">
+                          <Ionicons name="lock-closed" size={18} color="#5a5a5a" />
+                        </View>
                       )}
-                      <Ionicons name="checkmark-circle" size={24} color="#34C759" />
+                      {typeof feature.premium === "string" ? (
+                        <View className="items-center flex-1">
+                          <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                          <Text
+                            style={{ fontFamily: "Poppins_400Regular" }}
+                            className="text-[#5a5a5a] text-[10px] leading-[14px] text-center"
+                            numberOfLines={2}
+                          >
+                            {feature.premium}
+                          </Text>
+                        </View>
+                      ) : feature.premium ? (
+                        <View className="flex-1 items-center">
+                          <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                        </View>
+                      ) : (
+                        <View className="flex-1 items-center">
+                          <Ionicons name="lock-closed" size={18} color="#5a5a5a" />
+                        </View>
+                      )}
+                      {typeof feature.family === "string" ? (
+                        <View className="items-center flex-1">
+                          <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                          <Text
+                            style={{ fontFamily: "Poppins_400Regular" }}
+                            className="text-[#5a5a5a] text-[10px] leading-[14px] text-center"
+                            numberOfLines={2}
+                          >
+                            {feature.family}
+                          </Text>
+                        </View>
+                      ) : feature.family ? (
+                        <View className="flex-1 items-center">
+                          <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                        </View>
+                      ) : (
+                        <View className="flex-1 items-center">
+                          <Ionicons name="lock-closed" size={18} color="#5a5a5a" />
+                        </View>
+                      )}
                     </View>
                   </View>
                 ))}
@@ -350,13 +479,32 @@ export default function Pricing() {
               activeOpacity={0.9}
               className="bg-[#2f3a56] h-[60px] rounded-[8px] items-center justify-center w-full px-4"
             >
+              {isLoading ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <Text
+                  style={{ fontFamily: "Poppins_500Medium" }}
+                  className="text-white text-[16px]"
+                >
+                  Start Your Free 30-Days
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Set Up Payment Button
+            <TouchableOpacity
+              onPress={handleSetupPayment}
+              activeOpacity={0.9}
+              className="h-[52px] rounded-[8px] items-center justify-center w-full px-4 border-2 border-[#4a5b87] bg-white"
+            >
               <Text
                 style={{ fontFamily: "Poppins_500Medium" }}
-                className="text-white text-[16px]"
+                className="text-[#4a5b87] text-[16px]"
               >
-                Start Your Free 30-Days
+                Set Up Payment
               </Text>
             </TouchableOpacity>
+            */}
           </View>
         </ScrollView>
       </LinearGradient>

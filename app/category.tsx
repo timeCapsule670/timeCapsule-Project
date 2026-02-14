@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 interface CategoryOption {
   id: string;
@@ -46,6 +47,7 @@ const categories: CategoryOption[] = [
 
 export default function Category() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
 
   const handleBack = () => {
@@ -95,7 +97,7 @@ export default function Category() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingTop: 24, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 16, paddingTop: 24, paddingBottom: scrollContentPadding(40) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-6">

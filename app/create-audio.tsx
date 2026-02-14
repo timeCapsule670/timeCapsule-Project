@@ -4,9 +4,11 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Animated, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 export default function CreateAudioMessage() {
   const router = useRouter();
+  const { scrollContentPadding, bottomInset } = useTabBarHeight();
   
   // Recording states
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -224,7 +226,7 @@ export default function CreateAudioMessage() {
 
       <ScrollView
         className="flex-1 px-4"
-        contentContainerStyle={{ paddingTop: 24, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingTop: 24, paddingBottom: scrollContentPadding(140) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-10 items-center">
@@ -340,7 +342,10 @@ export default function CreateAudioMessage() {
       </ScrollView>
 
       {/* Footer */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-4 py-6 gap-4">
+      <View
+        className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-4 py-6 gap-4"
+        style={{ paddingBottom: 24 + bottomInset }}
+      >
         <TouchableOpacity
           onPress={handleNext}
           activeOpacity={0.9}

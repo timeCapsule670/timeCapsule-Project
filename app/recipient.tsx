@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 interface Recipient {
   id: string;
@@ -17,7 +18,13 @@ const mockRecipients: Recipient[] = [];
 
 export default function RecipientSelection() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ messageType: string; type: string }>();
+  const { scrollContentPadding, bottomInset } = useTabBarHeight();
+  const params = useLocalSearchParams<{
+    messageType: string;
+    type: string;
+    prompt?: string;
+    promptId?: string;
+  }>();
   const messageType = params.messageType || params.type;
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
 
@@ -107,7 +114,7 @@ export default function RecipientSelection() {
 
       <ScrollView
         className="flex-1 px-4"
-        contentContainerStyle={{ paddingTop: 24, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingTop: 24, paddingBottom: scrollContentPadding(140) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-6">
@@ -290,7 +297,10 @@ export default function RecipientSelection() {
       </ScrollView>
 
       {/* Footer */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-4 py-6 gap-4">
+      <View
+        className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#f3f4f6] px-4 py-6 gap-4"
+        style={{ paddingBottom: 24 + bottomInset }}
+      >
         <TouchableOpacity
           onPress={handleNext}
           activeOpacity={0.9}

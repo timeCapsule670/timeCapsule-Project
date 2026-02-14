@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import ToastManager from "toastify-react-native";
 import { TimeCapsuleProvider } from "../context/TimeCapsuleContext";
+import { PromptProvider } from "../context/PromptContext";
 import "../global.css";
 
 // Keep the splash screen visible while we fetch resources
@@ -36,8 +37,10 @@ export default function RootLayout() {
 
   return (
     <TimeCapsuleProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-      <ToastManager />
+      <PromptProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+        <ToastManager />
+      </PromptProvider>
     </TimeCapsuleProvider>
   );
 }

@@ -4,9 +4,11 @@ import LottieView from "lottie-react-native";
 import React, { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 
 export default function SuccessConfirmation() {
   const router = useRouter();
+  const { scrollContentPadding } = useTabBarHeight();
   const [showWIPModal, setShowWIPModal] = useState(false);
 
   const handleAction = () => {
@@ -17,7 +19,7 @@ export default function SuccessConfirmation() {
     <SafeAreaView style={{ flex: 1 }} className="bg-white">
       <ScrollView 
         className="flex-1" 
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 40, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 40, paddingBottom: scrollContentPadding(40) }}
         showsVerticalScrollIndicator={false}
       >
         <View className="items-center gap-10">

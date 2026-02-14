@@ -1,11 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Image,
   ImageBackground,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -14,9 +16,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTabBarHeight } from "../../hooks/useTabBarHeight";
 import {
   messageCardBg,
-  plusIcon,
   profilePicture,
   templateFirstHeartbreak,
   templateFirstHeartbreakOverlay,
@@ -74,9 +76,18 @@ function SkeletonLoader({ width, height, borderRadius = 8 }: { width?: number | 
   );
 }
 
+const PROMPT_CARD_WIDTH = 296;
+const PROMPT_CARD_GAP = 16;
+
 export default function HomeTab() {
+  const router = useRouter();
   const { timecapsules } = useTimeCapsules();
   const [isLoading, setIsLoading] = useState(true);
+  const { contentBottomPadding } = useTabBarHeight();
+  const suggestedScrollRef = useRef<ScrollView>(null);
+  const suggestedScrollIndex = useRef(0);
+  const isUserScrolling = useRef(false);
+  const userScrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Simulate loading time for images and data
@@ -84,7 +95,10 @@ export default function HomeTab() {
       setIsLoading(false);
     }, 1500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (userScrollTimeout.current) clearTimeout(userScrollTimeout.current);
+    };
   }, []);
 
   const suggestedPrompts = [
@@ -98,6 +112,7 @@ export default function HomeTab() {
       iconBg: "rgba(253,203,110,0.5)",
       buttonColor: "#fcb32b",
       buttonText: "black",
+      icon: "school" as const,
     },
     {
       id: 2,
@@ -109,6 +124,7 @@ export default function HomeTab() {
       iconBg: "rgba(255,181,181,0.6)",
       buttonColor: "#ff2828",
       buttonText: "white",
+      icon: "heart" as const,
     },
     {
       id: 3,
@@ -120,8 +136,25 @@ export default function HomeTab() {
       iconBg: "rgba(214,199,237,0.5)",
       buttonColor: "#8a5fcc",
       buttonText: "white",
+      icon: "book" as const,
     },
   ];
+
+  // Auto-scroll Suggested prompts
+  useEffect(() => {
+    if (isLoading) return;
+    const scrollInterval = setInterval(() => {
+      if (isUserScrolling.current) return;
+      suggestedScrollIndex.current += 1;
+      const maxIndex = suggestedPrompts.length;
+      if (suggestedScrollIndex.current >= maxIndex) {
+        suggestedScrollIndex.current = 0;
+      }
+      const offset = suggestedScrollIndex.current * (PROMPT_CARD_WIDTH + PROMPT_CARD_GAP);
+      suggestedScrollRef.current?.scrollTo({ x: offset, animated: true });
+    }, 4000);
+    return () => clearInterval(scrollInterval);
+  }, [isLoading]);
 
   // Dynamic timecapsules from context
 
@@ -158,11 +191,11 @@ export default function HomeTab() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
-        <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }} edges={["top"]}>
+        <StatusBar barStyle="dark-content" backgroundColor="white" translucent />
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: contentBottomPadding }}
           showsVerticalScrollIndicator={false}
         >
           <View className="px-4 pt-2">
@@ -265,18 +298,16 @@ export default function HomeTab() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "white" }} edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="white" translucent />
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: contentBottomPadding }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-5 pt-6">
-
-
+        <View className="px-5 pt-4 pb-2">
           {/* Header Section */}
-          <View className="flex-row gap-4 items-center mt-2 mb-10">
+          <View className="flex-row gap-4 items-center mb-8">
             <View style={styles.profileImageContainer}>
               <Image
                 source={{ uri: profilePicture }}
@@ -303,16 +334,12 @@ export default function HomeTab() {
           {/* Create Button */}
           <Link href="/recipient" asChild>
             <TouchableOpacity
-              activeOpacity={0.9}
+              activeOpacity={0.85}
               style={styles.createButton}
             >
-              <Image
-                source={{ uri: plusIcon }}
-                style={styles.plusIcon}
-                resizeMode="contain"
-              />
+              <Ionicons name="add" size={28} color="white" />
               <Text
-                style={{ fontFamily: "Poppins_500Medium", color: "white", fontSize: 16 }}
+                style={{ fontFamily: "Poppins_600SemiBold", color: "white", fontSize: 16 }}
               >
                 Create Your First TimeCapsule
               </Text>
@@ -320,66 +347,110 @@ export default function HomeTab() {
           </Link>
 
           {/* Suggested for You Section */}
-          <View className="mb-10">
+          <View className="mb-8">
             <View className="flex-row items-center justify-between mb-4">
               <Text
-                style={{ fontFamily: "Poppins_600SemiBold" }}
-                className="text-[#1a1f36] text-[18px]"
+                style={{ fontFamily: "Poppins_700Bold" }}
+                className="text-[#1a1f36] text-[20px]"
               >
                 Suggested for You
               </Text>
-              <TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7}>
                 <Text
-                  style={{ fontFamily: "Poppins_400Regular" }}
-                  className="text-[#1d6ee1] text-[16px]"
+                  style={{ fontFamily: "Poppins_500Medium" }}
+                  className="text-[#4a5b87] text-[15px]"
                 >
                   View All
                 </Text>
               </TouchableOpacity>
             </View>
             <ScrollView
+              ref={suggestedScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 16, paddingRight: 16, paddingVertical: 8 }}
+              contentContainerStyle={{ gap: PROMPT_CARD_GAP, paddingHorizontal: 4, paddingRight: 24, paddingVertical: 12 }}
+              onScrollBeginDrag={() => {
+                isUserScrolling.current = true;
+                if (userScrollTimeout.current) clearTimeout(userScrollTimeout.current);
+              }}
+              onScrollEndDrag={() => {
+                userScrollTimeout.current = setTimeout(() => {
+                  isUserScrolling.current = false;
+                }, 5000);
+              }}
+              onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+                const offset = e.nativeEvent.contentOffset.x;
+                suggestedScrollIndex.current = Math.round(offset / (PROMPT_CARD_WIDTH + PROMPT_CARD_GAP));
+              }}
             >
               {suggestedPrompts.map((prompt) => (
                 <View
                   key={prompt.id}
-                  style={[styles.promptCard, { backgroundColor: prompt.bgColor }]}
+                  style={[
+                    styles.promptCard,
+                    {
+                      backgroundColor: prompt.bgColor,
+                      width: PROMPT_CARD_WIDTH,
+                    },
+                  ]}
                 >
-                  <View className="flex-row items-center gap-1 mb-2">
-                    <View
-                      style={[styles.promptIconBg, { backgroundColor: prompt.iconBg }]}
+                  {/* Top accent strip */}
+                  <View
+                    style={{
+                      height: 3,
+                      backgroundColor: prompt.buttonColor,
+                      borderRadius: 2,
+                      marginBottom: 16,
+                    }}
+                  />
+                  <View
+                    style={[styles.categoryBadge, { backgroundColor: prompt.iconBg }]}
+                    className="flex-row items-center gap-1.5 mb-3 self-start"
+                  >
+                    <Ionicons
+                      name={prompt.icon === "school" ? "school-outline" : prompt.icon === "heart" ? "heart-outline" : "book-outline"}
+                      size={14}
+                      color={prompt.categoryColor}
+                    />
+                    <Text
+                      style={{ fontFamily: "Poppins_600SemiBold", color: prompt.categoryColor, fontSize: 12 }}
                     >
-                      <Ionicons name="school-outline" size={20} color={prompt.categoryColor} />
-                    </View>
-                    <View
-                      style={[styles.categoryBadge, { backgroundColor: prompt.iconBg }]}
-                    >
-                      <Text
-                        style={{ fontFamily: "Poppins_500Medium", color: prompt.categoryColor, fontSize: 14 }}
-                      >
-                        {prompt.category}
-                      </Text>
-                    </View>
+                      {prompt.category}
+                    </Text>
                   </View>
                   <Text
-                    style={{ fontFamily: "Poppins_500Medium" }}
-                    className="text-[#2f3a56] text-[18px] leading-[27px] mb-2"
+                    style={{ fontFamily: "Poppins_600SemiBold" }}
+                    className="text-[#1a1f36] text-[19px] leading-[26px] mb-2"
                   >
                     {prompt.title}
                   </Text>
                   <Text
                     style={{ fontFamily: "Poppins_400Regular" }}
-                    className="text-[#2f3a56] text-[16px] leading-[21px] mb-4"
+                    className="text-[#1a1f36] text-[15px] leading-[22px] mb-5 opacity-80"
                   >
                     {prompt.description}
                   </Text>
                   <TouchableOpacity
-                    style={[styles.promptButton, { backgroundColor: prompt.buttonColor }]}
+                    activeOpacity={0.85}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/prompt",
+                        params: {
+                          promptId: String(prompt.id),
+                          question: prompt.description,
+                          title: prompt.title,
+                        },
+                      })
+                    }
+                    style={[
+                      styles.promptButton,
+                      {
+                        backgroundColor: prompt.buttonColor,
+                      },
+                    ]}
                   >
                     <Text
-                      style={{ fontFamily: "Poppins_500Medium", color: prompt.buttonText, fontSize: 16 }}
+                      style={{ fontFamily: "Poppins_600SemiBold", color: prompt.buttonText, fontSize: 15 }}
                     >
                       Use This Prompt
                     </Text>
@@ -390,18 +461,18 @@ export default function HomeTab() {
           </View>
 
           {/* Your Timecapsules Section */}
-          <View className="mb-10">
+          <View className="mb-8">
             <View className="flex-row items-center justify-between mb-4">
               <Text
-                style={{ fontFamily: "Poppins_600SemiBold" }}
-                className="text-[#1a1f36] text-[18px]"
+                style={{ fontFamily: "Poppins_700Bold" }}
+                className="text-[#1a1f36] text-[20px]"
               >
                 Your Timecapsules
               </Text>
-              <TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7}>
                 <Text
-                  style={{ fontFamily: "Poppins_400Regular" }}
-                  className="text-[#1d6ee1] text-[16px]"
+                  style={{ fontFamily: "Poppins_500Medium" }}
+                  className="text-[#4a5b87] text-[15px]"
                 >
                   View All
                 </Text>
@@ -479,7 +550,7 @@ export default function HomeTab() {
                   </ImageBackground>
 
                   <View style={styles.capsuleDetails}>
-                    <View className="flex-row items-center justify-between mb-1">
+                    <View className="flex-row items-center justify-between mb-0.5">
                       <Text
                         numberOfLines={1}
                         style={{ fontFamily: "Poppins_600SemiBold" }}
@@ -522,17 +593,13 @@ export default function HomeTab() {
               {/* Create New Card */}
               <Link href="/recipient" asChild>
                 <TouchableOpacity style={styles.createNewCard} activeOpacity={0.8}>
-                  <LinearGradient
-                    colors={["#f5f3ff", "#ede9fe"]}
-                    style={StyleSheet.absoluteFillObject}
-                  />
                   <View style={styles.addIconContainer}>
-                    <Ionicons name="add" size={32} color="#6738af" />
+                    <Ionicons name="add" size={32} color="#4a5b87" />
                   </View>
                   <Text
                     style={{
                       fontFamily: "Poppins_600SemiBold",
-                      color: "#48277b",
+                      color: "#1a1f36",
                       fontSize: 14,
                       textAlign: "center",
                       marginTop: 8,
@@ -544,10 +611,9 @@ export default function HomeTab() {
                   <Text
                     style={{
                       fontFamily: "Poppins_400Regular",
-                      color: "#6d28d9",
-                      fontSize: 11,
+                      color: "#6b7280",
+                      fontSize: 12,
                       textAlign: "center",
-                      opacity: 0.6
                     }}
                   >
                     Capture a memory
@@ -558,24 +624,24 @@ export default function HomeTab() {
           </View>
 
           {/* Message Templates Section */}
-          <View className="mb-2">
+          <View className="mb-6">
             <View className="flex-row items-center justify-between mb-4">
               <Text
-                style={{ fontFamily: "Poppins_600SemiBold" }}
-                className="text-[#1a1f36] text-[18px]"
+                style={{ fontFamily: "Poppins_700Bold" }}
+                className="text-[#1a1f36] text-[20px]"
               >
                 Message Templates
               </Text>
-              <TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7}>
                 <Text
-                  style={{ fontFamily: "Poppins_400Regular" }}
-                  className="text-[#1d6ee1] text-[16px]"
+                  style={{ fontFamily: "Poppins_500Medium" }}
+                  className="text-[#4a5b87] text-[15px]"
                 >
                   Browse
                 </Text>
               </TouchableOpacity>
             </View>
-            <View className="flex-row flex-wrap gap-2">
+            <View className="flex-row flex-wrap gap-3">
               {messageTemplates.map((template) => (
                 <TouchableOpacity
                   key={template.id}
@@ -633,41 +699,33 @@ const styles = StyleSheet.create({
     height: 26,
   },
   createButton: {
-    backgroundColor: "#2f3a56",
-    height: 58,
-    borderRadius: 14,
+    backgroundColor: "#4a5b87",
+    height: 60,
+    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
     paddingHorizontal: 24,
-    marginBottom: 32,
-    shadowColor: "#2f3a56",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  profileImageContainer: {
+    marginBottom: 28,
     shadowColor: "#4a5b87",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
     elevation: 6,
   },
-  plusIcon: {
-    width: 29,
-    height: 29,
+  profileImageContainer: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   promptCard: {
-    borderRadius: 20,
-    padding: 18,
-    width: 260,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#f3f4f6",
   },
   promptIconBg: {
     width: 36,
@@ -683,25 +741,20 @@ const styles = StyleSheet.create({
   },
   promptButton: {
     height: 44,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   capsuleCard: {
-    width: 190,
+    width: 200,
     borderRadius: 24,
     overflow: "hidden",
     backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 4,
     borderWidth: 1,
     borderColor: "#f3f4f6",
   },
   capsuleImageBg: {
-    height: 180,
+    height: 200,
     padding: 12,
   },
   floatingTypeBadge: {
@@ -711,17 +764,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
     zIndex: 10,
   },
   floatingTypeText: {
     color: "white",
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: "Poppins_600SemiBold",
   },
   playButton: {
@@ -742,7 +793,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.2)",
   },
   capsuleDetails: {
-    padding: 14,
+    padding: 16,
     backgroundColor: "white",
   },
   statusDot: {
@@ -752,13 +803,12 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   createNewCard: {
-    width: 190,
-    height: 290, // Match total height of capsule card approximately
+    width: 200,
+    height: 310,
     borderRadius: 24,
-    borderWidth: 2,
-    borderStyle: "dashed",
+    borderWidth: 1,
     borderColor: "#e9d5ff",
-    backgroundColor: "#f5f3ff",
+    backgroundColor: "#f9f5ff",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
@@ -771,21 +821,18 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#6738af",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 2,
   },
   templateCard: {
     width: "48%",
-    height: 140,
+    height: 160,
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#f3f4f6",
   },
 });
