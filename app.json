@@ -39,6 +39,13 @@
         "projectId": "555a01a5-6888-431a-b39e-95bc132b12ec"
       }
     },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/555a01a5-6888-431a-b39e-95bc132b12ec"
+    },
+    "runtimeVersion": "1.0.0",
     "plugins": [
       "expo-router",
       "expo-camera",

@@ -244,22 +244,17 @@ export default function PromptsTab() {
           position: "absolute",
           bottom: scrollContentPadding(56),
           right: 16,
-          width: 60,
-          height: 60,
-          borderRadius: 30,
+          width: 66,
+          height: 66,
+          borderRadius: 20,
           alignItems: "center",
           justifyContent: "center",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: 0.15,
-          shadowRadius: 6,
-          elevation: 8,
           zIndex: 999,
         }}
       >
         <Image
           source={require("../../assets/assistance.gif")}
-          style={{ width: 56, height: 56, borderRadius: 30 }}
+          style={{ width: 66, height: 66, borderRadius: 20 }}
           resizeMode="contain"
         />
       </TouchableOpacity>
